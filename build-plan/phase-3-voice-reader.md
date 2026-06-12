@@ -21,8 +21,14 @@
 - [ ] Route transcribed text through the **safety-guarded** request path (same as typed).
 - [ ] Mic permission handling (per platform), fallback to typing.
 
+### Story archive (replay past episodes)
+- [ ] **Archive view** per series: list past `Beat`s with each `summary` (short "what happened").
+- [ ] Tap any episode to **re-read or replay via the voice reader** (reuses narration above).
+- [ ] Mark favorites (thumbs up) → feeds `LearnedProfile`.
+
 ### Read-along (nice-to-have)
 - [ ] Word/sentence highlighting synced to `progress` stream (early-reader aid).
+- [ ] Wire streaming generation (Phase 2) → sentence-boundary narration for a "live" read.
 
 ## Exit criteria
 - A chapter is narrated aloud with at least pitch-differentiated character voices, controllable playback, in the child's language; cloud voices work when a key is provided and fall back cleanly when not.

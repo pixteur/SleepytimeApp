@@ -33,7 +33,7 @@ Every generated segment is checked **before it's ever shown or spoken**:
 - The generation prompt requires the model to **self-report a rating** + a list of any sensitive elements as structured metadata.
 - `SafetyGuard` validates that rating against the child's band and scans the text against the band's banned-theme list / patterns.
 - **On fail:** regenerate with tightened constraints (bounded retries, e.g. 2). If still failing, fall back to a safe pre-written "cozy filler" beat so the child is never shown raw unvetted output and the night never breaks.
-- Optionally (configurable, higher quality): a **second model pass acts as a dedicated reviewer** ("you are a children's content safety checker…") — cheap insurance, especially valuable in the hosted phase.
+- **Second-model reviewer — ON by default** (toggle in Settings): a second model pass acts as a dedicated checker ("you are a children's content safety checker…"). Higher quality at ~2× per-story cost; a parent can disable it to save tokens. Especially valuable in the hosted phase.
 
 ### Layer 4 — Continuity guard
 - Beats store their rating; `BeatStore` watches the **trend** and reminds the prompt to keep things light if intensity is creeping up.
@@ -42,10 +42,33 @@ Every generated segment is checked **before it's ever shown or spoken**:
 ## Parent controls
 
 - Set/adjust child age (moves the band).
-- **Banned topics** list (parent can add their own, e.g. "no spiders").
+- **Banned themes** list — see below (parent toggles + free additions, e.g. "no spiders").
+- **Parent's Brief** — free-text (sentence → paragraphs) to express **values and tone**, not just bans (e.g. "kindness and honesty win; family matters; no scary stuff"). Injected into every prompt for that child/series. The positive-framing companion to the ban list. Stored on `ChildProfile` (and optionally per `Series`). See [data-model.md](data-model.md).
 - **Intensity dial** within a band (cozier ↔ more adventurous).
-- Review/clear story history.
+- Review/clear story history; archive/branch series.
 - All settings live on-device. See [data-model.md](data-model.md).
+
+### Banned themes — defaults & menu
+
+Set in **Settings**, enforced by injecting the active list into every prompt **and** scanning output in `SafetyGuard`. Each item is a toggle; parents can add their own free-text bans too. Lists are per child.
+
+**Pre-enabled by default** (family-specified): sex · drugs · alcohol · flirting/romance · religion · evolution · birthdays · Christmas.
+
+**Suggested additional toggles** (grouped — off/on per family):
+
+| Group | Themes |
+|-------|--------|
+| Violence | weapons, war, fighting, graphic injury |
+| Death & grief | dying, loss, funerals |
+| Fear / horror | monsters, ghosts, nightmares, the dark, jump-scares |
+| Supernatural / occult | witchcraft, magic spells, fortune-telling, luck/superstition, horoscopes |
+| Other holidays | Halloween, Easter, Valentine's, Thanksgiving |
+| Romance (beyond flirting) | dating, marriage, kissing |
+| Real-world danger (imitable) | fire, strangers/kidnapping, getting lost, heights |
+| Crude / unkind | toilet humor, profanity, name-calling, bullying |
+| Other | politics/nationalism, gambling, smoking/vaping, materialism/greed |
+
+> Banned themes are a **floor**, applied on top of the age-band policy — the stricter of the two always wins. The Parent's Brief expresses the *positive* side (what stories should celebrate).
 
 ## Privacy (children's data)
 

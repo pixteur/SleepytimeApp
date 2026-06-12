@@ -8,11 +8,13 @@ Built **Flutter-first for PC (Windows)**, designed to port cleanly to **macOS an
 
 ## What it does
 
-- **Per-child accounts** with a 10-question onboarding quiz that seeds each kid's story world.
+- **Per-child accounts** (multi-kid) with an onboarding quiz — including stories they already love — that seeds each kid's story world.
 - **Nightly launch choices:** 🎲 *Roll the dice* for a new twist, ▶️ *Continue where we left off*, or ⌨️/🎤 *Tell it what to hear* (text or microphone).
-- **Adjustable detail levels** — from short bedtime tales to longer chapter adventures.
-- **Grows with your kid** — a settings page to tune story details, child's age, tone, and reading level.
-- **Age-appropriate & safe** — every story is generated under hard age-rating constraints and passed through a content guardrail.
+- **Multiple story series + branching** — keep several sagas going, or branch off a brand-new one (and pick who the hero is).
+- **Story archive** — browse past episodes with short recaps and replay any of them aloud.
+- **Adjustable detail levels** and **streaming** stories that appear as they're written.
+- **Grows with your kid** — a settings page to tune details, age, and tone, plus a **learned profile** that adapts from how they play.
+- **Age-appropriate & safe** — hard age-rating constraints, a parent **banned-themes** list, an optional **Parent's Brief** for values/tone, and a content guardrail (with a second-model reviewer on by default).
 - **New Interests** — add a fresh fascination (fractals, Jupiter, dinosaurs…) and the app nudges future stories that way.
 - **Voice story reader** — male/female expressive voices that take on each character's personality, in multiple languages.
 - **Multi-language** — English, French, Spanish at launch; Japanese and more built into the framework.

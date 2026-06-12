@@ -5,9 +5,12 @@
 ## Tasks
 
 ### Domain (test-first)
-- [ ] `PromptBuilder` — assembles system prompt (age policy + universal rules) + context (seed, recent beats, interests, chosen twist, language, detail level). Golden-snapshot tests per age band.
-- [ ] `TwistDeck` — 6 localized option cards + `roll()`; parent-tunable tone. Content in `assets/twists/`.
-- [ ] `BeatStore` — `recentContext(child)` (recent full beats + summarized history + story bible) and `append(beat)`. Tests for continuity assembly.
+- [ ] `SeriesService` — create/list/continue/archive series; **branch** (new series, optionally forked from a beat). Powers the **story list/library**.
+- [ ] Hero choice at series start (`heroMode`: child-as-hero / named / surprise) → into `PromptBuilder`.
+- [ ] `PromptBuilder` — assembles system prompt (age policy + **banned themes** + **parent brief** + universal rules) + context (series seed, recent beats, interests, `LearnedProfile` weights, chosen twist, language, detail level). Golden-snapshot tests per age band.
+- [ ] `TwistDeck` — fixed categories with AI-flavored text + `roll()`; parent-tunable tone. Content in `assets/twists/`.
+- [ ] `BeatStore` — `recentContext(series)` (recent full beats + summarized history + per-series `storyBible`) and `append(beat)`. Tests for continuity assembly.
+- [ ] `LearnedProfile` updates: record twist picks / feedback / inferred interests each turn.
 - [ ] `SafetyGuard.review()` — validates rating vs band, scans banned themes, enforces calm ending; bounded regenerate; safe-filler fallback. **Adversarial corpus tests (required).** See [../docs/safety.md](../docs/safety.md).
 - [ ] `StoryEngine.takeTurn(child, intent)` — orchestrates the full step list from [../docs/architecture.md](../docs/architecture.md).
 
@@ -19,14 +22,15 @@
 - [ ] Offline pre-written fallback bank.
 
 ### UI
+- [ ] **Story list / library** screen: a child's series as shelf cards → continue, or **branch off** a new series (with hero choice).
 - [ ] **Home/launch** screen: Continue / 🎲 Roll / 6 cards / ⌨️ type request.
-- [ ] **Story view**: render chapter, basic next/again controls (voice comes Phase 3).
+- [ ] **Story view**: render chapter with **streaming** text as it writes; next/again controls (voice comes Phase 3).
 - [ ] Loading/"the storyteller is thinking" state; graceful error states.
 
 ### Decisions to finalize here
-- [ ] **Drift vs Isar** — commit and migrate stubs.
+- [x] **DB → Drift** (decided 2026-06-12). Implement schema + migration v1 (ChildProfile, Series, Beat, Interest, QuizResult, LearnedProfile, Settings).
 - [ ] Context-window tuning against real token costs/latency.
-- [ ] Streaming generation? (optional this phase.)
+- [x] **Streaming generation → yes.** Stream tokens to Story view; sentence-boundary hand-off prepared for Phase 3 TTS.
 
 ## Exit criteria
 - With a real Claude key, a child can roll/continue/type and get a fresh, **age-appropriate**, coherent chapter that's saved and continues correctly the next session.

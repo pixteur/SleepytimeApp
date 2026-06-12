@@ -11,11 +11,13 @@
 
 | Screen | Audience | Purpose |
 |--------|----------|---------|
-| **Profile select** | Kid | Pick which child (avatar cards). Big, friendly. |
+| **Profile select** | Kid | Pick which child (avatar cards). Big, friendly. Multi-kid. |
+| **Story library** | Kid | Shelf of the child's **series**; continue one, or **branch off** a new series (with hero choice). |
 | **Home / Launch** | Kid | The nightly choice: 🎲 Roll the dice · 6 option cards · ▶️ Continue · ⌨️/🎤 Request |
-| **Story view** | Kid | Chapter text + voice playback controls; calm, auto-dimming |
-| **Onboarding quiz** | Kid + parent | 10 questions to seed the story world |
-| **Settings** (gated) | Parent | Age, detail level, intensity, language, banned topics, AI provider + key, voice provider, theme |
+| **Story view** | Kid | Streaming chapter text + voice playback controls; calm, auto-dimming |
+| **Archive** | Kid | Past episodes of a series, each with a short summary; tap to re-read/replay aloud |
+| **Onboarding quiz** | Kid + parent | Seed the story world; full first-run + mini-quiz per new series; optional **Parent's Brief** |
+| **Settings** (gated) | Parent | Age, detail level, intensity, language, **banned themes**, **Parent's Brief**, AI provider + key, **safety reviewer (on by default)**, voice provider, theme |
 | **Interests** (gated) | Parent | Add/toggle/weight "new interests" |
 | **Profiles admin** (gated) | Parent | Create/edit/delete child accounts |
 
