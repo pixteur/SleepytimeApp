@@ -80,10 +80,11 @@ Enables the **story list** (pick which saga to continue) and **branching** (star
 | `title` | string | Kid/AI-named, e.g. "The Cloud Pirates" |
 | `coverEmoji` / `coverColor` | | For the library "shelf" |
 | `seedSummary` | string | Premise for this series |
-| `theme` | enum | **Series flavor, chosen at start:** `adventure` / `technical` / `nature` / `documentary` / `learning` / `multilanguage` / `custom` |
+| `theme` | enum | **Series flavor, chosen at start.** One of: `adventure` · `technical` · `nature` · `documentary` · `learning` · `cozy` · `feelings` · `mystery` · `silly` · `fairytale` · `history` · `aroundTheWorld` · `superhero` · `mindfulness` · `sliceOfLife` · `surprise` · `custom` |
 | `customTheme` | string? | Free-text flavor if `theme == custom` (e.g. "space archaeology") |
-| `secondaryLanguage` | locale? | For `multilanguage` theme — the 2nd language woven in |
-| `bilingualBlend` | enum? | For `multilanguage`: `sprinkle` (a few words) / `phrases` / `alternating` (balanced) — controls how much 2nd language |
+| `bilingualEnabled` | bool | **Bilingual mode — a modifier, independent of theme.** Any story can be bilingual. |
+| `secondaryLanguage` | locale? | The 2nd language woven in (when `bilingualEnabled`) |
+| `bilingualBlend` | enum? | `sprinkle` (a few words) / `phrases` / `alternating` (balanced) — how much 2nd language |
 | `heroMode` | enum | `childAsHero` / `namedHero` / `surprise` — **chosen when starting the series** |
 | `heroName` | string? | If `namedHero` |
 | `parentBrief` | string? | Optional per-series hone (extends the profile brief) |

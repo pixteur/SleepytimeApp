@@ -54,19 +54,20 @@
 
 ---
 
-## 2026-06-12 — Series themes (chooser)
+## 2026-06-12 — Series themes (chooser) + bilingual as a modifier
 
-**Context:** Added a theme chooser when starting a new series — the series' overall *flavor*, distinct from the per-night twist deck.
+**Context:** Added a theme chooser when starting a new series — the series' overall *flavor*, distinct from the per-night twist deck. Then expanded the theme set and reclassified bilingual.
 
-**Decision:** `Series.theme` enum: `adventure` / `technical` / `nature` / `documentary` / `learning` / `multilanguage` / `custom` (+ `customTheme` free-text). Picked at new-series setup (theme → hero → mini-quiz).
+**Decisions:**
+- **Full theme set (~16 + custom):** `adventure` · `technical` · `nature` · `documentary` · `learning` · `cozy` · `feelings` · `mystery` · `silly` · `fairytale` · `history` · `aroundTheWorld` · `superhero` · `mindfulness` · `sliceOfLife` · `surprise` · `custom` (+ `customTheme` free-text). Picked at new-series setup (theme → hero → mini-quiz). Chooser is **grouped** (Exciting / Calm & Bedtime / Discover & Learn / Imagine & Giggle / Surprise · Custom) so ~16 options aren't overwhelming.
+- **Bilingual is a MODIFIER, not a theme** (user call). `bilingualEnabled` + `secondaryLanguage` + `bilingualBlend` (`sprinkle`/`phrases`/`alternating`) can layer onto *any* theme. Model emits **language-tagged spans**; voice reader switches language per span (cloud-TTS fallback where device lacks the 2nd voice).
+- **Settings vs interests vs themes:** specific topics (pirates, space, dinosaurs) stay as **Interests/seed**, NOT themes, to keep the theme list broad (~16) and avoid sprawl.
 
-**Multilanguage theme:** generates a **bilingual** story for language learning. Adds `secondaryLanguage` + `bilingualBlend` (`sprinkle` / `phrases` / `alternating`). Model emits **language-tagged spans**; voice reader switches language per span (cloud-TTS fallback where device lacks the 2nd voice).
+**Why:** themes give a strong, predictable lever on tone/content; decoupling bilingual lets *every* flavor double as language practice. Theme sets series flavor; twist deck drives each episode within it.
 
-**Why:** themes give the parent/kid a strong, predictable lever on tone/content; multilanguage turns bedtime into painless second-language exposure. Theme sets series flavor; twist deck still drives each episode within it.
+**Affects:** README, data-model.md (Series.theme full enum + bilingual fields decoupled), ui-ux.md (grouped chooser + bilingual toggle), i18n.md + voice-tts.md (bilingual mode), build-plan phases 2–3. PromptBuilder golden-tested per theme + age band.
 
-**Affects:** data-model.md (Series.theme + bilingual fields), ui-ux.md (theme chooser), i18n.md (bilingual stories), voice-tts.md (bilingual narration), build-plan phases 2–3. PromptBuilder now golden-tested per theme as well as per age band.
-
-**Open questions:** exact prompt recipe per theme; bilingual correctness/age-appropriateness guardrails for the 2nd language; whether `bilingualBlend` should auto-step-up as the kid progresses.
+**Open questions:** exact prompt recipe per theme; bilingual correctness/age-appropriateness guardrails for the 2nd language; whether `bilingualBlend` auto-steps-up as the kid progresses; final emoji/icon set for theme cards.
 
 ---
 

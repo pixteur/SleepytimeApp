@@ -46,19 +46,39 @@ The 6 cards come from the localized **twist deck**; the dice picks one at random
 
 ## Starting a new series — theme chooser
 
-When a kid branches a new series they first pick a **theme** (the flavor of the whole storyline), then a hero, then answer a short mini-quiz. Themes are big, icon-led cards:
+When a kid branches a new series they pick a **theme** (the flavor of the whole storyline), then a hero, then answer a short mini-quiz. There are a lot of themes, so the chooser is **grouped** into a few friendly buckets (kid taps a bucket → sees its cards) to avoid an overwhelming grid:
+
+**🚀 Exciting** — 🗺️ Adventure · 🔍 Mystery · 🦸 Superhero
+**🌙 Calm & Bedtime** — 🌙 Cozy / Dreamtime · 🧘 Mindfulness / Calm · 💛 Feelings & Kindness · 🏡 Slice-of-Life / Helper
+**🔬 Discover & Learn** — 🌿 Nature · ⚙️ Technical · 🎬 Documentary · 📚 Learning · ⏳ History / Time-Travel · 🌍 Around the World
+**✨ Imagine & Giggle** — 🏰 Fairytale / Folktale · 😄 Silly / Giggles
+**🎲 Surprise** (AI picks) · **✏️ Custom** (free-text — any flavor, e.g. "pirate cooking school")
 
 | Theme | Flavor the story leans into |
 |-------|-----------------------------|
-| 🗺️ **Adventure** | Quests, exploration, excitement, brave-but-cozy stakes |
-| ⚙️ **Technical** | How things work — machines, building, simple engineering/coding ideas woven in |
-| 🌿 **Nature** | Animals, ecosystems, the outdoors, gentle wonder at the natural world |
+| 🗺️ **Adventure** | Quests, exploration, brave-but-cozy stakes |
+| 🔍 **Mystery** | Gentle, age-appropriate puzzle-solving — page-turny, never scary |
+| 🦸 **Superhero** | Everyday-hero stories (helping, courage), not combat |
+| 🌙 **Cozy / Dreamtime** | Slow, soft, sleepy, low-stakes — the flagship wind-down flavor |
+| 🧘 **Mindfulness / Calm** | Breathing, gratitude, gentle imagery — doubles as a sleep aid |
+| 💛 **Feelings & Kindness** | Social-emotional: empathy, big feelings, sharing |
+| 🏡 **Slice-of-Life / Helper** | Everyday situations that model routines (first day of school, doctor visit) |
+| 🌿 **Nature** | Animals, ecosystems, the outdoors, gentle wonder |
+| ⚙️ **Technical** | How things work — machines, building, simple engineering/coding ideas |
 | 🎬 **Documentary** | A friendly narrator explains *real* things accurately (nature-doc style) |
 | 📚 **Learning** | Teaches a concept (counting, science, reading) *through* the story |
-| 🗣️ **Multilanguage** | A **bilingual** story — characters speak in two languages so the kid soaks up a second one. Pick the 2nd language + a blend level (sprinkle / phrases / alternating). See [i18n.md](i18n.md). |
-| ✏️ **Custom** | Free-text — type any flavor ("pirate cooking school", "space archaeology") |
+| ⏳ **History / Time-Travel** | Visit the past; sneaky-educational, pairs with Documentary/Learning |
+| 🌍 **Around the World** | Cultures, geography, food — pairs great with Bilingual mode |
+| 🏰 **Fairytale / Folktale** | Classic "once upon a time" storybook cadence |
+| 😄 **Silly / Giggles** | Pure comedy and wordplay |
+| 🎲 **Surprise / Mixed** | Let the AI pick the flavor |
+| ✏️ **Custom** | Free-text — type any flavor |
 
 The chosen theme is stored on `Series.theme` and injected by `PromptBuilder` so the whole series keeps that flavor; the per-night **twist deck** still drives each episode's direction *within* the theme. Theme cards are localized.
+
+### Bilingual mode — a modifier on top of any theme
+
+Separately from the theme, a new series can toggle **Bilingual mode** (a small switch in new-series setup): the story weaves in a **second language** so the kid soaks one up. Works with *any* theme — a bilingual Adventure, a bilingual Documentary, etc. Set the **second language** + a **blend level** (sprinkle / phrases / alternating). Stored as `bilingualEnabled` + `secondaryLanguage` + `bilingualBlend`. See [i18n.md](i18n.md) and [voice-tts.md](voice-tts.md).
 
 ## Theming / color config
 
