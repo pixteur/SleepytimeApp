@@ -132,6 +132,22 @@ void main() {
     expect(beat.rating, AgeRating.tiny);
   });
 
+  test('concurrent turns are serialized — no duplicate seq', () async {
+    final engine = StoryEngine(ai: const FakeAiProvider(), repo: repo);
+    // Fire two turns at once (e.g. background auto-complete + a user tap).
+    final results = await Future.wait([
+      engine.takeTurn(child: child, series: series, intent: StoryIntent.dice),
+      engine.takeTurn(
+        child: child,
+        series: series,
+        intent: StoryIntent.continued,
+      ),
+    ]);
+    expect((results.map((b) => b.seq).toList()..sort()), [0, 1]);
+    final saved = await repo.loadBeats(series.id);
+    expect(saved.map((b) => b.seq).toList(), [0, 1]); // no duplicate
+  });
+
   test('persists the final-chapter flag from the segment', () async {
     final engine = StoryEngine(ai: _FinalProvider(), repo: repo);
     final beat = await engine.takeTurn(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app_providers.dart';
 import '../../domain/models/series.dart';
+import '../common/parent_gate.dart';
 import '../story/series_home_screen.dart';
 import 'new_series_screen.dart';
 import 'theme_catalog.dart';
@@ -78,7 +79,15 @@ class _SeriesCard extends ConsumerWidget {
         leading: Text(meta.emoji, style: const TextStyle(fontSize: 28)),
         title: Text(series.title),
         subtitle: Text(meta.label),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert),
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'delete', child: Text('Delete story')),
+          ],
+          onSelected: (v) {
+            if (v == 'delete') _confirmDelete(context, ref);
+          },
+        ),
         onTap: () {
           ref.read(activeSeriesProvider.notifier).select(series);
           Navigator.push(
@@ -88,5 +97,31 @@ class _SeriesCard extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    if (!await showParentGate(context) || !context.mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete story?'),
+        content: Text(
+          'Delete "${series.title}" and all its chapters? This can\'t be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    await ref.read(seriesServiceProvider).delete(series.id);
+    ref.invalidate(seriesForChildProvider(series.childId));
   }
 }

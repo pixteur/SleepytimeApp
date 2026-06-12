@@ -57,6 +57,9 @@ class SeriesService {
   Future<void> archive(Series series) =>
       _repo.saveSeries(series.copyWith(status: SeriesStatus.archived));
 
+  /// Permanently delete a series and its chapters (FK cascade).
+  Future<void> delete(String id) => _repo.deleteSeries(id);
+
   /// Branch a new series from an existing one, optionally forking from a beat.
   Future<Series> branch({
     required Series from,

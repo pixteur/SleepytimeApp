@@ -48,9 +48,13 @@ class PromptBuilder {
         'ready for sleep.',
       )
       ..writeln(
-        'Return: this chapter\'s text, a one-line summary, an age rating (one '
-        'of tiny/little/big/older), the setting, recurring characters, any open '
-        'story threads, and is_final (true on the last chapter).',
+        'The audience band is "${band.name}". Write strictly within it and set '
+        '"rating" to "${band.name}" (never higher).',
+      )
+      ..writeln(
+        'Return: this chapter\'s text, a one-line summary, the rating, the '
+        'setting, recurring characters, any open story threads, and is_final '
+        '(true on the last chapter).',
       );
 
     final user = StringBuffer()

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:uuid/uuid.dart';
 
 import '../adapters/ai/ai_provider.dart';
@@ -47,8 +49,42 @@ class StoryEngine {
   final int _maxRetries;
   final Uuid _uuid;
 
-  /// Produce, vet, and persist the next beat for [series].
+  /// Per-series generation lock so concurrent turns (e.g. background
+  /// auto-complete + a user tap) can't compute the same `seq` and duplicate a
+  /// chapter. Turns for a series run one at a time.
+  final Map<String, Future<void>> _locks = {};
+
+  /// Produce, vet, and persist the next beat for [series]. Serialized per series.
   Future<Beat> takeTurn({
+    required ChildProfile child,
+    required Series series,
+    required StoryIntent intent,
+    String? chosenTwist,
+  }) async {
+    final prior = _locks[series.id];
+    final gate = Completer<void>();
+    _locks[series.id] = gate.future;
+    try {
+      if (prior != null) {
+        try {
+          await prior;
+        } catch (_) {
+          /* a failed prior turn shouldn't block the next */
+        }
+      }
+      return await _runTurn(
+        child: child,
+        series: series,
+        intent: intent,
+        chosenTwist: chosenTwist,
+      );
+    } finally {
+      gate.complete();
+      if (identical(_locks[series.id], gate.future)) _locks.remove(series.id);
+    }
+  }
+
+  Future<Beat> _runTurn({
     required ChildProfile child,
     required Series series,
     required StoryIntent intent,
