@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,17 +29,24 @@ class StoryViewScreen extends ConsumerStatefulWidget {
 
 class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   late final TtsProvider _tts;
+  StreamSubscription<TtsState>? _stateSub;
   bool _busy = false;
+
+  // When narration finishes naturally, auto-advance to the next chapter.
+  // Cleared when the user stops, so Stop doesn't trigger an advance.
+  bool _autoAdvance = false;
 
   @override
   void initState() {
     super.initState();
     _tts = ref.read(ttsProvider);
+    _stateSub = _tts.stateStream.listen(_onTtsState);
     WidgetsBinding.instance.addPostFrameCallback((_) => _speak());
   }
 
   @override
   void dispose() {
+    _stateSub?.cancel();
     _tts.stop();
     super.dispose();
   }
@@ -46,14 +55,40 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   String? get _seriesId => ref.read(activeSeriesProvider)?.id;
 
   Future<void> _speak() async {
+    _autoAdvance = true;
     try {
       await _tts.speak(widget.beat.text, language: _lang);
     } catch (e) {
+      _autoAdvance = false;
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Voice unavailable: $e')));
     }
+  }
+
+  void _onTtsState(TtsState s) {
+    if (s == TtsState.idle && _autoAdvance) {
+      _autoAdvance = false;
+      _autoNext();
+    }
+  }
+
+  /// Auto-advance to the next chapter when this one finishes reading.
+  Future<void> _autoNext() async {
+    if (!mounted || _busy) return;
+    final id = _seriesId;
+    if (id == null) return;
+    final beats = await ref.read(storageRepoProvider).loadBeats(id);
+    final hasNext = beats.any((b) => b.seq == widget.beat.seq + 1);
+    final canGenerate = widget.canContinue && !widget.beat.isFinal && !hasNext;
+    if (hasNext || canGenerate) await _next();
+  }
+
+  /// User-initiated stop — cancels auto-advance so it stays put.
+  Future<void> _stop() async {
+    _autoAdvance = false;
+    await _tts.stop();
   }
 
   Beat? _find(List<Beat> beats, int seq) {
@@ -169,7 +204,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                   onPlay: _speak,
                   onPause: _tts.pause,
                   onResume: _tts.resume,
-                  onStop: _tts.stop,
+                  onStop: _stop,
                 ),
               ),
               Expanded(

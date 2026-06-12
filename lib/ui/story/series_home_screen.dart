@@ -40,6 +40,9 @@ class _SeriesHomeScreenState extends ConsumerState<SeriesHomeScreen> {
     final series = ref.read(activeSeriesProvider);
     if (child == null || series == null) return;
     setState(() => _busy = true);
+    // Ensure the configured provider (e.g. Gemini) is resolved before the first
+    // generation, so a cold start doesn't silently use the offline placeholder.
+    await ref.read(aiConfigProvider.notifier).refresh();
     final beat = await ref
         .read(storyEngineProvider)
         .takeTurn(

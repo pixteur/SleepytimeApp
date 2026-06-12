@@ -68,6 +68,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final prefs = await AppPrefs.open();
     final provider = providerIdFromName(prefs.selectedProvider);
     final hasKey = await _keyPresent(provider);
+    // Re-resolve so the status card reflects the saved key immediately.
+    await ref.read(aiConfigProvider.notifier).refresh();
     if (!mounted) return;
     setState(() {
       _provider = provider;
@@ -260,6 +262,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   border: const OutlineInputBorder(),
                 ),
               ),
+              if (_hasStoredKey) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle,
+                      size: 18,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'A ${_meta.label} key is saved on this device.',
+                      style: TextStyle(color: theme.colorScheme.primary),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 16),
               Row(
                 children: [
