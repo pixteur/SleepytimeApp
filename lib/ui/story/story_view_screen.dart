@@ -97,6 +97,9 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
+  /// Restart from chapter 1 (re-reads and re-narrates from the start).
+  Future<void> _restart() => _goToSeq(0);
+
   Future<void> _next() async {
     final id = _seriesId;
     if (id == null) return;
@@ -141,6 +144,11 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
         ),
         title: Text('Chapter ${widget.beat.seq + 1}'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.replay_rounded),
+            tooltip: 'Start from chapter 1',
+            onPressed: _busy ? null : _restart,
+          ),
           IconButton(
             icon: const Icon(Icons.home_rounded),
             tooltip: 'Home',

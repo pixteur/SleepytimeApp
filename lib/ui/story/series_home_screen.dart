@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../adapters/ai/ai_provider.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../../domain/models/child_profile.dart';
@@ -138,6 +139,23 @@ class _SeriesHomeScreenState extends ConsumerState<SeriesHomeScreen> {
                     'How does tonight begin?',
                     style: theme.textTheme.headlineSmall,
                   ),
+                  if (ref.watch(aiConfigProvider) == ProviderId.fake) ...[
+                    const SizedBox(height: 16),
+                    Card(
+                      color: theme.colorScheme.tertiaryContainer,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          '✨ Offline placeholder stories right now. Add a story '
+                          'AI key (gear → Story AI setup) for real, unique '
+                          'tales — that\'s separate from the voice setup.',
+                          style: TextStyle(
+                            color: theme.colorScheme.onTertiaryContainer,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   if (hasBeats)
                     FilledButton.icon(
