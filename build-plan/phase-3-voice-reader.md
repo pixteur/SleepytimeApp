@@ -16,6 +16,10 @@
 - [ ] **Cloud casting (opt-in):** `ElevenLabsProvider` (and/or Azure/GCP) for expressive multi-voice + emotion/SSML. BYO key, behind the same `TtsProvider` interface.
 - [ ] Graceful fallback: cloud → device single-narrator if no key/unreachable.
 
+### Bilingual narration (Multilanguage theme)
+- [ ] Read language-tagged spans (from Phase 2) with **per-span voice/language switching**; prefer a voice covering both languages, else switch at boundaries. See [../docs/voice-tts.md](../docs/voice-tts.md).
+- [ ] Cloud-TTS fallback when device lacks the 2nd language voice.
+
 ### Microphone input (🎤 request path)
 - [ ] `SttProvider` impl (speech-to-text) + "hold to talk" UI with listening state + cancel.
 - [ ] Route transcribed text through the **safety-guarded** request path (same as typed).

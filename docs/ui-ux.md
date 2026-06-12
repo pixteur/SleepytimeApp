@@ -12,7 +12,8 @@
 | Screen | Audience | Purpose |
 |--------|----------|---------|
 | **Profile select** | Kid | Pick which child (avatar cards). Big, friendly. Multi-kid. |
-| **Story library** | Kid | Shelf of the child's **series**; continue one, or **branch off** a new series (with hero choice). |
+| **Story library** | Kid | Shelf of the child's **series**; continue one, or **branch off** a new series. |
+| **New-series setup** | Kid (+parent) | Pick a **theme**, then the **hero**, then a quick mini-quiz → seeds the series. |
 | **Home / Launch** | Kid | The nightly choice: 🎲 Roll the dice · 6 option cards · ▶️ Continue · ⌨️/🎤 Request |
 | **Story view** | Kid | Streaming chapter text + voice playback controls; calm, auto-dimming |
 | **Archive** | Kid | Past episodes of a series, each with a short summary; tap to re-read/replay aloud |
@@ -42,6 +43,22 @@
 ```
 
 The 6 cards come from the localized **twist deck**; the dice picks one at random with a fun animation. The text/mic input feeds the safety-guarded request path.
+
+## Starting a new series — theme chooser
+
+When a kid branches a new series they first pick a **theme** (the flavor of the whole storyline), then a hero, then answer a short mini-quiz. Themes are big, icon-led cards:
+
+| Theme | Flavor the story leans into |
+|-------|-----------------------------|
+| 🗺️ **Adventure** | Quests, exploration, excitement, brave-but-cozy stakes |
+| ⚙️ **Technical** | How things work — machines, building, simple engineering/coding ideas woven in |
+| 🌿 **Nature** | Animals, ecosystems, the outdoors, gentle wonder at the natural world |
+| 🎬 **Documentary** | A friendly narrator explains *real* things accurately (nature-doc style) |
+| 📚 **Learning** | Teaches a concept (counting, science, reading) *through* the story |
+| 🗣️ **Multilanguage** | A **bilingual** story — characters speak in two languages so the kid soaks up a second one. Pick the 2nd language + a blend level (sprinkle / phrases / alternating). See [i18n.md](i18n.md). |
+| ✏️ **Custom** | Free-text — type any flavor ("pirate cooking school", "space archaeology") |
+
+The chosen theme is stored on `Series.theme` and injected by `PromptBuilder` so the whole series keeps that flavor; the per-night **twist deck** still drives each episode's direction *within* the theme. Theme cards are localized.
 
 ## Theming / color config
 

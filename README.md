@@ -10,7 +10,8 @@ Built **Flutter-first for PC (Windows)**, designed to port cleanly to **macOS an
 
 - **Per-child accounts** (multi-kid) with an onboarding quiz — including stories they already love — that seeds each kid's story world.
 - **Nightly launch choices:** 🎲 *Roll the dice* for a new twist, ▶️ *Continue where we left off*, or ⌨️/🎤 *Tell it what to hear* (text or microphone).
-- **Multiple story series + branching** — keep several sagas going, or branch off a brand-new one (and pick who the hero is).
+- **Multiple story series + branching** — keep several sagas going, or branch off a brand-new one (pick a **theme** and who the hero is).
+- **Story themes** — Adventure · Technical · Nature · Documentary · Learning · **Multilanguage** (a bilingual story to soak up a second language) · Custom.
 - **Story archive** — browse past episodes with short recaps and replay any of them aloud.
 - **Adjustable detail levels** and **streaming** stories that appear as they're written.
 - **Grows with your kid** — a settings page to tune details, age, and tone, plus a **learned profile** that adapts from how they play.

@@ -51,6 +51,14 @@ To enable casting, `PromptBuilder` asks the model to mark dialogue with speaker 
 - Voice list is filtered by the child's `language`.
 - Device TTS language availability varies by OS — detect installed voices, prompt to install if missing, and fall back to a cloud provider for languages the device lacks (important for **Japanese** and less-common languages). See [i18n.md](i18n.md).
 
+## Bilingual narration (Multilanguage theme)
+
+For the **Multilanguage** series theme, a single episode contains spans in two languages. The structured output tags each span's language (see [i18n.md](i18n.md)); the TTS layer **switches voice/language per span** so each language is pronounced correctly:
+
+- Prefer a voice available in *both* languages for continuity; otherwise switch to a per-language voice at span boundaries.
+- Cloud providers (Azure/Google/ElevenLabs) handle multilingual narration more gracefully than most device voices — fall back to cloud when the device lacks the 2nd language voice.
+- Keep transitions smooth (no jarring gaps); honor the `bilingualBlend` level so pacing stays calm at bedtime.
+
 ## Read-along (nice-to-have)
 
 `progress` stream emits word/sentence boundaries → highlight text karaoke-style as it's read. Device TTS exposes progress handlers; cloud providers expose timestamps. Great for early readers; revisit after Phase 3 core works.

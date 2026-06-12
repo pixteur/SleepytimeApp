@@ -80,6 +80,10 @@ Enables the **story list** (pick which saga to continue) and **branching** (star
 | `title` | string | Kid/AI-named, e.g. "The Cloud Pirates" |
 | `coverEmoji` / `coverColor` | | For the library "shelf" |
 | `seedSummary` | string | Premise for this series |
+| `theme` | enum | **Series flavor, chosen at start:** `adventure` / `technical` / `nature` / `documentary` / `learning` / `multilanguage` / `custom` |
+| `customTheme` | string? | Free-text flavor if `theme == custom` (e.g. "space archaeology") |
+| `secondaryLanguage` | locale? | For `multilanguage` theme — the 2nd language woven in |
+| `bilingualBlend` | enum? | For `multilanguage`: `sprinkle` (a few words) / `phrases` / `alternating` (balanced) — controls how much 2nd language |
 | `heroMode` | enum | `childAsHero` / `namedHero` / `surprise` — **chosen when starting the series** |
 | `heroName` | string? | If `namedHero` |
 | `parentBrief` | string? | Optional per-series hone (extends the profile brief) |

@@ -54,6 +54,22 @@
 
 ---
 
+## 2026-06-12 — Series themes (chooser)
+
+**Context:** Added a theme chooser when starting a new series — the series' overall *flavor*, distinct from the per-night twist deck.
+
+**Decision:** `Series.theme` enum: `adventure` / `technical` / `nature` / `documentary` / `learning` / `multilanguage` / `custom` (+ `customTheme` free-text). Picked at new-series setup (theme → hero → mini-quiz).
+
+**Multilanguage theme:** generates a **bilingual** story for language learning. Adds `secondaryLanguage` + `bilingualBlend` (`sprinkle` / `phrases` / `alternating`). Model emits **language-tagged spans**; voice reader switches language per span (cloud-TTS fallback where device lacks the 2nd voice).
+
+**Why:** themes give the parent/kid a strong, predictable lever on tone/content; multilanguage turns bedtime into painless second-language exposure. Theme sets series flavor; twist deck still drives each episode within it.
+
+**Affects:** data-model.md (Series.theme + bilingual fields), ui-ux.md (theme chooser), i18n.md (bilingual stories), voice-tts.md (bilingual narration), build-plan phases 2–3. PromptBuilder now golden-tested per theme as well as per age band.
+
+**Open questions:** exact prompt recipe per theme; bilingual correctness/age-appropriateness guardrails for the 2nd language; whether `bilingualBlend` should auto-step-up as the kid progresses.
+
+---
+
 ## Template for new entries
 
 ```

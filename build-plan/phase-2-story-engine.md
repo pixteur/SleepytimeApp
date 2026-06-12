@@ -6,8 +6,10 @@
 
 ### Domain (test-first)
 - [ ] `SeriesService` — create/list/continue/archive series; **branch** (new series, optionally forked from a beat). Powers the **story list/library**.
+- [ ] New-series setup: **theme chooser** (`adventure`/`technical`/`nature`/`documentary`/`learning`/`multilanguage`/`custom` + custom free-text) → then hero, then mini-quiz. See [../docs/ui-ux.md](../docs/ui-ux.md).
 - [ ] Hero choice at series start (`heroMode`: child-as-hero / named / surprise) → into `PromptBuilder`.
-- [ ] `PromptBuilder` — assembles system prompt (age policy + **banned themes** + **parent brief** + universal rules) + context (series seed, recent beats, interests, `LearnedProfile` weights, chosen twist, language, detail level). Golden-snapshot tests per age band.
+- [ ] **Multilanguage theme:** `secondaryLanguage` + `bilingualBlend`; `PromptBuilder` emits language-tagged spans for voice switching (Phase 3). See [../docs/i18n.md](../docs/i18n.md).
+- [ ] `PromptBuilder` — assembles system prompt (age policy + **banned themes** + **parent brief** + **series theme** + universal rules) + context (series seed, recent beats, interests, `LearnedProfile` weights, chosen twist, language(s), detail level). Golden-snapshot tests per age band **and per theme**.
 - [ ] `TwistDeck` — fixed categories with AI-flavored text + `roll()`; parent-tunable tone. Content in `assets/twists/`.
 - [ ] `BeatStore` — `recentContext(series)` (recent full beats + summarized history + per-series `storyBible`) and `append(beat)`. Tests for continuity assembly.
 - [ ] `LearnedProfile` updates: record twist picks / feedback / inferred interests each turn.
