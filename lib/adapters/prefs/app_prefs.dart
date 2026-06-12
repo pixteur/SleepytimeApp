@@ -25,4 +25,20 @@ class AppPrefs {
 
   Future<void> setSelectedProvider(String name) =>
       _prefs.setString(_providerKey, name);
+
+  // ── Voice ───────────────────────────────────────────────────────
+  static const _voiceEngineKey = 'voice_engine';
+
+  /// The chosen voice engine (`device` / `openai` / `elevenlabs` / `gemini`).
+  /// Default `device` (free, offline).
+  String get voiceEngine => _prefs.getString(_voiceEngineKey) ?? 'device';
+
+  Future<void> setVoiceEngine(String name) =>
+      _prefs.setString(_voiceEngineKey, name);
+
+  /// The selected voice/voice-id for an engine (null → engine default).
+  String? voiceName(String engine) => _prefs.getString('voicename_$engine');
+
+  Future<void> setVoiceName(String engine, String name) =>
+      _prefs.setString('voicename_$engine', name);
 }

@@ -43,7 +43,16 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
 
   String get _lang => ref.read(activeChildProvider)?.language ?? 'en';
 
-  Future<void> _speak() => _tts.speak(widget.beat.text, language: _lang);
+  Future<void> _speak() async {
+    try {
+      await _tts.speak(widget.beat.text, language: _lang);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Voice unavailable: $e')));
+    }
+  }
 
   Future<void> _continue() async {
     final child = ref.read(activeChildProvider);
@@ -80,6 +89,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                   state: snap.data ?? TtsState.idle,
                   onPlay: _speak,
                   onPause: _tts.pause,
+                  onResume: _tts.resume,
                   onStop: _tts.stop,
                 ),
               ),
@@ -127,17 +137,20 @@ class _PlaybackBar extends StatelessWidget {
     required this.state,
     required this.onPlay,
     required this.onPause,
+    required this.onResume,
     required this.onStop,
   });
 
   final TtsState state;
   final VoidCallback onPlay;
   final VoidCallback onPause;
+  final VoidCallback onResume;
   final VoidCallback onStop;
 
   @override
   Widget build(BuildContext context) {
     final speaking = state == TtsState.speaking;
+    final paused = state == TtsState.paused;
     final label = switch (state) {
       TtsState.speaking => 'Reading aloud…',
       TtsState.paused => 'Paused',
@@ -154,10 +167,8 @@ class _PlaybackBar extends StatelessWidget {
               icon: Icon(
                 speaking ? Icons.pause_rounded : Icons.volume_up_rounded,
               ),
-              tooltip: speaking
-                  ? 'Pause'
-                  : (state == TtsState.paused ? 'Replay' : 'Read aloud'),
-              onPressed: speaking ? onPause : onPlay,
+              tooltip: speaking ? 'Pause' : (paused ? 'Resume' : 'Read aloud'),
+              onPressed: speaking ? onPause : (paused ? onResume : onPlay),
             ),
             IconButton(
               icon: const Icon(Icons.stop_rounded),

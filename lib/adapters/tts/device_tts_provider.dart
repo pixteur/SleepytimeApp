@@ -23,6 +23,12 @@ class DeviceTtsProvider implements TtsProvider {
       StreamController<TtsState>.broadcast();
   TtsState _state = TtsState.idle;
 
+  // Device SAPI/WinRT has no reliable resume; remember the last utterance so
+  // "resume" restarts it.
+  String? _lastText;
+  String _lastLang = 'en';
+  TtsVoicePref _lastVoice = const TtsVoicePref();
+
   @override
   TtsProviderId get id => TtsProviderId.device;
 
@@ -43,6 +49,9 @@ class DeviceTtsProvider implements TtsProvider {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
   }) async {
+    _lastText = text;
+    _lastLang = language;
+    _lastVoice = voice;
     await _tts.stop();
     await _tts.setLanguage(_bcp47(language));
     await _tts.setPitch(voice.pitch.clamp(0.5, 2.0));
@@ -54,6 +63,13 @@ class DeviceTtsProvider implements TtsProvider {
 
   @override
   Future<void> pause() => _tts.pause();
+
+  @override
+  Future<void> resume() async {
+    if (_lastText != null) {
+      await speak(_lastText!, language: _lastLang, voice: _lastVoice);
+    }
+  }
 
   @override
   Future<void> stop() async {

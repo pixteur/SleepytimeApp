@@ -11,7 +11,11 @@ import 'adapters/secrets/secret_store.dart';
 import 'adapters/storage/app_database.dart';
 import 'adapters/storage/drift_storage_repo.dart';
 import 'adapters/storage/storage_repo.dart';
+import 'adapters/tts/cloud_tts_provider.dart';
 import 'adapters/tts/device_tts_provider.dart';
+import 'adapters/tts/elevenlabs_tts_synthesizer.dart';
+import 'adapters/tts/gemini_tts_synthesizer.dart';
+import 'adapters/tts/openai_tts_synthesizer.dart';
 import 'adapters/tts/tts_provider.dart';
 import 'domain/models/beat.dart';
 import 'domain/models/child_profile.dart';
@@ -95,11 +99,97 @@ final storyEngineProvider = Provider<StoryEngine>(
 /// The twist deck (six option cards + dice).
 final twistDeckProvider = Provider<TwistDeck>((ref) => const TwistDeck());
 
-/// The voice reader (device TTS). Disposed with the provider scope.
+// ─── Voice engine ─────────────────────────────────────────────────────
+
+enum VoiceEngine { device, openai, elevenlabs, gemini }
+
+VoiceEngine voiceEngineFromName(String name) => switch (name) {
+  'openai' => VoiceEngine.openai,
+  'elevenlabs' => VoiceEngine.elevenlabs,
+  'gemini' => VoiceEngine.gemini,
+  _ => VoiceEngine.device,
+};
+
+/// The SecretStore key name a cloud voice engine uses (null for device).
+String? ttsKeyNameFor(VoiceEngine engine) => switch (engine) {
+  VoiceEngine.openai => OpenAiTtsSynthesizer.keyName,
+  VoiceEngine.elevenlabs => ElevenLabsTtsSynthesizer.keyName,
+  VoiceEngine.gemini => GeminiTtsSynthesizer.keyName,
+  VoiceEngine.device => null,
+};
+
+class VoiceConfig {
+  const VoiceConfig(this.engine, this.voiceName);
+  final VoiceEngine engine;
+  final String voiceName; // '' = engine default
+}
+
+/// Resolves the active voice engine. Falls back to device TTS unless the chosen
+/// cloud engine has a key AND third-party-AI consent is given. Settings calls
+/// [VoiceConfigController.refresh] after changes.
+final voiceConfigProvider =
+    NotifierProvider<VoiceConfigController, VoiceConfig>(
+      VoiceConfigController.new,
+    );
+
+class VoiceConfigController extends Notifier<VoiceConfig> {
+  @override
+  VoiceConfig build() {
+    _hydrate();
+    return const VoiceConfig(VoiceEngine.device, '');
+  }
+
+  Future<void> _hydrate() async => state = await _resolve();
+
+  Future<VoiceConfig> _resolve() async {
+    final prefs = await AppPrefs.open();
+    final engine = voiceEngineFromName(prefs.voiceEngine);
+    if (engine == VoiceEngine.device) {
+      return const VoiceConfig(VoiceEngine.device, '');
+    }
+    if (!prefs.aiConsentGiven) return const VoiceConfig(VoiceEngine.device, '');
+    final hasKey = await ref
+        .read(secretStoreProvider)
+        .hasKey(ttsKeyNameFor(engine)!);
+    if (!hasKey) return const VoiceConfig(VoiceEngine.device, '');
+    return VoiceConfig(engine, prefs.voiceName(engine.name) ?? '');
+  }
+
+  Future<void> refresh() async => state = await _resolve();
+}
+
+/// The active voice reader — device TTS or a cloud engine. Disposed on rebuild.
 final ttsProvider = Provider<TtsProvider>((ref) {
-  final tts = DeviceTtsProvider();
-  ref.onDispose(tts.dispose);
-  return tts;
+  final cfg = ref.watch(voiceConfigProvider);
+  final secrets = ref.watch(secretStoreProvider);
+  final provider = switch (cfg.engine) {
+    VoiceEngine.openai => CloudTtsProvider(
+      OpenAiTtsSynthesizer(
+        secrets: secrets,
+        voiceName: cfg.voiceName.isEmpty ? 'nova' : cfg.voiceName,
+      ),
+      TtsProviderId.openai,
+    ),
+    VoiceEngine.elevenlabs => CloudTtsProvider(
+      ElevenLabsTtsSynthesizer(
+        secrets: secrets,
+        voiceName: cfg.voiceName.isEmpty
+            ? '21m00Tcm4TlvDq8ikWAM'
+            : cfg.voiceName,
+      ),
+      TtsProviderId.elevenlabs,
+    ),
+    VoiceEngine.gemini => CloudTtsProvider(
+      GeminiTtsSynthesizer(
+        secrets: secrets,
+        voiceName: cfg.voiceName.isEmpty ? 'Kore' : cfg.voiceName,
+      ),
+      TtsProviderId.gemini,
+    ),
+    VoiceEngine.device => DeviceTtsProvider(),
+  };
+  ref.onDispose(provider.dispose);
+  return provider;
 });
 
 // ─── Storage ──────────────────────────────────────────────────────────

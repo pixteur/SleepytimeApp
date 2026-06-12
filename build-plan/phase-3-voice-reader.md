@@ -2,16 +2,18 @@
 
 **Goal:** Chapters are read aloud in expressive, kid-friendly voices that can take on character personalities — male/female, multi-language — plus the 🎤 microphone request path. See [../docs/voice-tts.md](../docs/voice-tts.md).
 
-## 🟡 Status: Phase 3a COMPLETE (2026-06-12) — device narration + archive
+## 🟡 Status: Phase 3a + cloud voices COMPLETE (2026-06-12)
 
-**Done (3a):**
-- **`TtsProvider`** interface (state stream + speak/pause/stop + voice pref) and **`DeviceTtsProvider`** via `flutter_tts` (Windows SAPI/WinRT). Best-effort gender/voice selection.
-- **Story view narration**: auto-plays the chapter on open; a playback bar (Read aloud / Pause / Stop / Replay) driven by the TTS state stream; stops on navigate.
-- **Story archive**: per-series list of past chapters with recaps (history icon on the series home); tap any to re-read + replay aloud (`canContinue: false`).
-- **Build note:** `flutter_tts` on Windows needs **`nuget.exe`** on PATH (fetches the WinRT speech package). Installed to `C:\src\flutter\bin\nuget.exe`. (CI runs analyze+test on Linux, so it's unaffected.)
+**Done:**
+- **`TtsProvider`** interface (state stream + speak/pause/resume/stop) and **`DeviceTtsProvider`** via `flutter_tts` (Windows SAPI/WinRT, free/offline).
+- **Cloud neural voices** (natural, the big quality jump): `CloudTtsProvider` + per-engine `TtsSynthesizer`s — **OpenAI** (`gpt-4o-mini-tts`), **ElevenLabs** (expressive/character), **Gemini** (`gemini-2.5-flash-preview-tts`, PCM→WAV). Audio played via `audioplayers`. Synthesizers are HTTP-only (unit-tested with mock client).
+- **Voice setup screen** (parent-gated, via the 🔊 icon in Story AI setup): pick engine + voice, ElevenLabs key entry, "Save & test voice" preview. Cloud reuses the story keys + the same consent; falls back to device if no key/consent.
+- **Story view narration**: auto-plays on open; playback bar (Read aloud / Pause / Resume / Stop) driven by the state stream; graceful error snackbar.
+- **Story archive**: per-series past chapters with recaps (history icon); tap to re-read + replay.
+- **Build notes:** `flutter_tts` needs **`nuget.exe`** on PATH (WinRT speech pkg); `audioplayers` provides Windows playback. Both installed/verified. CI (Linux analyze+test) unaffected.
 
 **Deferred to Phase 3b:**
-- Character voices (pitch/rate presets per recurring character from beat metadata; speaker-tagged dialogue → voice mapping); cloud expressive voices (ElevenLabs/Azure); bilingual per-span narration; 🎤 **STT mic input**; per-child voice picker UI in Settings; read-along word highlighting; auto-soften toward the ending.
+- Character voices (pitch/rate presets per recurring character; speaker-tagged dialogue → voice mapping); bilingual per-span narration; 🎤 **STT mic input**; read-along word highlighting; auto-soften toward the ending; per-child voice preference.
 
 Original task checklist below for reference.
 

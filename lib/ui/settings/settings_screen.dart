@@ -9,6 +9,7 @@ import '../../adapters/prefs/app_prefs.dart';
 import '../../adapters/secrets/secret_store.dart';
 import '../../app_providers.dart';
 import '../../domain/prompt_builder.dart';
+import 'voice_settings_screen.dart';
 
 /// Parent-only AI setup: pick a provider, give the third-party-AI consent, add
 /// the API key, and run a real "Test connection". Reached through the parent
@@ -176,7 +177,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         : '${_providers.firstWhere((p) => p.id == active).label} (online)';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Story AI setup')),
+      appBar: AppBar(
+        title: const Text('Story AI setup'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.record_voice_over_outlined),
+            tooltip: 'Voice setup',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const VoiceSettingsScreen()),
+            ),
+          ),
+        ],
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),

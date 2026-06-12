@@ -42,8 +42,9 @@ abstract class TtsProvider {
   });
 
   Future<void> pause();
+  Future<void> resume();
   Future<void> stop();
   Future<void> dispose();
 }
 
-enum TtsProviderId { device, elevenlabs, azure, gcp, hosted }
+enum TtsProviderId { device, openai, elevenlabs, gemini, azure, gcp, hosted }

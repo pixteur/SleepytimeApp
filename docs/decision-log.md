@@ -206,6 +206,22 @@
 
 ---
 
+## 2026-06-12 — Cloud neural voices (OpenAI / ElevenLabs / Gemini)
+
+**Context:** Device TTS sounded robotic ("1980s"). Added natural cloud voices behind the same `TtsProvider` interface so the playback bar is unchanged.
+
+**Implementation:**
+- **`TtsSynthesizer`** (HTTP-only, unit-testable) per engine: **OpenAI** (`/v1/audio/speech`, `gpt-4o-mini-tts`, mp3, steered with `instructions` for a gentle bedtime tone), **ElevenLabs** (`/v1/text-to-speech/{voiceId}`, mp3, preset voices), **Gemini** (`gemini-2.5-flash-preview-tts`, `responseModalities:[AUDIO]` → raw PCM wrapped in WAV via `pcmToWav`).
+- **`CloudTtsProvider`** wraps a synthesizer + `audioplayers` (BytesSource w/ mimeType); maps player state → TtsState; pause/resume/stop. Added `resume()` to `TtsProvider` (device "resume" restarts the last utterance since SAPI can't resume).
+- **Voice setup screen** (parent-gated): engine + voice picker, ElevenLabs key field, "Save & test voice". `voiceConfigProvider` resolves the active engine — cloud only when its key is present AND consent given, else device.
+- OpenAI/Gemini reuse the story keys; ElevenLabs has its own key. Voice prefs in `AppPrefs`.
+
+**Build:** `audioplayers` added (compiles clean on Windows — no ATL/nuget drama this time). Synthesizers tested with mock HTTP (8 new tests incl. the PCM→WAV header); the audio-player glue is verified by build + boot.
+
+**Open questions:** confirm current OpenAI/Gemini TTS model ids against live APIs when a key is tested; per-character voice mapping (3b); whether to cache synthesized audio per beat to avoid re-paying on replay.
+
+---
+
 ## Template for new entries
 
 ```
