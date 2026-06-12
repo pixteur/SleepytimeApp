@@ -1,0 +1,49 @@
+# ── Secrets (NEVER commit API keys) ───────────────────────────────
+*.env
+.env*
+secrets.json
+**/secrets/
+api_keys.json
+
+# ── Flutter / Dart ────────────────────────────────────────────────
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+flutter_*.png
+**/doc/api/
+*.lock.bak
+
+# Generated
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+coverage/
+*.iml
+
+# ── Platform: Windows ─────────────────────────────────────────────
+windows/flutter/ephemeral/
+
+# ── Platform: macOS / iOS ─────────────────────────────────────────
+**/Pods/
+*.xcworkspace
+ios/Flutter/ephemeral/
+macos/Flutter/ephemeral/
+**/xcuserdata/
+**/.symlinks/
+DerivedData/
+
+# ── IDE / OS ──────────────────────────────────────────────────────
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+.DS_Store
+Thumbs.db
+
+# ── Local app data (test profiles, generated stories) ─────────────
+local_data/
+*.sleepytime.db
