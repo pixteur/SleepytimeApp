@@ -2,6 +2,19 @@
 
 **Goal:** A running, empty Flutter Windows app with the architecture skeleton, dependencies, and CI in place. No features yet — just a solid floor to build on.
 
+## ✅ Status: COMPLETE (2026-06-12)
+
+- **Flutter 3.44.2 stable** installed at `C:\src\flutter` (on user PATH); Dart 3.12.2.
+- **Windows toolchain green** — `flutter doctor` detected the existing **Build Tools 2026** (MSVC + Windows 10 SDK) as a valid Visual Studio; no big install needed. (Android toolchain intentionally absent — not a target.)
+- Project scaffolded (`flutter create`, package `sleepytime`, org `com.pixteur`, Windows platform).
+- Architecture skeleton: domain models, adapter interfaces (`AiProvider`/`TtsProvider`/`StorageRepo`/`SecretStore`), `FakeAiProvider`, `StoryEngine` pass-through, Riverpod wiring, placeholder Home screen.
+- **`flutter analyze` clean**, **5 tests pass**, **`flutter build windows` produces `sleepytime.exe`**.
+- **CI** added (`.github/workflows/ci.yml`): format check + analyze + test on push/PR.
+
+**Deferred on purpose:** heavier deps (Drift, `flutter_secure_storage`, `flutter_tts`, `intl`/l10n, `freezed`) are added in the phases that use them, not carried unused now. Pre-commit hook left optional (CI covers it). macOS/iOS platform folders added in Phase 5.
+
+Original task checklist below for reference.
+
 ## Tasks
 
 ### Toolchain (must do first — not currently installed)

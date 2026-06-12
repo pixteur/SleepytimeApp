@@ -71,6 +71,30 @@
 
 ---
 
+## 2026-06-12 — Phase 0 complete (toolchain + skeleton + CI)
+
+**Context:** Built the foundation so feature work can start.
+
+**Environment / toolchain:**
+- **Flutter 3.44.2 stable** installed via shallow `git clone` to `C:\src\flutter` (winget has no Flutter SDK package); added to user PATH. Dart 3.12.2.
+- **No Visual Studio install needed:** the machine already had **Build Tools 2026** (and 2022) with the C++ desktop workload (MSVC `VC.Tools`, CMake, Windows 10 SDK). `flutter doctor` accepts Build Tools as a valid "Visual Studio" for Windows desktop. Android toolchain intentionally not installed (not a target).
+- gh CLI 2.93.0 installed earlier, authed as `pixteur`; repo pushed.
+
+**Scaffold decisions:**
+- Project package name **`sleepytime`** (snake_case required), org **`com.pixteur`**, `--platforms windows` only for now (macOS/iOS added in Phase 5).
+- State/DI: **Riverpod** wired at root (`ProviderScope`); `aiProvider` → `FakeAiProvider`, `storyEngineProvider` → `StoryEngine`.
+- **Dependencies kept minimal:** only `flutter_riverpod` + `uuid` added now. Heavier deps (Drift, `flutter_secure_storage`, `flutter_tts`, `intl`/l10n, `freezed`) deferred to the phases that use them to avoid unused-package churn.
+- Domain layer is pure Dart (no Flutter imports) — models + `StoryEngine`; adapters are interfaces with a `FakeAiProvider` so everything runs offline with no key.
+- **CI** on GitHub Actions (ubuntu): `dart format --set-exit-if-changed` + `flutter analyze` + `flutter test`, Flutter pinned to 3.44.2.
+
+**Verified:** `flutter analyze` clean · 5 tests pass · `flutter build windows --debug` → `sleepytime.exe` (1.2 MB).
+
+**Affects:** new `lib/`, `test/`, `windows/`, `pubspec.yaml`, `.github/workflows/ci.yml`; build-plan README + phase-0 marked complete.
+
+**Open questions:** revisit whether Build Tools (vs full VS) causes any issue when adding plugins with native code (none so far); confirm `freezed`/codegen approach when models gain (de)serialization in Phase 1.
+
+---
+
 ## Template for new entries
 
 ```
