@@ -1,6 +1,19 @@
 # Phase 1 — Profiles & Quiz
 
-**Goal:** Create per-child accounts and run the 10-question onboarding quiz that produces a story **seed**. All persisted locally.
+**Goal:** Create per-child accounts and run the onboarding quiz that produces a story **seed**. All persisted locally.
+
+## ✅ Status: COMPLETE (2026-06-12)
+
+- **Drift (SQLite) schema v1** — `ChildProfiles`, `QuizResults`, `Interests`, `LearnedProfiles` (FKs + JSON converters); `DriftStorageRepo` maps rows↔pure domain models. DB opens + creates schema on Windows at runtime (verified: `Documents\sleepytime.sqlite`).
+- **Profiles** — `ProfileService` CRUD; multi-kid **profile select** screen (avatar cards), **create-profile** form (name/age/colour/parent brief), behind a **parent gate** (arithmetic speed-bump).
+- **Quiz** — 11-question `fullQuiz` incl. "stories/characters you already love"; one-question-per-screen UI; pure `deriveSeed` + `detailLevelFor`; `submit` persists the result, seeds `Interest`s, sets the profile's detail level.
+- **Adaptive scaffold** — `QuizKind` (full/mini/checkin) + `LearnedProfile` model & persistence (populated from Phase 2).
+- **Hero choice deliberately deferred to new-series setup** (Phase 2), per design.
+- **13 tests pass** (profile + quiz services against an in-memory `StorageRepo`, boot smoke); `flutter analyze` clean; Windows build OK.
+
+**Notes:** Riverpod 3 removed top-level `StateProvider` → used a `Notifier` for the active child. Domain tests run against an in-memory repo (Drift's native sqlite isn't reliably loadable in `flutter test`); the real Drift path is verified by the Windows build + runtime DB creation. Generated `*.g.dart` is committed so CI needs no codegen step.
+
+Original task checklist below for reference.
 
 ## Tasks
 

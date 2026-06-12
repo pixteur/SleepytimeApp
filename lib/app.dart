@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'ui/home/home_screen.dart';
+import 'ui/profiles/profile_select_screen.dart';
 
 /// Root widget. Theming/color config and routing live here; only this UI layer
 /// changes meaningfully when porting to touch/iOS. See `docs/ui-ux.md`.
@@ -19,7 +19,7 @@ class SleepytimeApp extends StatelessWidget {
           brightness: Brightness.dark, // bedtime-friendly default
         ),
       ),
-      home: const HomeScreen(),
+      home: const ProfileSelectScreen(),
     );
   }
 }

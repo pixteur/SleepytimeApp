@@ -30,6 +30,25 @@ class ChildProfile {
 
   /// The age band drives the safety policy injected into every prompt.
   AgeBand get ageBand => AgeBand.forAge(age);
+
+  ChildProfile copyWith({
+    String? displayName,
+    int? age,
+    String? language,
+    DetailLevel? detailLevel,
+    int? themeColor,
+    String? parentBrief,
+  }) {
+    return ChildProfile(
+      id: id,
+      displayName: displayName ?? this.displayName,
+      age: age ?? this.age,
+      language: language ?? this.language,
+      detailLevel: detailLevel ?? this.detailLevel,
+      themeColor: themeColor ?? this.themeColor,
+      parentBrief: parentBrief ?? this.parentBrief,
+    );
+  }
 }
 
 enum DetailLevel { short, medium, long }

@@ -39,13 +39,17 @@ Built **Flutter-first for PC (Windows)**, designed to port cleanly to **macOS an
 
 - [docs/](docs/) — architecture, safety, data model, AI providers, voice, i18n, UI/UX, and a running decision log.
 - [build-plan/](build-plan/README.md) — phased roadmap, Phase 0 → Phase 6.
+- [CLAUDE.md](CLAUDE.md) — repo guidance for Claude/coding agents, including iOS/App Store constraints.
 
 ## Getting started (dev)
 
-> Flutter is **not yet installed** on this machine. Phase 0 covers setup. Once installed:
+Flutter **3.44.2** is installed at `C:\src\flutter`. Requires Windows **Developer Mode** on (for plugin symlinks).
 
 ```powershell
 flutter doctor          # verify toolchain
 flutter pub get         # install dependencies
 flutter run -d windows  # run the desktop app
 ```
+
+> Generated code (`*.g.dart`) is committed. After changing Drift tables, regenerate with:
+> `dart run build_runner build`

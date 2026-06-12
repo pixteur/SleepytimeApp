@@ -18,10 +18,16 @@
 
 ### iOS / iPad port
 - [ ] `flutter build ios`; run on simulator + device.
+- [ ] Add Apple platform scaffolding on a Mac: `flutter create --platforms=ios,macos .`
 - [ ] Touch-tune all layouts (already touch-first — verify, don't redesign).
 - [ ] iOS Keychain `SecretStore`, iOS TTS/STT, mic permission strings.
 - [ ] App icons, splash, safe-area handling.
 - [ ] TestFlight build.
+- [ ] Decide product positioning for App Store review: Kids Category vs broader parent/family app.
+- [ ] If shipping as a kids app, add parental gates for parent settings, outbound links, provider-key setup, and any purchases.
+- [ ] Prepare App Privacy disclosures for third-party AI providers and any transmitted profile/story data.
+- [ ] Keep first iOS release free of casual analytics/ad SDK additions unless explicitly cleared against kids/privacy requirements.
+- [ ] If cloud accounts are added, support in-app account deletion before submission.
 
 ### Packaging / distribution
 - [ ] Windows installer (MSIX or similar).
@@ -37,3 +43,5 @@
 
 ## Notes
 - The whole architecture was chosen to make this phase cheap — porting should be adapters + layout tuning, not rewrites. If it isn't, revisit where platform logic leaked into UI/domain.
+- For this repo, the main iOS risk is App Store review and privacy compliance, not native-code portability.
+- Prefer a conservative first iOS release: local-only child profiles, BYO provider key in a parent-only area, TestFlight first, hosted backend later.

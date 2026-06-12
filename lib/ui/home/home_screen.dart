@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Placeholder launch screen showing the nightly choices. Buttons are inert in
-/// Phase 0 — profiles, the story engine, and the twist deck wire them up in
-/// Phases 1–2. See `docs/ui-ux.md`.
-class HomeScreen extends StatelessWidget {
+import '../../app_providers.dart';
+
+/// The nightly launch screen for the selected child. The three choices are
+/// inert in Phase 1 — the story engine + twist deck wire them up in Phase 2.
+/// See `docs/ui-ux.md`.
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final child = ref.watch(activeChildProvider);
+    final name = child?.displayName ?? 'friend';
+
     return Scaffold(
+      appBar: AppBar(title: const Text('SleepytimeApp')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -20,10 +27,14 @@ class HomeScreen extends StatelessWidget {
               children: [
                 Text('🌙', style: theme.textTheme.displayLarge),
                 const SizedBox(height: 8),
-                Text('SleepytimeApp', style: theme.textTheme.headlineMedium),
+                Text(
+                  'Good evening, $name!',
+                  style: theme.textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  'Phase 0 — foundation skeleton',
+                  'Stories begin in Phase 2.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -63,7 +74,7 @@ class _LaunchButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: FilledButton.tonalIcon(
-        onPressed: null, // wired up in later phases
+        onPressed: null, // wired up in Phase 2
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 18),
         ),

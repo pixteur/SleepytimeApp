@@ -7,7 +7,7 @@ Phased roadmap for SleepytimeApp. Each phase is independently shippable-ish and 
 | Phase | Title | Goal | Status |
 |-------|-------|------|--------|
 | 0 | [Foundation](phase-0-foundation.md) | Toolchain, Flutter project, architecture skeleton, CI | 🟢 |
-| 1 | [Profiles & Quiz](phase-1-profiles-quiz.md) | Child accounts + 10-question onboarding → story seed | ⚪ |
+| 1 | [Profiles & Quiz](phase-1-profiles-quiz.md) | Child accounts + onboarding quiz → story seed | 🟢 |
 | 2 | [Story Engine](phase-2-story-engine.md) | The core loop: roll/continue/request → AI chapter → safe → saved | ⚪ |
 | 3 | [Voice Reader](phase-3-voice-reader.md) | TTS narration, character voices, mic input | ⚪ |
 | 4 | [i18n & Theming](phase-4-i18n-theming.md) | fr/es full, Japanese framework, color/theme personalization | ⚪ |
@@ -30,4 +30,4 @@ Phased roadmap for SleepytimeApp. Each phase is independently shippable-ish and 
 
 ## Current focus
 
-**Phase 1 — Profiles & Quiz.** Phase 0 is complete (toolchain + skeleton + CI). Next: child accounts and the onboarding quiz. See [phase-1-profiles-quiz.md](phase-1-profiles-quiz.md).
+**Phase 2 — Story Engine.** Phases 0–1 complete (toolchain, skeleton, CI; Drift DB, profiles + parent gate, onboarding quiz with seed derivation). Next: the core nightly loop — series, twist deck, prompt builder, safety guard, real AI providers. See [phase-2-story-engine.md](phase-2-story-engine.md).

@@ -1,0 +1,111 @@
+# CLAUDE.md
+
+Guidance for Claude and other coding agents working in this repository.
+
+## Project snapshot
+
+- `SleepytimeApp` is a Flutter-first bedtime storytelling app for children.
+- The current repo is mostly pure Dart/Flutter application code plus the generated Windows runner.
+- There is no custom native iOS/macOS layer yet, and there is no app-specific C++ portability problem yet.
+- As of now, the repo has `windows/` only. There is no `ios/` or `macos/` directory yet.
+
+## Architecture constraints
+
+- Keep the domain layer pure Dart.
+- Keep platform logic in thin adapters.
+- Do not leak provider-specific or Apple-specific logic into `lib/domain/`.
+- Preserve the current design direction from [docs/architecture.md](docs/architecture.md): UI/layout changes live in Flutter, platform-specific work lives in adapters and platform scaffolding.
+
+## iOS / App Store strategy
+
+### Important framing
+
+For this repo, iOS is primarily a Flutter platform-expansion and App Store compliance task, not a native rewrite.
+
+The first iOS milestone should be:
+
+1. Add Apple platform scaffolding on a Mac:
+   - `flutter create --platforms=ios,macos .`
+2. Configure signing, bundle ID, app name, icons, versioning, and device targets in Xcode.
+3. Implement Apple-specific adapters:
+   - `SecretStore` via Keychain
+   - iOS TTS/STT adapter(s)
+   - microphone permission strings
+   - safe-area and touch verification
+4. Validate on simulator and physical devices.
+5. Ship to TestFlight before App Store submission.
+
+### Repo-specific product risk
+
+The app concept is child-focused, AI-backed, and privacy-sensitive. Any iOS work must consider App Store review constraints up front.
+
+### Kids Category decision
+
+This product is currently positioned like a kids app. That makes one early decision especially important:
+
+- either ship in the `Kids Category`
+- or ship as a parent/family app that is about children but not marketed as primarily for kids
+
+Current messaging in [README.md](README.md) strongly points toward a kids-facing product, so assume Kids Category constraints unless product direction changes.
+
+### If shipping in the Kids Category
+
+Treat the following as baseline requirements:
+
+- Parent-only settings must be behind a parental gate.
+- External links, purchases, and provider-key setup should be parent-gated.
+- Avoid third-party analytics and third-party advertising.
+- Be conservative with any outbound data sharing involving child profiles or story content.
+- Age band, privacy disclosures, and review notes must be prepared carefully.
+
+### AI-provider rules for this app
+
+The plan in [docs/ai-providers.md](docs/ai-providers.md) sends prompts and profile-derived context to third-party AI providers. On iOS, that means:
+
+- clearly disclose that data may be sent to third-party AI providers
+- obtain explicit parent/user permission before sharing personal data with third-party AI
+- keep the child profile and prompt payload as minimal as possible
+- keep provider configuration in a parent-only area
+
+Do not casually add telemetry, logging, or debugging uploads that include story text, profile text, or prompts.
+
+### Account and billing implications
+
+- If the app later supports real cloud accounts, account deletion must be initiable in-app.
+- If the app later moves from BYO-key to a hosted paid story service consumed in the app, expect In-App Purchase requirements to apply.
+
+## Recommended launch sequence
+
+Prefer this order unless product strategy changes:
+
+### Version 1
+
+- local-only child profiles
+- no cloud account system
+- BYO AI provider key in a parent-only area
+- no third-party analytics or ads
+- TestFlight-first rollout
+
+### Version 2
+
+- hosted backend
+- optional sync/accounts
+- subscription / billing work
+
+## Files to update when iOS work starts
+
+- [build-plan/phase-5-polish-port.md](build-plan/phase-5-polish-port.md)
+- [docs/decision-log.md](docs/decision-log.md)
+- [docs/ai-providers.md](docs/ai-providers.md)
+- [docs/safety.md](docs/safety.md)
+- [README.md](README.md)
+
+## Reference docs
+
+- Flutter iOS setup: <https://docs.flutter.dev/platform-integration/ios/setup>
+- Flutter iOS release: <https://docs.flutter.dev/deployment/ios>
+- Apple App Review Guidelines: <https://developer.apple.com/app-store/review/guidelines/>
+- Apple Kids guidance: <https://developer.apple.com/kids/>
+- Apple App privacy details: <https://developer.apple.com/app-store/app-privacy-details/>
+- Apple account deletion requirement: <https://developer.apple.com/support/offering-account-deletion-in-your-app/>
+- App Store Connect uploads: <https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/>

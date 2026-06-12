@@ -17,9 +17,9 @@ flutter_*.png
 **/doc/api/
 *.lock.bak
 
-# Generated
-*.g.dart
-*.freezed.dart
+# Generated code: we COMMIT Drift/codegen output (*.g.dart, *.freezed.dart) so
+# CI doesn't need a build_runner step and the format check stays simple.
+# Regenerate with: dart run build_runner build
 *.mocks.dart
 coverage/
 *.iml

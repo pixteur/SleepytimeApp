@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-06-12 — iOS/App Store strategy captured for future agent work
+
+**Context:** Reviewed the actual repo state before planning iOS distribution. The app is Flutter-first, currently Windows-only at the platform layer, with no custom native iOS/macOS implementation yet.
+
+**Decisions:**
+1. **Treat iOS as platform expansion, not a C++ port.** The current codebase is mostly pure Dart/Flutter plus the generated Windows runner, so the first iOS work is adding `ios/` and `macos/` scaffolding, not rewriting native code.
+2. **Capture iOS/App Store constraints in a root `CLAUDE.md`.** Future agent sessions should see the Apple review constraints, Kids Category tradeoffs, and repo-specific launch order without re-deriving them.
+3. **Assume Kids Category constraints unless product positioning changes.** Current messaging presents SleepytimeApp as a children-focused bedtime app, so App Store work should be planned around parental gates, conservative data-sharing, and no casual analytics/ad SDK additions.
+4. **Prefer a conservative first iOS release.** First release should stay local-only, avoid cloud accounts, keep BYO provider key setup in a parent-only area, and go through TestFlight before any hosted backend or billing work.
+
+**Why:** The main risk for iOS is not native portability; it is App Store review, privacy disclosure, parental-gate design, and how third-party AI providers are used in a kids-oriented product.
+
+**Affects:** `CLAUDE.md`, `build-plan/phase-5-polish-port.md`, iOS planning, future adapter work, App Store metadata/review notes.
+
+**Open questions:**
+- Final product positioning: strict Kids Category vs broader parent/family positioning.
+- Whether BYO API keys survive the first public App Store version or become a TestFlight-only bridge.
+- Exact parental-gate UX for settings, provider setup, outbound links, and any future purchases.
+
+---
+
 ## 2026-06-12 — Project kickoff & foundational decisions
 
 **Context:** Starting SleepytimeApp — a kids' nighttime storytelling app. PC-first, port to Mac/iOS. AI invents each night's chapter; voice reads it aloud.
@@ -92,6 +113,29 @@
 **Affects:** new `lib/`, `test/`, `windows/`, `pubspec.yaml`, `.github/workflows/ci.yml`; build-plan README + phase-0 marked complete.
 
 **Open questions:** revisit whether Build Tools (vs full VS) causes any issue when adding plugins with native code (none so far); confirm `freezed`/codegen approach when models gain (de)serialization in Phase 1.
+
+---
+
+## 2026-06-12 — Phase 1 complete (profiles, quiz, Drift)
+
+**Context:** Built child accounts and the onboarding quiz on a real local database.
+
+**Decisions / implementation:**
+- **Drift schema v1** — `ChildProfiles`, `QuizResults`, `Interests`, `LearnedProfiles`. Enums stored via `intEnum`; `Map<String,String>` answers via a JSON `TypeConverter`; `LearnedProfile` as a JSON blob; FKs `onDelete: cascade`; `PRAGMA foreign_keys = ON`. `@DataClassName('…Row')` avoids collisions with the pure-domain models. Series/Beats come in Phase 2 (schema v2 migration).
+- **DriftStorageRepo** implements the expanded `StorageRepo` port; all row↔domain mapping lives there so domain stays Drift-free.
+- **Quiz** — 11 questions incl. "stories/characters you already love"; `deriveSeed`/`detailLevelFor` are **pure + unit-tested**; `submit` seeds `Interest`s (source=quiz) and sets detail level. Hero choice intentionally lives at new-series setup, not the quiz.
+- **Parent gate** = randomized arithmetic speed-bump (not security). Skipped for the very first profile (nothing to protect yet).
+- **Riverpod 3**: top-level `StateProvider` was removed → active child uses a `Notifier`/`NotifierProvider`.
+- **Testing strategy**: domain tested against an **in-memory `StorageRepo`** (Drift's `NativeDatabase` needs native sqlite, not reliably present in `flutter test`). Drift itself verified by the **Windows build + runtime DB creation** (`Documents\sleepytime.sqlite`, 36 KB, schema built).
+- **Generated code committed**: `.gitignore` no longer ignores `*.g.dart`/`*.freezed.dart`, so CI needs no `build_runner` step and the format check stays simple.
+
+**Environment:** Enabling the SQLite plugin required **Windows Developer Mode** (symlink support) — enabled via an elevated registry write (user accepted UAC).
+
+**Verified:** 13 tests pass · `flutter analyze` clean · `flutter build windows` OK · app boots and creates the DB.
+
+**Affects:** `lib/adapters/storage/*`, `lib/domain/{profile_service,quiz_service}.dart` + new models, `lib/ui/{profiles,quiz,common,home}`, `app_providers.dart`, tests, `.gitignore`, build-plan.
+
+**Open questions:** mini-quiz (per-series) question set; whether to add a Drift integration test on the windows device later; revisit `LearnedProfile` blob vs columns when the engine writes to it heavily in Phase 2.
 
 ---
 
