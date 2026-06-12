@@ -1,9 +1,12 @@
 # ── Secrets (NEVER commit API keys) ───────────────────────────────
+# NOTE: do NOT add a bare `**/secrets/` rule — it silently swallows the source
+# directory lib/adapters/secrets/. Keys are stored at runtime via OS-secure
+# storage (DPAPI), never in the repo.
 *.env
 .env*
 secrets.json
-**/secrets/
 api_keys.json
+/secrets/
 
 # ── Flutter / Dart ────────────────────────────────────────────────
 .dart_tool/
