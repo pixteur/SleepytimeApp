@@ -13,6 +13,8 @@ class Series {
     this.secondaryLanguage,
     this.bilingualBlend,
     this.seedSummary = '',
+    this.storyBible = '',
+    this.branchedFromBeatId,
     this.status = SeriesStatus.active,
   });
 
@@ -36,7 +38,38 @@ class Series {
 
   /// Premise this series starts from (distilled from the quiz + briefs).
   final String seedSummary;
+
+  /// Rolling summary the engine maintains for cheap long-term continuity.
+  final String storyBible;
+
+  /// If this series was forked from a beat in another series.
+  final String? branchedFromBeatId;
+
   final SeriesStatus status;
+
+  Series copyWith({
+    String? title,
+    String? seedSummary,
+    String? storyBible,
+    SeriesStatus? status,
+  }) {
+    return Series(
+      id: id,
+      childId: childId,
+      title: title ?? this.title,
+      theme: theme,
+      customTheme: customTheme,
+      heroMode: heroMode,
+      heroName: heroName,
+      bilingualEnabled: bilingualEnabled,
+      secondaryLanguage: secondaryLanguage,
+      bilingualBlend: bilingualBlend,
+      seedSummary: seedSummary ?? this.seedSummary,
+      storyBible: storyBible ?? this.storyBible,
+      branchedFromBeatId: branchedFromBeatId,
+      status: status ?? this.status,
+    );
+  }
 }
 
 /// The ~16 series themes surfaced in the chooser. See `docs/ui-ux.md`.

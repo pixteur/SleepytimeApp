@@ -5,7 +5,7 @@ import '../../app_providers.dart';
 import '../../domain/models/child_profile.dart';
 import '../../domain/models/quiz_question.dart';
 import '../../domain/quiz_service.dart';
-import '../home/home_screen.dart';
+import '../series/story_library_screen.dart';
 
 /// One-question-at-a-time onboarding quiz. Collects answers, then submits to
 /// [QuizService] (which derives the seed + seeds interests) and updates the
@@ -97,7 +97,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      MaterialPageRoute(builder: (_) => const StoryLibraryScreen()),
       (route) => route.isFirst,
     );
   }

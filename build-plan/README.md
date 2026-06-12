@@ -8,7 +8,7 @@ Phased roadmap for SleepytimeApp. Each phase is independently shippable-ish and 
 |-------|-------|------|--------|
 | 0 | [Foundation](phase-0-foundation.md) | Toolchain, Flutter project, architecture skeleton, CI | 🟢 |
 | 1 | [Profiles & Quiz](phase-1-profiles-quiz.md) | Child accounts + onboarding quiz → story seed | 🟢 |
-| 2 | [Story Engine](phase-2-story-engine.md) | The core loop: roll/continue/request → AI chapter → safe → saved | ⚪ |
+| 2 | [Story Engine](phase-2-story-engine.md) | The core loop: roll/continue/request → AI chapter → safe → saved | 🟡 |
 | 3 | [Voice Reader](phase-3-voice-reader.md) | TTS narration, character voices, mic input | ⚪ |
 | 4 | [i18n & Theming](phase-4-i18n-theming.md) | fr/es full, Japanese framework, color/theme personalization | ⚪ |
 | 5 | [Polish & Port](phase-5-polish-port.md) | UX polish, macOS/iOS port, packaging | ⚪ |
@@ -30,4 +30,4 @@ Phased roadmap for SleepytimeApp. Each phase is independently shippable-ish and 
 
 ## Current focus
 
-**Phase 2 — Story Engine.** Phases 0–1 complete (toolchain, skeleton, CI; Drift DB, profiles + parent gate, onboarding quiz with seed derivation). Next: the core nightly loop — series, twist deck, prompt builder, safety guard, real AI providers. See [phase-2-story-engine.md](phase-2-story-engine.md).
+**Phase 2b — Real AI providers.** Phase 2a is done: the full offline pipeline (series, twist deck, prompt builder, safety guard, beat store, engine, UI) works against the FakeAiProvider, with 35 passing tests and the v1→v2 DB migration verified. Next: the real Claude provider (+ OpenAI/Gemini), `SecretStore`, and a parent-gated, consent-disclosed key screen. See [phase-2-story-engine.md](phase-2-story-engine.md).

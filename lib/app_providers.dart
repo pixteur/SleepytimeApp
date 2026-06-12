@@ -5,10 +5,14 @@ import 'adapters/ai/fake_ai_provider.dart';
 import 'adapters/storage/app_database.dart';
 import 'adapters/storage/drift_storage_repo.dart';
 import 'adapters/storage/storage_repo.dart';
+import 'domain/models/beat.dart';
 import 'domain/models/child_profile.dart';
+import 'domain/models/series.dart';
 import 'domain/profile_service.dart';
 import 'domain/quiz_service.dart';
+import 'domain/series_service.dart';
 import 'domain/story_engine.dart';
+import 'domain/twist_deck.dart';
 
 // ─── AI / story ───────────────────────────────────────────────────────
 
@@ -17,10 +21,16 @@ import 'domain/story_engine.dart';
 /// (Claude / OpenAI / Gemini / hosted). See `docs/ai-providers.md`.
 final aiProvider = Provider<AiProvider>((ref) => const FakeAiProvider());
 
-/// The story engine, wired to whatever [aiProvider] currently resolves to.
+/// The story engine, wired to the active provider + storage.
 final storyEngineProvider = Provider<StoryEngine>(
-  (ref) => StoryEngine(ref.watch(aiProvider)),
+  (ref) => StoryEngine(
+    ai: ref.watch(aiProvider),
+    repo: ref.watch(storageRepoProvider),
+  ),
 );
+
+/// The twist deck (six option cards + dice).
+final twistDeckProvider = Provider<TwistDeck>((ref) => const TwistDeck());
 
 // ─── Storage ──────────────────────────────────────────────────────────
 
@@ -43,6 +53,33 @@ final profileServiceProvider = Provider<ProfileService>(
 
 final quizServiceProvider = Provider<QuizService>(
   (ref) => QuizService(ref.watch(storageRepoProvider)),
+);
+
+final seriesServiceProvider = Provider<SeriesService>(
+  (ref) => SeriesService(ref.watch(storageRepoProvider)),
+);
+
+/// Active (non-archived) series for a given child — the story library.
+/// Invalidate after creating/archiving a series to refresh.
+final seriesForChildProvider = FutureProvider.family<List<Series>, String>(
+  (ref, childId) => ref.watch(seriesServiceProvider).forChild(childId),
+);
+
+/// The currently open series (null = none).
+final activeSeriesProvider = NotifierProvider<ActiveSeries, Series?>(
+  ActiveSeries.new,
+);
+
+class ActiveSeries extends Notifier<Series?> {
+  @override
+  Series? build() => null;
+
+  void select(Series? series) => state = series;
+}
+
+/// All beats for a series, oldest→newest. Invalidate after a new turn.
+final beatsForSeriesProvider = FutureProvider.family<List<Beat>, String>(
+  (ref, seriesId) => ref.watch(storageRepoProvider).loadBeats(seriesId),
 );
 
 /// All child profiles. Invalidate after create/edit/delete to refresh the UI.

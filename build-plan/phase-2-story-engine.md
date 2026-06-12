@@ -2,6 +2,21 @@
 
 **Goal:** The nightly loop works end-to-end with a real AI provider: choose roll/continue/request → AI writes the next chapter → safety-checked → saved as a beat → displayed. **This is the heart of the app.**
 
+## 🟡 Status: Phase 2a COMPLETE (2026-06-12) — offline engine; 2b = real providers
+
+**Done (2a — full pipeline against the FakeAiProvider, all offline & tested):**
+- **Drift schema v2** — `series` + `beats` tables (FKs, enum + JSON-list converters); v1→v2 migration verified on the existing DB (all 6 tables present at runtime).
+- **Domain engine:** `AgePolicy` (band policies + universal rules + default banned themes), `TwistDeck` (6 cards + dice), `PromptBuilder` (system+user: age policy, banned themes, theme, seed, recent beats, interests, intent, bilingual), `SafetyGuard` (rating-vs-band, banned-theme scan, empty/flagged), `BeatStore` (recent context + seq), `SeriesService` (create/list/archive/branch), and `StoryEngine.takeTurn` (gather → prompt → generate → safety → bounded retry → **safe fallback** → persist beat → update LearnedProfile + story bible).
+- **AiProvider** now takes a built `StoryPrompt` (engine owns PromptBuilder, the single source of truth).
+- **UI:** story library, new-series setup (grouped theme chooser + hero pick), series home (Continue / Roll / 6 cards / type idea), story view (Continue). Navigation: profile → library → series → story.
+- **Tests:** 35 pass — engine pipeline incl. **unsafe→fallback** and **error→fallback**, safety adversarial cases, prompt golden checks, twist/series. `flutter analyze` clean; Windows build + migration verified.
+
+**Deferred to Phase 2b:**
+- Real `ClaudeProvider` (default) + OpenAI/Gemini with structured output; `SecretStore` (Windows Credential Manager); **parent-gated** provider/key Settings screen with a **third-party-AI disclosure + consent** step (per `CLAUDE.md`).
+- Streaming generation; per-child banned-themes/settings UI; custom-theme text + bilingual toggle in new-series setup; offline pre-written story bank.
+
+Original task checklist below for reference.
+
 ## Tasks
 
 ### Domain (test-first)

@@ -1,8 +1,10 @@
 import 'package:sleepytime/adapters/storage/storage_repo.dart';
+import 'package:sleepytime/domain/models/beat.dart';
 import 'package:sleepytime/domain/models/child_profile.dart';
 import 'package:sleepytime/domain/models/interest.dart';
 import 'package:sleepytime/domain/models/learned_profile.dart';
 import 'package:sleepytime/domain/models/quiz_result.dart';
+import 'package:sleepytime/domain/models/series.dart';
 
 /// A pure-Dart [StorageRepo] for tests — no Drift, no native sqlite, no
 /// platform channels. The real DriftStorageRepo is exercised at app runtime.
@@ -53,4 +55,33 @@ class InMemoryStorageRepo implements StorageRepo {
   @override
   Future<void> saveLearnedProfile(LearnedProfile profile) async =>
       _learned[profile.childId] = profile;
+
+  final Map<String, Series> _series = {};
+  final Map<String, List<Beat>> _beats = {};
+
+  @override
+  Future<List<Series>> loadSeries(String childId) async =>
+      _series.values.where((s) => s.childId == childId).toList();
+
+  @override
+  Future<Series?> loadSeriesById(String id) async => _series[id];
+
+  @override
+  Future<void> saveSeries(Series series) async => _series[series.id] = series;
+
+  @override
+  Future<void> deleteSeries(String id) async {
+    _series.remove(id);
+    _beats.remove(id);
+  }
+
+  @override
+  Future<List<Beat>> loadBeats(String seriesId) async {
+    final list = [...?_beats[seriesId]]..sort((a, b) => a.seq.compareTo(b.seq));
+    return list;
+  }
+
+  @override
+  Future<void> saveBeat(Beat beat) async =>
+      (_beats[beat.seriesId] ??= []).add(beat);
 }

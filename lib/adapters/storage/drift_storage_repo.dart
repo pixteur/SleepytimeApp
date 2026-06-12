@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../../domain/models/beat.dart';
 import '../../domain/models/child_profile.dart';
 import '../../domain/models/interest.dart';
 import '../../domain/models/learned_profile.dart';
 import '../../domain/models/quiz_result.dart';
+import '../../domain/models/series.dart';
 import 'app_database.dart';
 import 'storage_repo.dart';
 
@@ -186,4 +188,120 @@ class DriftStorageRepo implements StorageRepo {
     'inferredInterests': p.inferredInterests,
     'observedTone': p.observedTone,
   });
+
+  // ── Series ──────────────────────────────────────────────────────
+  @override
+  Future<List<Series>> loadSeries(String childId) async {
+    final rows =
+        await (_db.select(_db.seriesTable)
+              ..where((t) => t.childId.equals(childId))
+              ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+            .get();
+    return rows.map(_toSeries).toList();
+  }
+
+  @override
+  Future<Series?> loadSeriesById(String id) async {
+    final row = await (_db.select(
+      _db.seriesTable,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    return row == null ? null : _toSeries(row);
+  }
+
+  @override
+  Future<void> saveSeries(Series s) async {
+    await _db
+        .into(_db.seriesTable)
+        .insertOnConflictUpdate(
+          SeriesTableCompanion.insert(
+            id: s.id,
+            childId: s.childId,
+            title: s.title,
+            theme: s.theme,
+            heroMode: s.heroMode,
+            status: s.status,
+            customTheme: Value(s.customTheme),
+            heroName: Value(s.heroName),
+            bilingualEnabled: Value(s.bilingualEnabled),
+            secondaryLanguage: Value(s.secondaryLanguage),
+            bilingualBlend: Value(s.bilingualBlend),
+            seedSummary: Value(s.seedSummary),
+            storyBible: Value(s.storyBible),
+            branchedFromBeatId: Value(s.branchedFromBeatId),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
+  }
+
+  @override
+  Future<void> deleteSeries(String id) async {
+    await (_db.delete(_db.seriesTable)..where((t) => t.id.equals(id))).go();
+  }
+
+  Series _toSeries(SeriesRow r) => Series(
+    id: r.id,
+    childId: r.childId,
+    title: r.title,
+    theme: r.theme,
+    customTheme: r.customTheme,
+    heroMode: r.heroMode,
+    heroName: r.heroName,
+    bilingualEnabled: r.bilingualEnabled,
+    secondaryLanguage: r.secondaryLanguage,
+    bilingualBlend: r.bilingualBlend,
+    seedSummary: r.seedSummary,
+    storyBible: r.storyBible,
+    branchedFromBeatId: r.branchedFromBeatId,
+    status: r.status,
+  );
+
+  // ── Beats ───────────────────────────────────────────────────────
+  @override
+  Future<List<Beat>> loadBeats(String seriesId) async {
+    final rows =
+        await (_db.select(_db.beats)
+              ..where((t) => t.seriesId.equals(seriesId))
+              ..orderBy([(t) => OrderingTerm.asc(t.seq)]))
+            .get();
+    return rows.map(_toBeat).toList();
+  }
+
+  @override
+  Future<void> saveBeat(Beat b) async {
+    await _db
+        .into(_db.beats)
+        .insertOnConflictUpdate(
+          BeatsCompanion.insert(
+            id: b.id,
+            seriesId: b.seriesId,
+            childId: b.childId,
+            seq: b.seq,
+            intent: b.intent,
+            storyText: b.text,
+            summary: b.summary,
+            rating: b.rating,
+            characters: b.characters,
+            openThreads: b.openThreads,
+            chosenTwist: Value(b.chosenTwist),
+            setting: Value(b.setting),
+            language: Value(b.language),
+          ),
+        );
+  }
+
+  Beat _toBeat(BeatRow r) => Beat(
+    id: r.id,
+    seriesId: r.seriesId,
+    childId: r.childId,
+    seq: r.seq,
+    intent: r.intent,
+    text: r.storyText,
+    summary: r.summary,
+    rating: r.rating,
+    setting: r.setting,
+    chosenTwist: r.chosenTwist,
+    characters: r.characters,
+    openThreads: r.openThreads,
+    language: r.language,
+  );
 }

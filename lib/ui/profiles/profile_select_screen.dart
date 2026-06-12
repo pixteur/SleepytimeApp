@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app_providers.dart';
 import '../../domain/models/child_profile.dart';
 import '../common/parent_gate.dart';
-import '../home/home_screen.dart';
+import '../series/story_library_screen.dart';
 import 'create_profile_screen.dart';
 
 /// The launch screen: pick which child is listening tonight, or (behind the
@@ -102,7 +102,7 @@ class _ProfileCard extends ConsumerWidget {
             ref.read(activeChildProvider.notifier).select(child);
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              MaterialPageRoute(builder: (_) => const StoryLibraryScreen()),
             );
           },
           child: Padding(

@@ -139,6 +139,30 @@
 
 ---
 
+## 2026-06-12 — Phase 2a complete (offline story engine)
+
+**Context:** Built the heart of the app — the nightly story pipeline — fully offline against the FakeAiProvider first (per the agreed approach), so safety + continuity are nailed before spending API tokens.
+
+**Implementation:**
+- **Drift schema v2**: added `series` + `beats` tables (FKs cascade; enum via `intEnum`; `List<String>` via a JSON converter). v1→v2 `onUpgrade` migration **verified on the existing DB** (all 6 tables present at runtime).
+- **Domain (pure, test-first):** `AgePolicy` (+ `BannedThemes.defaults`), `TwistDeck` (6 fixed cards + dice), `PromptBuilder`→`StoryPrompt` (single source of truth: age policy, banned themes, theme guidance, seed, story bible, interests, recent beats, intent line, bilingual), `SafetyGuard` (rating≤band, whole-word banned-theme scan, empty/flagged), `BeatStore` (recent window + nextSeq), `SeriesService` (create/list/archive/branch), `StoryEngine.takeTurn` (context→prompt→generate→safety→bounded retry→**safe fallback**→persist→LearnedProfile + story-bible update).
+- **Interface change:** `AiProvider.generate(StoryPrompt)` — the engine builds the prompt; providers only translate + parse. FakeAiProvider returns a safe canned segment.
+- **UI:** story library, new-series setup (grouped theme chooser + hero), series home (Continue/Roll/6 cards/type idea), story view.
+
+**Key choices:**
+- **Never break bedtime**: bounded retries then a pre-written safe fallback beat; provider errors are swallowed into the fallback.
+- Banned themes default to the 8-item list (per-child settings UI deferred); injected into prompt AND enforced in the guard (floor on top of the age band).
+- `HeroMode` collides with Flutter's `material.dart` export → `hide HeroMode` in the UI. Riverpod 3 AsyncValue uses `asData?.value` (not `valueOrNull`).
+- Twist dice/option pass the twist *hint* as `chosenTwist` (good prompt); LearnedProfile keys affinity by it. Splitting tag-vs-hint is a 2b nicety.
+
+**Verified:** 35 tests pass (incl. unsafe→fallback, error→fallback, adversarial safety) · `flutter analyze` clean · Windows build + migration + boot OK.
+
+**Deferred to 2b:** real Claude/OpenAI/Gemini providers + structured output; `SecretStore`; **parent-gated** key Settings with third-party-AI **disclosure + consent** (per CLAUDE.md); streaming; per-child banned-themes UI; custom-theme/bilingual toggles in new-series; offline story bank.
+
+**Affects:** `lib/adapters/storage/*` (schema v2), `lib/adapters/ai/*`, `lib/domain/{age_policy,twist_deck,prompt_builder,safety_guard,beat_store,series_service,story_engine}.dart`, `lib/ui/{series,story}`, `app_providers.dart`, tests, build-plan.
+
+---
+
 ## Template for new entries
 
 ```

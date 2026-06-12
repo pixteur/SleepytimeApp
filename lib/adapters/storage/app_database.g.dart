@@ -1762,6 +1762,1772 @@ class LearnedProfilesCompanion extends UpdateCompanion<LearnedProfileRow> {
   }
 }
 
+class $SeriesTableTable extends SeriesTable
+    with TableInfo<$SeriesTableTable, SeriesRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SeriesTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _childIdMeta = const VerificationMeta(
+    'childId',
+  );
+  @override
+  late final GeneratedColumn<String> childId = GeneratedColumn<String>(
+    'child_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES child_profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<StoryTheme, int> theme =
+      GeneratedColumn<int>(
+        'theme',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<StoryTheme>($SeriesTableTable.$convertertheme);
+  static const VerificationMeta _customThemeMeta = const VerificationMeta(
+    'customTheme',
+  );
+  @override
+  late final GeneratedColumn<String> customTheme = GeneratedColumn<String>(
+    'custom_theme',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<HeroMode, int> heroMode =
+      GeneratedColumn<int>(
+        'hero_mode',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<HeroMode>($SeriesTableTable.$converterheroMode);
+  static const VerificationMeta _heroNameMeta = const VerificationMeta(
+    'heroName',
+  );
+  @override
+  late final GeneratedColumn<String> heroName = GeneratedColumn<String>(
+    'hero_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bilingualEnabledMeta = const VerificationMeta(
+    'bilingualEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> bilingualEnabled = GeneratedColumn<bool>(
+    'bilingual_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("bilingual_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _secondaryLanguageMeta = const VerificationMeta(
+    'secondaryLanguage',
+  );
+  @override
+  late final GeneratedColumn<String> secondaryLanguage =
+      GeneratedColumn<String>(
+        'secondary_language',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  @override
+  late final GeneratedColumnWithTypeConverter<BilingualBlend?, int>
+  bilingualBlend = GeneratedColumn<int>(
+    'bilingual_blend',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  ).withConverter<BilingualBlend?>($SeriesTableTable.$converterbilingualBlendn);
+  static const VerificationMeta _seedSummaryMeta = const VerificationMeta(
+    'seedSummary',
+  );
+  @override
+  late final GeneratedColumn<String> seedSummary = GeneratedColumn<String>(
+    'seed_summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _storyBibleMeta = const VerificationMeta(
+    'storyBible',
+  );
+  @override
+  late final GeneratedColumn<String> storyBible = GeneratedColumn<String>(
+    'story_bible',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _branchedFromBeatIdMeta =
+      const VerificationMeta('branchedFromBeatId');
+  @override
+  late final GeneratedColumn<String> branchedFromBeatId =
+      GeneratedColumn<String>(
+        'branched_from_beat_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  @override
+  late final GeneratedColumnWithTypeConverter<SeriesStatus, int> status =
+      GeneratedColumn<int>(
+        'status',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<SeriesStatus>($SeriesTableTable.$converterstatus);
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    childId,
+    title,
+    theme,
+    customTheme,
+    heroMode,
+    heroName,
+    bilingualEnabled,
+    secondaryLanguage,
+    bilingualBlend,
+    seedSummary,
+    storyBible,
+    branchedFromBeatId,
+    status,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'series';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SeriesRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('child_id')) {
+      context.handle(
+        _childIdMeta,
+        childId.isAcceptableOrUnknown(data['child_id']!, _childIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_childIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('custom_theme')) {
+      context.handle(
+        _customThemeMeta,
+        customTheme.isAcceptableOrUnknown(
+          data['custom_theme']!,
+          _customThemeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hero_name')) {
+      context.handle(
+        _heroNameMeta,
+        heroName.isAcceptableOrUnknown(data['hero_name']!, _heroNameMeta),
+      );
+    }
+    if (data.containsKey('bilingual_enabled')) {
+      context.handle(
+        _bilingualEnabledMeta,
+        bilingualEnabled.isAcceptableOrUnknown(
+          data['bilingual_enabled']!,
+          _bilingualEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('secondary_language')) {
+      context.handle(
+        _secondaryLanguageMeta,
+        secondaryLanguage.isAcceptableOrUnknown(
+          data['secondary_language']!,
+          _secondaryLanguageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('seed_summary')) {
+      context.handle(
+        _seedSummaryMeta,
+        seedSummary.isAcceptableOrUnknown(
+          data['seed_summary']!,
+          _seedSummaryMeta,
+        ),
+      );
+    }
+    if (data.containsKey('story_bible')) {
+      context.handle(
+        _storyBibleMeta,
+        storyBible.isAcceptableOrUnknown(data['story_bible']!, _storyBibleMeta),
+      );
+    }
+    if (data.containsKey('branched_from_beat_id')) {
+      context.handle(
+        _branchedFromBeatIdMeta,
+        branchedFromBeatId.isAcceptableOrUnknown(
+          data['branched_from_beat_id']!,
+          _branchedFromBeatIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SeriesRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SeriesRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      childId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}child_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      theme: $SeriesTableTable.$convertertheme.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}theme'],
+        )!,
+      ),
+      customTheme: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}custom_theme'],
+      ),
+      heroMode: $SeriesTableTable.$converterheroMode.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}hero_mode'],
+        )!,
+      ),
+      heroName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hero_name'],
+      ),
+      bilingualEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}bilingual_enabled'],
+      )!,
+      secondaryLanguage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}secondary_language'],
+      ),
+      bilingualBlend: $SeriesTableTable.$converterbilingualBlendn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}bilingual_blend'],
+        ),
+      ),
+      seedSummary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}seed_summary'],
+      )!,
+      storyBible: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}story_bible'],
+      )!,
+      branchedFromBeatId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}branched_from_beat_id'],
+      ),
+      status: $SeriesTableTable.$converterstatus.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}status'],
+        )!,
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SeriesTableTable createAlias(String alias) {
+    return $SeriesTableTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<StoryTheme, int, int> $convertertheme =
+      const EnumIndexConverter<StoryTheme>(StoryTheme.values);
+  static JsonTypeConverter2<HeroMode, int, int> $converterheroMode =
+      const EnumIndexConverter<HeroMode>(HeroMode.values);
+  static JsonTypeConverter2<BilingualBlend, int, int> $converterbilingualBlend =
+      const EnumIndexConverter<BilingualBlend>(BilingualBlend.values);
+  static JsonTypeConverter2<BilingualBlend?, int?, int?>
+  $converterbilingualBlendn = JsonTypeConverter2.asNullable(
+    $converterbilingualBlend,
+  );
+  static JsonTypeConverter2<SeriesStatus, int, int> $converterstatus =
+      const EnumIndexConverter<SeriesStatus>(SeriesStatus.values);
+}
+
+class SeriesRow extends DataClass implements Insertable<SeriesRow> {
+  final String id;
+  final String childId;
+  final String title;
+  final StoryTheme theme;
+  final String? customTheme;
+  final HeroMode heroMode;
+  final String? heroName;
+  final bool bilingualEnabled;
+  final String? secondaryLanguage;
+  final BilingualBlend? bilingualBlend;
+  final String seedSummary;
+  final String storyBible;
+  final String? branchedFromBeatId;
+  final SeriesStatus status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const SeriesRow({
+    required this.id,
+    required this.childId,
+    required this.title,
+    required this.theme,
+    this.customTheme,
+    required this.heroMode,
+    this.heroName,
+    required this.bilingualEnabled,
+    this.secondaryLanguage,
+    this.bilingualBlend,
+    required this.seedSummary,
+    required this.storyBible,
+    this.branchedFromBeatId,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['child_id'] = Variable<String>(childId);
+    map['title'] = Variable<String>(title);
+    {
+      map['theme'] = Variable<int>(
+        $SeriesTableTable.$convertertheme.toSql(theme),
+      );
+    }
+    if (!nullToAbsent || customTheme != null) {
+      map['custom_theme'] = Variable<String>(customTheme);
+    }
+    {
+      map['hero_mode'] = Variable<int>(
+        $SeriesTableTable.$converterheroMode.toSql(heroMode),
+      );
+    }
+    if (!nullToAbsent || heroName != null) {
+      map['hero_name'] = Variable<String>(heroName);
+    }
+    map['bilingual_enabled'] = Variable<bool>(bilingualEnabled);
+    if (!nullToAbsent || secondaryLanguage != null) {
+      map['secondary_language'] = Variable<String>(secondaryLanguage);
+    }
+    if (!nullToAbsent || bilingualBlend != null) {
+      map['bilingual_blend'] = Variable<int>(
+        $SeriesTableTable.$converterbilingualBlendn.toSql(bilingualBlend),
+      );
+    }
+    map['seed_summary'] = Variable<String>(seedSummary);
+    map['story_bible'] = Variable<String>(storyBible);
+    if (!nullToAbsent || branchedFromBeatId != null) {
+      map['branched_from_beat_id'] = Variable<String>(branchedFromBeatId);
+    }
+    {
+      map['status'] = Variable<int>(
+        $SeriesTableTable.$converterstatus.toSql(status),
+      );
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  SeriesTableCompanion toCompanion(bool nullToAbsent) {
+    return SeriesTableCompanion(
+      id: Value(id),
+      childId: Value(childId),
+      title: Value(title),
+      theme: Value(theme),
+      customTheme: customTheme == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customTheme),
+      heroMode: Value(heroMode),
+      heroName: heroName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heroName),
+      bilingualEnabled: Value(bilingualEnabled),
+      secondaryLanguage: secondaryLanguage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(secondaryLanguage),
+      bilingualBlend: bilingualBlend == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bilingualBlend),
+      seedSummary: Value(seedSummary),
+      storyBible: Value(storyBible),
+      branchedFromBeatId: branchedFromBeatId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(branchedFromBeatId),
+      status: Value(status),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory SeriesRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SeriesRow(
+      id: serializer.fromJson<String>(json['id']),
+      childId: serializer.fromJson<String>(json['childId']),
+      title: serializer.fromJson<String>(json['title']),
+      theme: $SeriesTableTable.$convertertheme.fromJson(
+        serializer.fromJson<int>(json['theme']),
+      ),
+      customTheme: serializer.fromJson<String?>(json['customTheme']),
+      heroMode: $SeriesTableTable.$converterheroMode.fromJson(
+        serializer.fromJson<int>(json['heroMode']),
+      ),
+      heroName: serializer.fromJson<String?>(json['heroName']),
+      bilingualEnabled: serializer.fromJson<bool>(json['bilingualEnabled']),
+      secondaryLanguage: serializer.fromJson<String?>(
+        json['secondaryLanguage'],
+      ),
+      bilingualBlend: $SeriesTableTable.$converterbilingualBlendn.fromJson(
+        serializer.fromJson<int?>(json['bilingualBlend']),
+      ),
+      seedSummary: serializer.fromJson<String>(json['seedSummary']),
+      storyBible: serializer.fromJson<String>(json['storyBible']),
+      branchedFromBeatId: serializer.fromJson<String?>(
+        json['branchedFromBeatId'],
+      ),
+      status: $SeriesTableTable.$converterstatus.fromJson(
+        serializer.fromJson<int>(json['status']),
+      ),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'childId': serializer.toJson<String>(childId),
+      'title': serializer.toJson<String>(title),
+      'theme': serializer.toJson<int>(
+        $SeriesTableTable.$convertertheme.toJson(theme),
+      ),
+      'customTheme': serializer.toJson<String?>(customTheme),
+      'heroMode': serializer.toJson<int>(
+        $SeriesTableTable.$converterheroMode.toJson(heroMode),
+      ),
+      'heroName': serializer.toJson<String?>(heroName),
+      'bilingualEnabled': serializer.toJson<bool>(bilingualEnabled),
+      'secondaryLanguage': serializer.toJson<String?>(secondaryLanguage),
+      'bilingualBlend': serializer.toJson<int?>(
+        $SeriesTableTable.$converterbilingualBlendn.toJson(bilingualBlend),
+      ),
+      'seedSummary': serializer.toJson<String>(seedSummary),
+      'storyBible': serializer.toJson<String>(storyBible),
+      'branchedFromBeatId': serializer.toJson<String?>(branchedFromBeatId),
+      'status': serializer.toJson<int>(
+        $SeriesTableTable.$converterstatus.toJson(status),
+      ),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  SeriesRow copyWith({
+    String? id,
+    String? childId,
+    String? title,
+    StoryTheme? theme,
+    Value<String?> customTheme = const Value.absent(),
+    HeroMode? heroMode,
+    Value<String?> heroName = const Value.absent(),
+    bool? bilingualEnabled,
+    Value<String?> secondaryLanguage = const Value.absent(),
+    Value<BilingualBlend?> bilingualBlend = const Value.absent(),
+    String? seedSummary,
+    String? storyBible,
+    Value<String?> branchedFromBeatId = const Value.absent(),
+    SeriesStatus? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => SeriesRow(
+    id: id ?? this.id,
+    childId: childId ?? this.childId,
+    title: title ?? this.title,
+    theme: theme ?? this.theme,
+    customTheme: customTheme.present ? customTheme.value : this.customTheme,
+    heroMode: heroMode ?? this.heroMode,
+    heroName: heroName.present ? heroName.value : this.heroName,
+    bilingualEnabled: bilingualEnabled ?? this.bilingualEnabled,
+    secondaryLanguage: secondaryLanguage.present
+        ? secondaryLanguage.value
+        : this.secondaryLanguage,
+    bilingualBlend: bilingualBlend.present
+        ? bilingualBlend.value
+        : this.bilingualBlend,
+    seedSummary: seedSummary ?? this.seedSummary,
+    storyBible: storyBible ?? this.storyBible,
+    branchedFromBeatId: branchedFromBeatId.present
+        ? branchedFromBeatId.value
+        : this.branchedFromBeatId,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  SeriesRow copyWithCompanion(SeriesTableCompanion data) {
+    return SeriesRow(
+      id: data.id.present ? data.id.value : this.id,
+      childId: data.childId.present ? data.childId.value : this.childId,
+      title: data.title.present ? data.title.value : this.title,
+      theme: data.theme.present ? data.theme.value : this.theme,
+      customTheme: data.customTheme.present
+          ? data.customTheme.value
+          : this.customTheme,
+      heroMode: data.heroMode.present ? data.heroMode.value : this.heroMode,
+      heroName: data.heroName.present ? data.heroName.value : this.heroName,
+      bilingualEnabled: data.bilingualEnabled.present
+          ? data.bilingualEnabled.value
+          : this.bilingualEnabled,
+      secondaryLanguage: data.secondaryLanguage.present
+          ? data.secondaryLanguage.value
+          : this.secondaryLanguage,
+      bilingualBlend: data.bilingualBlend.present
+          ? data.bilingualBlend.value
+          : this.bilingualBlend,
+      seedSummary: data.seedSummary.present
+          ? data.seedSummary.value
+          : this.seedSummary,
+      storyBible: data.storyBible.present
+          ? data.storyBible.value
+          : this.storyBible,
+      branchedFromBeatId: data.branchedFromBeatId.present
+          ? data.branchedFromBeatId.value
+          : this.branchedFromBeatId,
+      status: data.status.present ? data.status.value : this.status,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SeriesRow(')
+          ..write('id: $id, ')
+          ..write('childId: $childId, ')
+          ..write('title: $title, ')
+          ..write('theme: $theme, ')
+          ..write('customTheme: $customTheme, ')
+          ..write('heroMode: $heroMode, ')
+          ..write('heroName: $heroName, ')
+          ..write('bilingualEnabled: $bilingualEnabled, ')
+          ..write('secondaryLanguage: $secondaryLanguage, ')
+          ..write('bilingualBlend: $bilingualBlend, ')
+          ..write('seedSummary: $seedSummary, ')
+          ..write('storyBible: $storyBible, ')
+          ..write('branchedFromBeatId: $branchedFromBeatId, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    childId,
+    title,
+    theme,
+    customTheme,
+    heroMode,
+    heroName,
+    bilingualEnabled,
+    secondaryLanguage,
+    bilingualBlend,
+    seedSummary,
+    storyBible,
+    branchedFromBeatId,
+    status,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SeriesRow &&
+          other.id == this.id &&
+          other.childId == this.childId &&
+          other.title == this.title &&
+          other.theme == this.theme &&
+          other.customTheme == this.customTheme &&
+          other.heroMode == this.heroMode &&
+          other.heroName == this.heroName &&
+          other.bilingualEnabled == this.bilingualEnabled &&
+          other.secondaryLanguage == this.secondaryLanguage &&
+          other.bilingualBlend == this.bilingualBlend &&
+          other.seedSummary == this.seedSummary &&
+          other.storyBible == this.storyBible &&
+          other.branchedFromBeatId == this.branchedFromBeatId &&
+          other.status == this.status &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
+  final Value<String> id;
+  final Value<String> childId;
+  final Value<String> title;
+  final Value<StoryTheme> theme;
+  final Value<String?> customTheme;
+  final Value<HeroMode> heroMode;
+  final Value<String?> heroName;
+  final Value<bool> bilingualEnabled;
+  final Value<String?> secondaryLanguage;
+  final Value<BilingualBlend?> bilingualBlend;
+  final Value<String> seedSummary;
+  final Value<String> storyBible;
+  final Value<String?> branchedFromBeatId;
+  final Value<SeriesStatus> status;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const SeriesTableCompanion({
+    this.id = const Value.absent(),
+    this.childId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.theme = const Value.absent(),
+    this.customTheme = const Value.absent(),
+    this.heroMode = const Value.absent(),
+    this.heroName = const Value.absent(),
+    this.bilingualEnabled = const Value.absent(),
+    this.secondaryLanguage = const Value.absent(),
+    this.bilingualBlend = const Value.absent(),
+    this.seedSummary = const Value.absent(),
+    this.storyBible = const Value.absent(),
+    this.branchedFromBeatId = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SeriesTableCompanion.insert({
+    required String id,
+    required String childId,
+    required String title,
+    required StoryTheme theme,
+    this.customTheme = const Value.absent(),
+    required HeroMode heroMode,
+    this.heroName = const Value.absent(),
+    this.bilingualEnabled = const Value.absent(),
+    this.secondaryLanguage = const Value.absent(),
+    this.bilingualBlend = const Value.absent(),
+    this.seedSummary = const Value.absent(),
+    this.storyBible = const Value.absent(),
+    this.branchedFromBeatId = const Value.absent(),
+    required SeriesStatus status,
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       childId = Value(childId),
+       title = Value(title),
+       theme = Value(theme),
+       heroMode = Value(heroMode),
+       status = Value(status);
+  static Insertable<SeriesRow> custom({
+    Expression<String>? id,
+    Expression<String>? childId,
+    Expression<String>? title,
+    Expression<int>? theme,
+    Expression<String>? customTheme,
+    Expression<int>? heroMode,
+    Expression<String>? heroName,
+    Expression<bool>? bilingualEnabled,
+    Expression<String>? secondaryLanguage,
+    Expression<int>? bilingualBlend,
+    Expression<String>? seedSummary,
+    Expression<String>? storyBible,
+    Expression<String>? branchedFromBeatId,
+    Expression<int>? status,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (childId != null) 'child_id': childId,
+      if (title != null) 'title': title,
+      if (theme != null) 'theme': theme,
+      if (customTheme != null) 'custom_theme': customTheme,
+      if (heroMode != null) 'hero_mode': heroMode,
+      if (heroName != null) 'hero_name': heroName,
+      if (bilingualEnabled != null) 'bilingual_enabled': bilingualEnabled,
+      if (secondaryLanguage != null) 'secondary_language': secondaryLanguage,
+      if (bilingualBlend != null) 'bilingual_blend': bilingualBlend,
+      if (seedSummary != null) 'seed_summary': seedSummary,
+      if (storyBible != null) 'story_bible': storyBible,
+      if (branchedFromBeatId != null)
+        'branched_from_beat_id': branchedFromBeatId,
+      if (status != null) 'status': status,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SeriesTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? childId,
+    Value<String>? title,
+    Value<StoryTheme>? theme,
+    Value<String?>? customTheme,
+    Value<HeroMode>? heroMode,
+    Value<String?>? heroName,
+    Value<bool>? bilingualEnabled,
+    Value<String?>? secondaryLanguage,
+    Value<BilingualBlend?>? bilingualBlend,
+    Value<String>? seedSummary,
+    Value<String>? storyBible,
+    Value<String?>? branchedFromBeatId,
+    Value<SeriesStatus>? status,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return SeriesTableCompanion(
+      id: id ?? this.id,
+      childId: childId ?? this.childId,
+      title: title ?? this.title,
+      theme: theme ?? this.theme,
+      customTheme: customTheme ?? this.customTheme,
+      heroMode: heroMode ?? this.heroMode,
+      heroName: heroName ?? this.heroName,
+      bilingualEnabled: bilingualEnabled ?? this.bilingualEnabled,
+      secondaryLanguage: secondaryLanguage ?? this.secondaryLanguage,
+      bilingualBlend: bilingualBlend ?? this.bilingualBlend,
+      seedSummary: seedSummary ?? this.seedSummary,
+      storyBible: storyBible ?? this.storyBible,
+      branchedFromBeatId: branchedFromBeatId ?? this.branchedFromBeatId,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (childId.present) {
+      map['child_id'] = Variable<String>(childId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (theme.present) {
+      map['theme'] = Variable<int>(
+        $SeriesTableTable.$convertertheme.toSql(theme.value),
+      );
+    }
+    if (customTheme.present) {
+      map['custom_theme'] = Variable<String>(customTheme.value);
+    }
+    if (heroMode.present) {
+      map['hero_mode'] = Variable<int>(
+        $SeriesTableTable.$converterheroMode.toSql(heroMode.value),
+      );
+    }
+    if (heroName.present) {
+      map['hero_name'] = Variable<String>(heroName.value);
+    }
+    if (bilingualEnabled.present) {
+      map['bilingual_enabled'] = Variable<bool>(bilingualEnabled.value);
+    }
+    if (secondaryLanguage.present) {
+      map['secondary_language'] = Variable<String>(secondaryLanguage.value);
+    }
+    if (bilingualBlend.present) {
+      map['bilingual_blend'] = Variable<int>(
+        $SeriesTableTable.$converterbilingualBlendn.toSql(bilingualBlend.value),
+      );
+    }
+    if (seedSummary.present) {
+      map['seed_summary'] = Variable<String>(seedSummary.value);
+    }
+    if (storyBible.present) {
+      map['story_bible'] = Variable<String>(storyBible.value);
+    }
+    if (branchedFromBeatId.present) {
+      map['branched_from_beat_id'] = Variable<String>(branchedFromBeatId.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<int>(
+        $SeriesTableTable.$converterstatus.toSql(status.value),
+      );
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SeriesTableCompanion(')
+          ..write('id: $id, ')
+          ..write('childId: $childId, ')
+          ..write('title: $title, ')
+          ..write('theme: $theme, ')
+          ..write('customTheme: $customTheme, ')
+          ..write('heroMode: $heroMode, ')
+          ..write('heroName: $heroName, ')
+          ..write('bilingualEnabled: $bilingualEnabled, ')
+          ..write('secondaryLanguage: $secondaryLanguage, ')
+          ..write('bilingualBlend: $bilingualBlend, ')
+          ..write('seedSummary: $seedSummary, ')
+          ..write('storyBible: $storyBible, ')
+          ..write('branchedFromBeatId: $branchedFromBeatId, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $BeatsTable extends Beats with TableInfo<$BeatsTable, BeatRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BeatsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _seriesIdMeta = const VerificationMeta(
+    'seriesId',
+  );
+  @override
+  late final GeneratedColumn<String> seriesId = GeneratedColumn<String>(
+    'series_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES series (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _childIdMeta = const VerificationMeta(
+    'childId',
+  );
+  @override
+  late final GeneratedColumn<String> childId = GeneratedColumn<String>(
+    'child_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _seqMeta = const VerificationMeta('seq');
+  @override
+  late final GeneratedColumn<int> seq = GeneratedColumn<int>(
+    'seq',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<StoryIntent, int> intent =
+      GeneratedColumn<int>(
+        'intent',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<StoryIntent>($BeatsTable.$converterintent);
+  static const VerificationMeta _chosenTwistMeta = const VerificationMeta(
+    'chosenTwist',
+  );
+  @override
+  late final GeneratedColumn<String> chosenTwist = GeneratedColumn<String>(
+    'chosen_twist',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _storyTextMeta = const VerificationMeta(
+    'storyText',
+  );
+  @override
+  late final GeneratedColumn<String> storyText = GeneratedColumn<String>(
+    'story_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _summaryMeta = const VerificationMeta(
+    'summary',
+  );
+  @override
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+    'summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<AgeRating, int> rating =
+      GeneratedColumn<int>(
+        'rating',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<AgeRating>($BeatsTable.$converterrating);
+  static const VerificationMeta _settingMeta = const VerificationMeta(
+    'setting',
+  );
+  @override
+  late final GeneratedColumn<String> setting = GeneratedColumn<String>(
+    'setting',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<List<String>, String> characters =
+      GeneratedColumn<String>(
+        'characters',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<List<String>>($BeatsTable.$convertercharacters);
+  @override
+  late final GeneratedColumnWithTypeConverter<List<String>, String>
+  openThreads = GeneratedColumn<String>(
+    'open_threads',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<List<String>>($BeatsTable.$converteropenThreads);
+  static const VerificationMeta _languageMeta = const VerificationMeta(
+    'language',
+  );
+  @override
+  late final GeneratedColumn<String> language = GeneratedColumn<String>(
+    'language',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('en'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    seriesId,
+    childId,
+    seq,
+    intent,
+    chosenTwist,
+    storyText,
+    summary,
+    rating,
+    setting,
+    characters,
+    openThreads,
+    language,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'beats';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BeatRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('series_id')) {
+      context.handle(
+        _seriesIdMeta,
+        seriesId.isAcceptableOrUnknown(data['series_id']!, _seriesIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_seriesIdMeta);
+    }
+    if (data.containsKey('child_id')) {
+      context.handle(
+        _childIdMeta,
+        childId.isAcceptableOrUnknown(data['child_id']!, _childIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_childIdMeta);
+    }
+    if (data.containsKey('seq')) {
+      context.handle(
+        _seqMeta,
+        seq.isAcceptableOrUnknown(data['seq']!, _seqMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_seqMeta);
+    }
+    if (data.containsKey('chosen_twist')) {
+      context.handle(
+        _chosenTwistMeta,
+        chosenTwist.isAcceptableOrUnknown(
+          data['chosen_twist']!,
+          _chosenTwistMeta,
+        ),
+      );
+    }
+    if (data.containsKey('story_text')) {
+      context.handle(
+        _storyTextMeta,
+        storyText.isAcceptableOrUnknown(data['story_text']!, _storyTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_storyTextMeta);
+    }
+    if (data.containsKey('summary')) {
+      context.handle(
+        _summaryMeta,
+        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_summaryMeta);
+    }
+    if (data.containsKey('setting')) {
+      context.handle(
+        _settingMeta,
+        setting.isAcceptableOrUnknown(data['setting']!, _settingMeta),
+      );
+    }
+    if (data.containsKey('language')) {
+      context.handle(
+        _languageMeta,
+        language.isAcceptableOrUnknown(data['language']!, _languageMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  BeatRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BeatRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      seriesId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}series_id'],
+      )!,
+      childId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}child_id'],
+      )!,
+      seq: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}seq'],
+      )!,
+      intent: $BeatsTable.$converterintent.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}intent'],
+        )!,
+      ),
+      chosenTwist: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}chosen_twist'],
+      ),
+      storyText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}story_text'],
+      )!,
+      summary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}summary'],
+      )!,
+      rating: $BeatsTable.$converterrating.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}rating'],
+        )!,
+      ),
+      setting: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}setting'],
+      )!,
+      characters: $BeatsTable.$convertercharacters.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}characters'],
+        )!,
+      ),
+      openThreads: $BeatsTable.$converteropenThreads.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}open_threads'],
+        )!,
+      ),
+      language: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}language'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $BeatsTable createAlias(String alias) {
+    return $BeatsTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<StoryIntent, int, int> $converterintent =
+      const EnumIndexConverter<StoryIntent>(StoryIntent.values);
+  static JsonTypeConverter2<AgeRating, int, int> $converterrating =
+      const EnumIndexConverter<AgeRating>(AgeRating.values);
+  static TypeConverter<List<String>, String> $convertercharacters =
+      const _StringListConverter();
+  static TypeConverter<List<String>, String> $converteropenThreads =
+      const _StringListConverter();
+}
+
+class BeatRow extends DataClass implements Insertable<BeatRow> {
+  final String id;
+  final String seriesId;
+  final String childId;
+  final int seq;
+  final StoryIntent intent;
+  final String? chosenTwist;
+  final String storyText;
+  final String summary;
+  final AgeRating rating;
+  final String setting;
+  final List<String> characters;
+  final List<String> openThreads;
+  final String language;
+  final DateTime createdAt;
+  const BeatRow({
+    required this.id,
+    required this.seriesId,
+    required this.childId,
+    required this.seq,
+    required this.intent,
+    this.chosenTwist,
+    required this.storyText,
+    required this.summary,
+    required this.rating,
+    required this.setting,
+    required this.characters,
+    required this.openThreads,
+    required this.language,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['series_id'] = Variable<String>(seriesId);
+    map['child_id'] = Variable<String>(childId);
+    map['seq'] = Variable<int>(seq);
+    {
+      map['intent'] = Variable<int>($BeatsTable.$converterintent.toSql(intent));
+    }
+    if (!nullToAbsent || chosenTwist != null) {
+      map['chosen_twist'] = Variable<String>(chosenTwist);
+    }
+    map['story_text'] = Variable<String>(storyText);
+    map['summary'] = Variable<String>(summary);
+    {
+      map['rating'] = Variable<int>($BeatsTable.$converterrating.toSql(rating));
+    }
+    map['setting'] = Variable<String>(setting);
+    {
+      map['characters'] = Variable<String>(
+        $BeatsTable.$convertercharacters.toSql(characters),
+      );
+    }
+    {
+      map['open_threads'] = Variable<String>(
+        $BeatsTable.$converteropenThreads.toSql(openThreads),
+      );
+    }
+    map['language'] = Variable<String>(language);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  BeatsCompanion toCompanion(bool nullToAbsent) {
+    return BeatsCompanion(
+      id: Value(id),
+      seriesId: Value(seriesId),
+      childId: Value(childId),
+      seq: Value(seq),
+      intent: Value(intent),
+      chosenTwist: chosenTwist == null && nullToAbsent
+          ? const Value.absent()
+          : Value(chosenTwist),
+      storyText: Value(storyText),
+      summary: Value(summary),
+      rating: Value(rating),
+      setting: Value(setting),
+      characters: Value(characters),
+      openThreads: Value(openThreads),
+      language: Value(language),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory BeatRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BeatRow(
+      id: serializer.fromJson<String>(json['id']),
+      seriesId: serializer.fromJson<String>(json['seriesId']),
+      childId: serializer.fromJson<String>(json['childId']),
+      seq: serializer.fromJson<int>(json['seq']),
+      intent: $BeatsTable.$converterintent.fromJson(
+        serializer.fromJson<int>(json['intent']),
+      ),
+      chosenTwist: serializer.fromJson<String?>(json['chosenTwist']),
+      storyText: serializer.fromJson<String>(json['storyText']),
+      summary: serializer.fromJson<String>(json['summary']),
+      rating: $BeatsTable.$converterrating.fromJson(
+        serializer.fromJson<int>(json['rating']),
+      ),
+      setting: serializer.fromJson<String>(json['setting']),
+      characters: serializer.fromJson<List<String>>(json['characters']),
+      openThreads: serializer.fromJson<List<String>>(json['openThreads']),
+      language: serializer.fromJson<String>(json['language']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'seriesId': serializer.toJson<String>(seriesId),
+      'childId': serializer.toJson<String>(childId),
+      'seq': serializer.toJson<int>(seq),
+      'intent': serializer.toJson<int>(
+        $BeatsTable.$converterintent.toJson(intent),
+      ),
+      'chosenTwist': serializer.toJson<String?>(chosenTwist),
+      'storyText': serializer.toJson<String>(storyText),
+      'summary': serializer.toJson<String>(summary),
+      'rating': serializer.toJson<int>(
+        $BeatsTable.$converterrating.toJson(rating),
+      ),
+      'setting': serializer.toJson<String>(setting),
+      'characters': serializer.toJson<List<String>>(characters),
+      'openThreads': serializer.toJson<List<String>>(openThreads),
+      'language': serializer.toJson<String>(language),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  BeatRow copyWith({
+    String? id,
+    String? seriesId,
+    String? childId,
+    int? seq,
+    StoryIntent? intent,
+    Value<String?> chosenTwist = const Value.absent(),
+    String? storyText,
+    String? summary,
+    AgeRating? rating,
+    String? setting,
+    List<String>? characters,
+    List<String>? openThreads,
+    String? language,
+    DateTime? createdAt,
+  }) => BeatRow(
+    id: id ?? this.id,
+    seriesId: seriesId ?? this.seriesId,
+    childId: childId ?? this.childId,
+    seq: seq ?? this.seq,
+    intent: intent ?? this.intent,
+    chosenTwist: chosenTwist.present ? chosenTwist.value : this.chosenTwist,
+    storyText: storyText ?? this.storyText,
+    summary: summary ?? this.summary,
+    rating: rating ?? this.rating,
+    setting: setting ?? this.setting,
+    characters: characters ?? this.characters,
+    openThreads: openThreads ?? this.openThreads,
+    language: language ?? this.language,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  BeatRow copyWithCompanion(BeatsCompanion data) {
+    return BeatRow(
+      id: data.id.present ? data.id.value : this.id,
+      seriesId: data.seriesId.present ? data.seriesId.value : this.seriesId,
+      childId: data.childId.present ? data.childId.value : this.childId,
+      seq: data.seq.present ? data.seq.value : this.seq,
+      intent: data.intent.present ? data.intent.value : this.intent,
+      chosenTwist: data.chosenTwist.present
+          ? data.chosenTwist.value
+          : this.chosenTwist,
+      storyText: data.storyText.present ? data.storyText.value : this.storyText,
+      summary: data.summary.present ? data.summary.value : this.summary,
+      rating: data.rating.present ? data.rating.value : this.rating,
+      setting: data.setting.present ? data.setting.value : this.setting,
+      characters: data.characters.present
+          ? data.characters.value
+          : this.characters,
+      openThreads: data.openThreads.present
+          ? data.openThreads.value
+          : this.openThreads,
+      language: data.language.present ? data.language.value : this.language,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BeatRow(')
+          ..write('id: $id, ')
+          ..write('seriesId: $seriesId, ')
+          ..write('childId: $childId, ')
+          ..write('seq: $seq, ')
+          ..write('intent: $intent, ')
+          ..write('chosenTwist: $chosenTwist, ')
+          ..write('storyText: $storyText, ')
+          ..write('summary: $summary, ')
+          ..write('rating: $rating, ')
+          ..write('setting: $setting, ')
+          ..write('characters: $characters, ')
+          ..write('openThreads: $openThreads, ')
+          ..write('language: $language, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    seriesId,
+    childId,
+    seq,
+    intent,
+    chosenTwist,
+    storyText,
+    summary,
+    rating,
+    setting,
+    characters,
+    openThreads,
+    language,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BeatRow &&
+          other.id == this.id &&
+          other.seriesId == this.seriesId &&
+          other.childId == this.childId &&
+          other.seq == this.seq &&
+          other.intent == this.intent &&
+          other.chosenTwist == this.chosenTwist &&
+          other.storyText == this.storyText &&
+          other.summary == this.summary &&
+          other.rating == this.rating &&
+          other.setting == this.setting &&
+          other.characters == this.characters &&
+          other.openThreads == this.openThreads &&
+          other.language == this.language &&
+          other.createdAt == this.createdAt);
+}
+
+class BeatsCompanion extends UpdateCompanion<BeatRow> {
+  final Value<String> id;
+  final Value<String> seriesId;
+  final Value<String> childId;
+  final Value<int> seq;
+  final Value<StoryIntent> intent;
+  final Value<String?> chosenTwist;
+  final Value<String> storyText;
+  final Value<String> summary;
+  final Value<AgeRating> rating;
+  final Value<String> setting;
+  final Value<List<String>> characters;
+  final Value<List<String>> openThreads;
+  final Value<String> language;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const BeatsCompanion({
+    this.id = const Value.absent(),
+    this.seriesId = const Value.absent(),
+    this.childId = const Value.absent(),
+    this.seq = const Value.absent(),
+    this.intent = const Value.absent(),
+    this.chosenTwist = const Value.absent(),
+    this.storyText = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.rating = const Value.absent(),
+    this.setting = const Value.absent(),
+    this.characters = const Value.absent(),
+    this.openThreads = const Value.absent(),
+    this.language = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BeatsCompanion.insert({
+    required String id,
+    required String seriesId,
+    required String childId,
+    required int seq,
+    required StoryIntent intent,
+    this.chosenTwist = const Value.absent(),
+    required String storyText,
+    required String summary,
+    required AgeRating rating,
+    this.setting = const Value.absent(),
+    required List<String> characters,
+    required List<String> openThreads,
+    this.language = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       seriesId = Value(seriesId),
+       childId = Value(childId),
+       seq = Value(seq),
+       intent = Value(intent),
+       storyText = Value(storyText),
+       summary = Value(summary),
+       rating = Value(rating),
+       characters = Value(characters),
+       openThreads = Value(openThreads);
+  static Insertable<BeatRow> custom({
+    Expression<String>? id,
+    Expression<String>? seriesId,
+    Expression<String>? childId,
+    Expression<int>? seq,
+    Expression<int>? intent,
+    Expression<String>? chosenTwist,
+    Expression<String>? storyText,
+    Expression<String>? summary,
+    Expression<int>? rating,
+    Expression<String>? setting,
+    Expression<String>? characters,
+    Expression<String>? openThreads,
+    Expression<String>? language,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (seriesId != null) 'series_id': seriesId,
+      if (childId != null) 'child_id': childId,
+      if (seq != null) 'seq': seq,
+      if (intent != null) 'intent': intent,
+      if (chosenTwist != null) 'chosen_twist': chosenTwist,
+      if (storyText != null) 'story_text': storyText,
+      if (summary != null) 'summary': summary,
+      if (rating != null) 'rating': rating,
+      if (setting != null) 'setting': setting,
+      if (characters != null) 'characters': characters,
+      if (openThreads != null) 'open_threads': openThreads,
+      if (language != null) 'language': language,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BeatsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? seriesId,
+    Value<String>? childId,
+    Value<int>? seq,
+    Value<StoryIntent>? intent,
+    Value<String?>? chosenTwist,
+    Value<String>? storyText,
+    Value<String>? summary,
+    Value<AgeRating>? rating,
+    Value<String>? setting,
+    Value<List<String>>? characters,
+    Value<List<String>>? openThreads,
+    Value<String>? language,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return BeatsCompanion(
+      id: id ?? this.id,
+      seriesId: seriesId ?? this.seriesId,
+      childId: childId ?? this.childId,
+      seq: seq ?? this.seq,
+      intent: intent ?? this.intent,
+      chosenTwist: chosenTwist ?? this.chosenTwist,
+      storyText: storyText ?? this.storyText,
+      summary: summary ?? this.summary,
+      rating: rating ?? this.rating,
+      setting: setting ?? this.setting,
+      characters: characters ?? this.characters,
+      openThreads: openThreads ?? this.openThreads,
+      language: language ?? this.language,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (seriesId.present) {
+      map['series_id'] = Variable<String>(seriesId.value);
+    }
+    if (childId.present) {
+      map['child_id'] = Variable<String>(childId.value);
+    }
+    if (seq.present) {
+      map['seq'] = Variable<int>(seq.value);
+    }
+    if (intent.present) {
+      map['intent'] = Variable<int>(
+        $BeatsTable.$converterintent.toSql(intent.value),
+      );
+    }
+    if (chosenTwist.present) {
+      map['chosen_twist'] = Variable<String>(chosenTwist.value);
+    }
+    if (storyText.present) {
+      map['story_text'] = Variable<String>(storyText.value);
+    }
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
+    }
+    if (rating.present) {
+      map['rating'] = Variable<int>(
+        $BeatsTable.$converterrating.toSql(rating.value),
+      );
+    }
+    if (setting.present) {
+      map['setting'] = Variable<String>(setting.value);
+    }
+    if (characters.present) {
+      map['characters'] = Variable<String>(
+        $BeatsTable.$convertercharacters.toSql(characters.value),
+      );
+    }
+    if (openThreads.present) {
+      map['open_threads'] = Variable<String>(
+        $BeatsTable.$converteropenThreads.toSql(openThreads.value),
+      );
+    }
+    if (language.present) {
+      map['language'] = Variable<String>(language.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BeatsCompanion(')
+          ..write('id: $id, ')
+          ..write('seriesId: $seriesId, ')
+          ..write('childId: $childId, ')
+          ..write('seq: $seq, ')
+          ..write('intent: $intent, ')
+          ..write('chosenTwist: $chosenTwist, ')
+          ..write('storyText: $storyText, ')
+          ..write('summary: $summary, ')
+          ..write('rating: $rating, ')
+          ..write('setting: $setting, ')
+          ..write('characters: $characters, ')
+          ..write('openThreads: $openThreads, ')
+          ..write('language: $language, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1771,6 +3537,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LearnedProfilesTable learnedProfiles = $LearnedProfilesTable(
     this,
   );
+  late final $SeriesTableTable seriesTable = $SeriesTableTable(this);
+  late final $BeatsTable beats = $BeatsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1780,6 +3548,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     quizResults,
     interests,
     learnedProfiles,
+    seriesTable,
+    beats,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -1803,6 +3573,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('learned_profiles', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'child_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('series', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'series',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('beats', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -1894,6 +3678,24 @@ final class $$ChildProfilesTableReferences
     final cache = $_typedResult.readTableOrNull(
       _learnedProfilesRefsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$SeriesTableTable, List<SeriesRow>>
+  _seriesTableRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.seriesTable,
+    aliasName: 'child_profiles__id__series__child_id',
+  );
+
+  $$SeriesTableTableProcessedTableManager get seriesTableRefs {
+    final manager = $$SeriesTableTableTableManager(
+      $_db,
+      $_db.seriesTable,
+    ).filter((f) => f.childId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_seriesTableRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -2021,6 +3823,31 @@ class $$ChildProfilesTableFilterComposer
           }) => $$LearnedProfilesTableFilterComposer(
             $db: $db,
             $table: $db.learnedProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> seriesTableRefs(
+    Expression<bool> Function($$SeriesTableTableFilterComposer f) f,
+  ) {
+    final $$SeriesTableTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.seriesTable,
+      getReferencedColumn: (t) => t.childId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeriesTableTableFilterComposer(
+            $db: $db,
+            $table: $db.seriesTable,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2205,6 +4032,31 @@ class $$ChildProfilesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> seriesTableRefs<T extends Object>(
+    Expression<T> Function($$SeriesTableTableAnnotationComposer a) f,
+  ) {
+    final $$SeriesTableTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.seriesTable,
+      getReferencedColumn: (t) => t.childId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeriesTableTableAnnotationComposer(
+            $db: $db,
+            $table: $db.seriesTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ChildProfilesTableTableManager
@@ -2224,6 +4076,7 @@ class $$ChildProfilesTableTableManager
             bool quizResultsRefs,
             bool interestsRefs,
             bool learnedProfilesRefs,
+            bool seriesTableRefs,
           })
         > {
   $$ChildProfilesTableTableManager(_$AppDatabase db, $ChildProfilesTable table)
@@ -2298,6 +4151,7 @@ class $$ChildProfilesTableTableManager
                 quizResultsRefs = false,
                 interestsRefs = false,
                 learnedProfilesRefs = false,
+                seriesTableRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -2305,6 +4159,7 @@ class $$ChildProfilesTableTableManager
                     if (quizResultsRefs) db.quizResults,
                     if (interestsRefs) db.interests,
                     if (learnedProfilesRefs) db.learnedProfiles,
+                    if (seriesTableRefs) db.seriesTable,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -2372,6 +4227,27 @@ class $$ChildProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (seriesTableRefs)
+                        await $_getPrefetchedData<
+                          ChildProfileRow,
+                          $ChildProfilesTable,
+                          SeriesRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ChildProfilesTableReferences
+                              ._seriesTableRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ChildProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).seriesTableRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.childId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -2396,6 +4272,7 @@ typedef $$ChildProfilesTableProcessedTableManager =
         bool quizResultsRefs,
         bool interestsRefs,
         bool learnedProfilesRefs,
+        bool seriesTableRefs,
       })
     >;
 typedef $$QuizResultsTableCreateCompanionBuilder =
@@ -3409,6 +5286,1133 @@ typedef $$LearnedProfilesTableProcessedTableManager =
       LearnedProfileRow,
       PrefetchHooks Function({bool childId})
     >;
+typedef $$SeriesTableTableCreateCompanionBuilder =
+    SeriesTableCompanion Function({
+      required String id,
+      required String childId,
+      required String title,
+      required StoryTheme theme,
+      Value<String?> customTheme,
+      required HeroMode heroMode,
+      Value<String?> heroName,
+      Value<bool> bilingualEnabled,
+      Value<String?> secondaryLanguage,
+      Value<BilingualBlend?> bilingualBlend,
+      Value<String> seedSummary,
+      Value<String> storyBible,
+      Value<String?> branchedFromBeatId,
+      required SeriesStatus status,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+typedef $$SeriesTableTableUpdateCompanionBuilder =
+    SeriesTableCompanion Function({
+      Value<String> id,
+      Value<String> childId,
+      Value<String> title,
+      Value<StoryTheme> theme,
+      Value<String?> customTheme,
+      Value<HeroMode> heroMode,
+      Value<String?> heroName,
+      Value<bool> bilingualEnabled,
+      Value<String?> secondaryLanguage,
+      Value<BilingualBlend?> bilingualBlend,
+      Value<String> seedSummary,
+      Value<String> storyBible,
+      Value<String?> branchedFromBeatId,
+      Value<SeriesStatus> status,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$SeriesTableTableReferences
+    extends BaseReferences<_$AppDatabase, $SeriesTableTable, SeriesRow> {
+  $$SeriesTableTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ChildProfilesTable _childIdTable(_$AppDatabase db) =>
+      db.childProfiles.createAlias('series__child_id__child_profiles__id');
+
+  $$ChildProfilesTableProcessedTableManager get childId {
+    final $_column = $_itemColumn<String>('child_id')!;
+
+    final manager = $$ChildProfilesTableTableManager(
+      $_db,
+      $_db.childProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_childIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$BeatsTable, List<BeatRow>> _beatsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.beats,
+    aliasName: 'series__id__beats__series_id',
+  );
+
+  $$BeatsTableProcessedTableManager get beatsRefs {
+    final manager = $$BeatsTableTableManager(
+      $_db,
+      $_db.beats,
+    ).filter((f) => f.seriesId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_beatsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$SeriesTableTableFilterComposer
+    extends Composer<_$AppDatabase, $SeriesTableTable> {
+  $$SeriesTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<StoryTheme, StoryTheme, int> get theme =>
+      $composableBuilder(
+        column: $table.theme,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get customTheme => $composableBuilder(
+    column: $table.customTheme,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<HeroMode, HeroMode, int> get heroMode =>
+      $composableBuilder(
+        column: $table.heroMode,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get heroName => $composableBuilder(
+    column: $table.heroName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get bilingualEnabled => $composableBuilder(
+    column: $table.bilingualEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get secondaryLanguage => $composableBuilder(
+    column: $table.secondaryLanguage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<BilingualBlend?, BilingualBlend, int>
+  get bilingualBlend => $composableBuilder(
+    column: $table.bilingualBlend,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get seedSummary => $composableBuilder(
+    column: $table.seedSummary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get storyBible => $composableBuilder(
+    column: $table.storyBible,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get branchedFromBeatId => $composableBuilder(
+    column: $table.branchedFromBeatId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<SeriesStatus, SeriesStatus, int> get status =>
+      $composableBuilder(
+        column: $table.status,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ChildProfilesTableFilterComposer get childId {
+    final $$ChildProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.childId,
+      referencedTable: $db.childProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChildProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.childProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> beatsRefs(
+    Expression<bool> Function($$BeatsTableFilterComposer f) f,
+  ) {
+    final $$BeatsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.beats,
+      getReferencedColumn: (t) => t.seriesId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BeatsTableFilterComposer(
+            $db: $db,
+            $table: $db.beats,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$SeriesTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $SeriesTableTable> {
+  $$SeriesTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get theme => $composableBuilder(
+    column: $table.theme,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get customTheme => $composableBuilder(
+    column: $table.customTheme,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get heroMode => $composableBuilder(
+    column: $table.heroMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get heroName => $composableBuilder(
+    column: $table.heroName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get bilingualEnabled => $composableBuilder(
+    column: $table.bilingualEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get secondaryLanguage => $composableBuilder(
+    column: $table.secondaryLanguage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get bilingualBlend => $composableBuilder(
+    column: $table.bilingualBlend,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get seedSummary => $composableBuilder(
+    column: $table.seedSummary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get storyBible => $composableBuilder(
+    column: $table.storyBible,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get branchedFromBeatId => $composableBuilder(
+    column: $table.branchedFromBeatId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ChildProfilesTableOrderingComposer get childId {
+    final $$ChildProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.childId,
+      referencedTable: $db.childProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChildProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.childProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SeriesTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SeriesTableTable> {
+  $$SeriesTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<StoryTheme, int> get theme =>
+      $composableBuilder(column: $table.theme, builder: (column) => column);
+
+  GeneratedColumn<String> get customTheme => $composableBuilder(
+    column: $table.customTheme,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<HeroMode, int> get heroMode =>
+      $composableBuilder(column: $table.heroMode, builder: (column) => column);
+
+  GeneratedColumn<String> get heroName =>
+      $composableBuilder(column: $table.heroName, builder: (column) => column);
+
+  GeneratedColumn<bool> get bilingualEnabled => $composableBuilder(
+    column: $table.bilingualEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get secondaryLanguage => $composableBuilder(
+    column: $table.secondaryLanguage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<BilingualBlend?, int> get bilingualBlend =>
+      $composableBuilder(
+        column: $table.bilingualBlend,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get seedSummary => $composableBuilder(
+    column: $table.seedSummary,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get storyBible => $composableBuilder(
+    column: $table.storyBible,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get branchedFromBeatId => $composableBuilder(
+    column: $table.branchedFromBeatId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<SeriesStatus, int> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$ChildProfilesTableAnnotationComposer get childId {
+    final $$ChildProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.childId,
+      referencedTable: $db.childProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChildProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.childProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> beatsRefs<T extends Object>(
+    Expression<T> Function($$BeatsTableAnnotationComposer a) f,
+  ) {
+    final $$BeatsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.beats,
+      getReferencedColumn: (t) => t.seriesId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BeatsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.beats,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$SeriesTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SeriesTableTable,
+          SeriesRow,
+          $$SeriesTableTableFilterComposer,
+          $$SeriesTableTableOrderingComposer,
+          $$SeriesTableTableAnnotationComposer,
+          $$SeriesTableTableCreateCompanionBuilder,
+          $$SeriesTableTableUpdateCompanionBuilder,
+          (SeriesRow, $$SeriesTableTableReferences),
+          SeriesRow,
+          PrefetchHooks Function({bool childId, bool beatsRefs})
+        > {
+  $$SeriesTableTableTableManager(_$AppDatabase db, $SeriesTableTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SeriesTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SeriesTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SeriesTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> childId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<StoryTheme> theme = const Value.absent(),
+                Value<String?> customTheme = const Value.absent(),
+                Value<HeroMode> heroMode = const Value.absent(),
+                Value<String?> heroName = const Value.absent(),
+                Value<bool> bilingualEnabled = const Value.absent(),
+                Value<String?> secondaryLanguage = const Value.absent(),
+                Value<BilingualBlend?> bilingualBlend = const Value.absent(),
+                Value<String> seedSummary = const Value.absent(),
+                Value<String> storyBible = const Value.absent(),
+                Value<String?> branchedFromBeatId = const Value.absent(),
+                Value<SeriesStatus> status = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SeriesTableCompanion(
+                id: id,
+                childId: childId,
+                title: title,
+                theme: theme,
+                customTheme: customTheme,
+                heroMode: heroMode,
+                heroName: heroName,
+                bilingualEnabled: bilingualEnabled,
+                secondaryLanguage: secondaryLanguage,
+                bilingualBlend: bilingualBlend,
+                seedSummary: seedSummary,
+                storyBible: storyBible,
+                branchedFromBeatId: branchedFromBeatId,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String childId,
+                required String title,
+                required StoryTheme theme,
+                Value<String?> customTheme = const Value.absent(),
+                required HeroMode heroMode,
+                Value<String?> heroName = const Value.absent(),
+                Value<bool> bilingualEnabled = const Value.absent(),
+                Value<String?> secondaryLanguage = const Value.absent(),
+                Value<BilingualBlend?> bilingualBlend = const Value.absent(),
+                Value<String> seedSummary = const Value.absent(),
+                Value<String> storyBible = const Value.absent(),
+                Value<String?> branchedFromBeatId = const Value.absent(),
+                required SeriesStatus status,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SeriesTableCompanion.insert(
+                id: id,
+                childId: childId,
+                title: title,
+                theme: theme,
+                customTheme: customTheme,
+                heroMode: heroMode,
+                heroName: heroName,
+                bilingualEnabled: bilingualEnabled,
+                secondaryLanguage: secondaryLanguage,
+                bilingualBlend: bilingualBlend,
+                seedSummary: seedSummary,
+                storyBible: storyBible,
+                branchedFromBeatId: branchedFromBeatId,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SeriesTableTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({childId = false, beatsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (beatsRefs) db.beats],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (childId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.childId,
+                                referencedTable: $$SeriesTableTableReferences
+                                    ._childIdTable(db),
+                                referencedColumn: $$SeriesTableTableReferences
+                                    ._childIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (beatsRefs)
+                    await $_getPrefetchedData<
+                      SeriesRow,
+                      $SeriesTableTable,
+                      BeatRow
+                    >(
+                      currentTable: table,
+                      referencedTable: $$SeriesTableTableReferences
+                          ._beatsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$SeriesTableTableReferences(db, table, p0).beatsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.seriesId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SeriesTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SeriesTableTable,
+      SeriesRow,
+      $$SeriesTableTableFilterComposer,
+      $$SeriesTableTableOrderingComposer,
+      $$SeriesTableTableAnnotationComposer,
+      $$SeriesTableTableCreateCompanionBuilder,
+      $$SeriesTableTableUpdateCompanionBuilder,
+      (SeriesRow, $$SeriesTableTableReferences),
+      SeriesRow,
+      PrefetchHooks Function({bool childId, bool beatsRefs})
+    >;
+typedef $$BeatsTableCreateCompanionBuilder =
+    BeatsCompanion Function({
+      required String id,
+      required String seriesId,
+      required String childId,
+      required int seq,
+      required StoryIntent intent,
+      Value<String?> chosenTwist,
+      required String storyText,
+      required String summary,
+      required AgeRating rating,
+      Value<String> setting,
+      required List<String> characters,
+      required List<String> openThreads,
+      Value<String> language,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$BeatsTableUpdateCompanionBuilder =
+    BeatsCompanion Function({
+      Value<String> id,
+      Value<String> seriesId,
+      Value<String> childId,
+      Value<int> seq,
+      Value<StoryIntent> intent,
+      Value<String?> chosenTwist,
+      Value<String> storyText,
+      Value<String> summary,
+      Value<AgeRating> rating,
+      Value<String> setting,
+      Value<List<String>> characters,
+      Value<List<String>> openThreads,
+      Value<String> language,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$BeatsTableReferences
+    extends BaseReferences<_$AppDatabase, $BeatsTable, BeatRow> {
+  $$BeatsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $SeriesTableTable _seriesIdTable(_$AppDatabase db) =>
+      db.seriesTable.createAlias('beats__series_id__series__id');
+
+  $$SeriesTableTableProcessedTableManager get seriesId {
+    final $_column = $_itemColumn<String>('series_id')!;
+
+    final manager = $$SeriesTableTableTableManager(
+      $_db,
+      $_db.seriesTable,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_seriesIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$BeatsTableFilterComposer extends Composer<_$AppDatabase, $BeatsTable> {
+  $$BeatsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get childId => $composableBuilder(
+    column: $table.childId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get seq => $composableBuilder(
+    column: $table.seq,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<StoryIntent, StoryIntent, int> get intent =>
+      $composableBuilder(
+        column: $table.intent,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get chosenTwist => $composableBuilder(
+    column: $table.chosenTwist,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get storyText => $composableBuilder(
+    column: $table.storyText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<AgeRating, AgeRating, int> get rating =>
+      $composableBuilder(
+        column: $table.rating,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get setting => $composableBuilder(
+    column: $table.setting,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<List<String>, List<String>, String>
+  get characters => $composableBuilder(
+    column: $table.characters,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<List<String>, List<String>, String>
+  get openThreads => $composableBuilder(
+    column: $table.openThreads,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SeriesTableTableFilterComposer get seriesId {
+    final $$SeriesTableTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.seriesId,
+      referencedTable: $db.seriesTable,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeriesTableTableFilterComposer(
+            $db: $db,
+            $table: $db.seriesTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$BeatsTableOrderingComposer
+    extends Composer<_$AppDatabase, $BeatsTable> {
+  $$BeatsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get childId => $composableBuilder(
+    column: $table.childId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get seq => $composableBuilder(
+    column: $table.seq,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get intent => $composableBuilder(
+    column: $table.intent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get chosenTwist => $composableBuilder(
+    column: $table.chosenTwist,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get storyText => $composableBuilder(
+    column: $table.storyText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rating => $composableBuilder(
+    column: $table.rating,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get setting => $composableBuilder(
+    column: $table.setting,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get characters => $composableBuilder(
+    column: $table.characters,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get openThreads => $composableBuilder(
+    column: $table.openThreads,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get language => $composableBuilder(
+    column: $table.language,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SeriesTableTableOrderingComposer get seriesId {
+    final $$SeriesTableTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.seriesId,
+      referencedTable: $db.seriesTable,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeriesTableTableOrderingComposer(
+            $db: $db,
+            $table: $db.seriesTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$BeatsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BeatsTable> {
+  $$BeatsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get childId =>
+      $composableBuilder(column: $table.childId, builder: (column) => column);
+
+  GeneratedColumn<int> get seq =>
+      $composableBuilder(column: $table.seq, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<StoryIntent, int> get intent =>
+      $composableBuilder(column: $table.intent, builder: (column) => column);
+
+  GeneratedColumn<String> get chosenTwist => $composableBuilder(
+    column: $table.chosenTwist,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get storyText =>
+      $composableBuilder(column: $table.storyText, builder: (column) => column);
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<AgeRating, int> get rating =>
+      $composableBuilder(column: $table.rating, builder: (column) => column);
+
+  GeneratedColumn<String> get setting =>
+      $composableBuilder(column: $table.setting, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<List<String>, String> get characters =>
+      $composableBuilder(
+        column: $table.characters,
+        builder: (column) => column,
+      );
+
+  GeneratedColumnWithTypeConverter<List<String>, String> get openThreads =>
+      $composableBuilder(
+        column: $table.openThreads,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get language =>
+      $composableBuilder(column: $table.language, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$SeriesTableTableAnnotationComposer get seriesId {
+    final $$SeriesTableTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.seriesId,
+      referencedTable: $db.seriesTable,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeriesTableTableAnnotationComposer(
+            $db: $db,
+            $table: $db.seriesTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$BeatsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BeatsTable,
+          BeatRow,
+          $$BeatsTableFilterComposer,
+          $$BeatsTableOrderingComposer,
+          $$BeatsTableAnnotationComposer,
+          $$BeatsTableCreateCompanionBuilder,
+          $$BeatsTableUpdateCompanionBuilder,
+          (BeatRow, $$BeatsTableReferences),
+          BeatRow,
+          PrefetchHooks Function({bool seriesId})
+        > {
+  $$BeatsTableTableManager(_$AppDatabase db, $BeatsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BeatsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BeatsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BeatsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> seriesId = const Value.absent(),
+                Value<String> childId = const Value.absent(),
+                Value<int> seq = const Value.absent(),
+                Value<StoryIntent> intent = const Value.absent(),
+                Value<String?> chosenTwist = const Value.absent(),
+                Value<String> storyText = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<AgeRating> rating = const Value.absent(),
+                Value<String> setting = const Value.absent(),
+                Value<List<String>> characters = const Value.absent(),
+                Value<List<String>> openThreads = const Value.absent(),
+                Value<String> language = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BeatsCompanion(
+                id: id,
+                seriesId: seriesId,
+                childId: childId,
+                seq: seq,
+                intent: intent,
+                chosenTwist: chosenTwist,
+                storyText: storyText,
+                summary: summary,
+                rating: rating,
+                setting: setting,
+                characters: characters,
+                openThreads: openThreads,
+                language: language,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String seriesId,
+                required String childId,
+                required int seq,
+                required StoryIntent intent,
+                Value<String?> chosenTwist = const Value.absent(),
+                required String storyText,
+                required String summary,
+                required AgeRating rating,
+                Value<String> setting = const Value.absent(),
+                required List<String> characters,
+                required List<String> openThreads,
+                Value<String> language = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BeatsCompanion.insert(
+                id: id,
+                seriesId: seriesId,
+                childId: childId,
+                seq: seq,
+                intent: intent,
+                chosenTwist: chosenTwist,
+                storyText: storyText,
+                summary: summary,
+                rating: rating,
+                setting: setting,
+                characters: characters,
+                openThreads: openThreads,
+                language: language,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) =>
+                    (e.readTable(table), $$BeatsTableReferences(db, table, e)),
+              )
+              .toList(),
+          prefetchHooksCallback: ({seriesId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (seriesId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.seriesId,
+                                referencedTable: $$BeatsTableReferences
+                                    ._seriesIdTable(db),
+                                referencedColumn: $$BeatsTableReferences
+                                    ._seriesIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$BeatsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BeatsTable,
+      BeatRow,
+      $$BeatsTableFilterComposer,
+      $$BeatsTableOrderingComposer,
+      $$BeatsTableAnnotationComposer,
+      $$BeatsTableCreateCompanionBuilder,
+      $$BeatsTableUpdateCompanionBuilder,
+      (BeatRow, $$BeatsTableReferences),
+      BeatRow,
+      PrefetchHooks Function({bool seriesId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3421,4 +6425,8 @@ class $AppDatabaseManager {
       $$InterestsTableTableManager(_db, _db.interests);
   $$LearnedProfilesTableTableManager get learnedProfiles =>
       $$LearnedProfilesTableTableManager(_db, _db.learnedProfiles);
+  $$SeriesTableTableTableManager get seriesTable =>
+      $$SeriesTableTableTableManager(_db, _db.seriesTable);
+  $$BeatsTableTableManager get beats =>
+      $$BeatsTableTableManager(_db, _db.beats);
 }
