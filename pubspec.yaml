@@ -43,6 +43,7 @@ dependencies:
   http: ^1.6.0
   shared_preferences: ^2.5.5
   ffi: ^2.2.0
+  flutter_tts: ^4.2.5
 
 dev_dependencies:
   flutter_test:

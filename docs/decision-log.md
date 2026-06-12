@@ -186,6 +186,26 @@
 
 ---
 
+## 2026-06-12 — Phase 3a: device voice reader + story archive
+
+**Context:** Added on-device narration and the per-series archive.
+
+**Implementation:**
+- **`TtsProvider`** (state stream + speak/pause/stop + `TtsVoicePref`) with **`DeviceTtsProvider`** over `flutter_tts`. Best-effort gender/voice match via `getVoices`.
+- **Story view** auto-narrates on open with a state-driven playback bar; stops on navigate/dispose. Story-view gained `canContinue` (false for archived chapters).
+- **Story archive** (`StoryArchiveScreen`): lists a series' beats with summaries (reuses `beatsForSeriesProvider`); a history icon on the series home; tap → replay aloud.
+- `ttsProvider` Riverpod provider (disposed with scope).
+
+**Build hurdle:** `flutter_tts` on Windows requires **`nuget.exe`** (CMake fetches the WinRT speech NuGet). Downloaded the standalone nuget to `C:\src\flutter\bin` (on PATH). Unlike the earlier ATL issue this was self-serve (no admin). CI is unaffected (Linux analyze+test only).
+
+**Not unit-tested:** `DeviceTtsProvider` is thin glue over a platform plugin that's awkward to mock; verified via the Windows build + runtime boot instead. Domain tests unchanged (43 pass).
+
+**Verified:** `flutter analyze` clean · 43 tests pass · Windows build + boot (TTS plugin loads).
+
+**Deferred to 3b:** character voices (pitch/rate presets + speaker-tagged dialogue), cloud voices, bilingual per-span narration, 🎤 STT mic input, per-child voice picker UI, read-along highlighting.
+
+---
+
 ## Template for new entries
 
 ```

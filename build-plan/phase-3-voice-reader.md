@@ -2,6 +2,19 @@
 
 **Goal:** Chapters are read aloud in expressive, kid-friendly voices that can take on character personalities — male/female, multi-language — plus the 🎤 microphone request path. See [../docs/voice-tts.md](../docs/voice-tts.md).
 
+## 🟡 Status: Phase 3a COMPLETE (2026-06-12) — device narration + archive
+
+**Done (3a):**
+- **`TtsProvider`** interface (state stream + speak/pause/stop + voice pref) and **`DeviceTtsProvider`** via `flutter_tts` (Windows SAPI/WinRT). Best-effort gender/voice selection.
+- **Story view narration**: auto-plays the chapter on open; a playback bar (Read aloud / Pause / Stop / Replay) driven by the TTS state stream; stops on navigate.
+- **Story archive**: per-series list of past chapters with recaps (history icon on the series home); tap any to re-read + replay aloud (`canContinue: false`).
+- **Build note:** `flutter_tts` on Windows needs **`nuget.exe`** on PATH (fetches the WinRT speech package). Installed to `C:\src\flutter\bin\nuget.exe`. (CI runs analyze+test on Linux, so it's unaffected.)
+
+**Deferred to Phase 3b:**
+- Character voices (pitch/rate presets per recurring character from beat metadata; speaker-tagged dialogue → voice mapping); cloud expressive voices (ElevenLabs/Azure); bilingual per-span narration; 🎤 **STT mic input**; per-child voice picker UI in Settings; read-along word highlighting; auto-soften toward the ending.
+
+Original task checklist below for reference.
+
 ## Tasks
 
 ### Narration (device TTS first — free/offline)

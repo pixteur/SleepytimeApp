@@ -9,7 +9,7 @@ Phased roadmap for SleepytimeApp. Each phase is independently shippable-ish and 
 | 0 | [Foundation](phase-0-foundation.md) | Toolchain, Flutter project, architecture skeleton, CI | 🟢 |
 | 1 | [Profiles & Quiz](phase-1-profiles-quiz.md) | Child accounts + onboarding quiz → story seed | 🟢 |
 | 2 | [Story Engine](phase-2-story-engine.md) | The core loop: roll/continue/request → AI chapter → safe → saved | 🟢 |
-| 3 | [Voice Reader](phase-3-voice-reader.md) | TTS narration, character voices, mic input | ⚪ |
+| 3 | [Voice Reader](phase-3-voice-reader.md) | TTS narration, character voices, mic input | 🟡 |
 | 4 | [i18n & Theming](phase-4-i18n-theming.md) | fr/es full, Japanese framework, color/theme personalization | ⚪ |
 | 5 | [Polish & Port](phase-5-polish-port.md) | UX polish, macOS/iOS port, packaging | ⚪ |
 | 6 | [Hosted Backend](phase-6-hosted-backend.md) | Turn it into a product: hosted provider, sync, billing, compliance | ⚪ |

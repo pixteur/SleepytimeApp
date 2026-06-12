@@ -11,6 +11,8 @@ import 'adapters/secrets/secret_store.dart';
 import 'adapters/storage/app_database.dart';
 import 'adapters/storage/drift_storage_repo.dart';
 import 'adapters/storage/storage_repo.dart';
+import 'adapters/tts/device_tts_provider.dart';
+import 'adapters/tts/tts_provider.dart';
 import 'domain/models/beat.dart';
 import 'domain/models/child_profile.dart';
 import 'domain/models/series.dart';
@@ -92,6 +94,13 @@ final storyEngineProvider = Provider<StoryEngine>(
 
 /// The twist deck (six option cards + dice).
 final twistDeckProvider = Provider<TwistDeck>((ref) => const TwistDeck());
+
+/// The voice reader (device TTS). Disposed with the provider scope.
+final ttsProvider = Provider<TtsProvider>((ref) {
+  final tts = DeviceTtsProvider();
+  ref.onDispose(tts.dispose);
+  return tts;
+});
 
 // ─── Storage ──────────────────────────────────────────────────────────
 

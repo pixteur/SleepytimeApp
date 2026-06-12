@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
+import 'story_archive_screen.dart';
 import 'story_view_screen.dart';
 
 /// The nightly launch for an open series: Continue, Roll the dice, pick from
@@ -60,7 +61,25 @@ class _SeriesHomeScreenState extends ConsumerState<SeriesHomeScreen> {
     final deck = ref.read(twistDeckProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(series.title)),
+      appBar: AppBar(
+        title: Text(series.title),
+        actions: [
+          if (hasBeats)
+            IconButton(
+              icon: const Icon(Icons.history_rounded),
+              tooltip: 'Past chapters',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => StoryArchiveScreen(
+                    seriesId: series.id,
+                    seriesTitle: series.title,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: Stack(
         children: [
           Center(
