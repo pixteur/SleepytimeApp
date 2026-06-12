@@ -120,6 +120,7 @@ class Beats extends Table {
   TextColumn get characters => text().map(const _StringListConverter())();
   TextColumn get openThreads => text().map(const _StringListConverter())();
   TextColumn get language => text().withDefault(const Constant('en'))();
+  BoolColumn get isFinal => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
@@ -171,7 +172,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.memory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   /// Opens the on-device database file (app documents dir). Foreign keys on.
   static AppDatabase open() {
@@ -190,6 +191,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 2) {
         await m.createTable(seriesTable);
         await m.createTable(beats);
+      }
+      if (from < 3) {
+        await m.addColumn(beats, beats.isFinal);
       }
     },
     beforeOpen: (details) async {

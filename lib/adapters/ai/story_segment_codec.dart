@@ -14,6 +14,7 @@ const List<String> storySegmentFields = [
   'sensitive_flags',
   'characters',
   'open_threads',
+  'is_final',
 ];
 
 /// Standard JSON Schema for the story segment — used by Claude (`output_config`)
@@ -40,6 +41,7 @@ const Map<String, dynamic> jsonStorySchema = {
       'type': 'array',
       'items': {'type': 'string'},
     },
+    'is_final': {'type': 'boolean'},
   },
   'required': storySegmentFields,
   'additionalProperties': false,
@@ -55,6 +57,7 @@ StorySegment storySegmentFromJson(Map<String, dynamic> d) => StorySegment(
   sensitiveFlags: _strList(d['sensitive_flags']),
   characters: _strList(d['characters']),
   openThreads: _strList(d['open_threads']),
+  isFinal: d['is_final'] as bool? ?? false,
 );
 
 AgeRating _rating(String? value) => switch (value) {

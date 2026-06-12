@@ -56,6 +56,7 @@ class GeminiProvider implements AiProvider {
         'type': 'ARRAY',
         'items': {'type': 'STRING'},
       },
+      'is_final': {'type': 'BOOLEAN'},
     },
     'required': storySegmentFields,
   };

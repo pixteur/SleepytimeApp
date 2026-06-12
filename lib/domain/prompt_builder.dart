@@ -36,11 +36,21 @@ class PromptBuilder {
       )
       ..writeln(_themeGuidance(req.series))
       ..writeln('Write the story in ${_languageName(req.child.language)}.')
-      ..writeln('Target length: ${_lengthFor(req.child.detailLevel)}.')
       ..writeln(
-        'Return: the next chapter (ending calm and safe), a one-line summary, '
-        'an age rating (one of tiny/little/big/older), the setting, recurring '
-        'characters, and any open story threads.',
+        'Target length per chapter: ${_lengthFor(req.child.detailLevel)}.',
+      )
+      ..writeln(
+        'Tell ONE complete bedtime story across about 3–6 short chapters. This '
+        'is chapter ${req.chapterNumber}. Each chapter should end on a gentle, '
+        'calm note. When the story reaches a warm, satisfying resolution, set '
+        '"is_final" to true; otherwise leave a soft hook for the next chapter '
+        'and set "is_final" to false. Always end the FINAL chapter peacefully, '
+        'ready for sleep.',
+      )
+      ..writeln(
+        'Return: this chapter\'s text, a one-line summary, an age rating (one '
+        'of tiny/little/big/older), the setting, recurring characters, any open '
+        'story threads, and is_final (true on the last chapter).',
       );
 
     final user = StringBuffer()

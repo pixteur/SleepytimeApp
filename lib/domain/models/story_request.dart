@@ -14,6 +14,7 @@ class StoryRequest {
     this.recentBeats = const [],
     this.interests = const [],
     this.chosenTwist,
+    this.chapterNumber = 1,
   });
 
   final ChildProfile child;
@@ -26,4 +27,7 @@ class StoryRequest {
 
   /// The option/dice/typed request that drove this turn, if any.
   final String? chosenTwist;
+
+  /// 1-based chapter index, so the model can pace a complete multi-chapter story.
+  final int chapterNumber;
 }

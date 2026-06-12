@@ -285,6 +285,7 @@ class DriftStorageRepo implements StorageRepo {
             chosenTwist: Value(b.chosenTwist),
             setting: Value(b.setting),
             language: Value(b.language),
+            isFinal: Value(b.isFinal),
           ),
         );
   }
@@ -303,5 +304,6 @@ class DriftStorageRepo implements StorageRepo {
     characters: r.characters,
     openThreads: r.openThreads,
     language: r.language,
+    isFinal: r.isFinal,
   );
 }

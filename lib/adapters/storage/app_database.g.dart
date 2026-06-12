@@ -2860,6 +2860,21 @@ class $BeatsTable extends Beats with TableInfo<$BeatsTable, BeatRow> {
     requiredDuringInsert: false,
     defaultValue: const Constant('en'),
   );
+  static const VerificationMeta _isFinalMeta = const VerificationMeta(
+    'isFinal',
+  );
+  @override
+  late final GeneratedColumn<bool> isFinal = GeneratedColumn<bool>(
+    'is_final',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_final" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2887,6 +2902,7 @@ class $BeatsTable extends Beats with TableInfo<$BeatsTable, BeatRow> {
     characters,
     openThreads,
     language,
+    isFinal,
     createdAt,
   ];
   @override
@@ -2967,6 +2983,12 @@ class $BeatsTable extends Beats with TableInfo<$BeatsTable, BeatRow> {
         language.isAcceptableOrUnknown(data['language']!, _languageMeta),
       );
     }
+    if (data.containsKey('is_final')) {
+      context.handle(
+        _isFinalMeta,
+        isFinal.isAcceptableOrUnknown(data['is_final']!, _isFinalMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3042,6 +3064,10 @@ class $BeatsTable extends Beats with TableInfo<$BeatsTable, BeatRow> {
         DriftSqlType.string,
         data['${effectivePrefix}language'],
       )!,
+      isFinal: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_final'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -3078,6 +3104,7 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
   final List<String> characters;
   final List<String> openThreads;
   final String language;
+  final bool isFinal;
   final DateTime createdAt;
   const BeatRow({
     required this.id,
@@ -3093,6 +3120,7 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
     required this.characters,
     required this.openThreads,
     required this.language,
+    required this.isFinal,
     required this.createdAt,
   });
   @override
@@ -3125,6 +3153,7 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
       );
     }
     map['language'] = Variable<String>(language);
+    map['is_final'] = Variable<bool>(isFinal);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -3146,6 +3175,7 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
       characters: Value(characters),
       openThreads: Value(openThreads),
       language: Value(language),
+      isFinal: Value(isFinal),
       createdAt: Value(createdAt),
     );
   }
@@ -3173,6 +3203,7 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
       characters: serializer.fromJson<List<String>>(json['characters']),
       openThreads: serializer.fromJson<List<String>>(json['openThreads']),
       language: serializer.fromJson<String>(json['language']),
+      isFinal: serializer.fromJson<bool>(json['isFinal']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -3197,6 +3228,7 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
       'characters': serializer.toJson<List<String>>(characters),
       'openThreads': serializer.toJson<List<String>>(openThreads),
       'language': serializer.toJson<String>(language),
+      'isFinal': serializer.toJson<bool>(isFinal),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -3215,6 +3247,7 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
     List<String>? characters,
     List<String>? openThreads,
     String? language,
+    bool? isFinal,
     DateTime? createdAt,
   }) => BeatRow(
     id: id ?? this.id,
@@ -3230,6 +3263,7 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
     characters: characters ?? this.characters,
     openThreads: openThreads ?? this.openThreads,
     language: language ?? this.language,
+    isFinal: isFinal ?? this.isFinal,
     createdAt: createdAt ?? this.createdAt,
   );
   BeatRow copyWithCompanion(BeatsCompanion data) {
@@ -3253,6 +3287,7 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
           ? data.openThreads.value
           : this.openThreads,
       language: data.language.present ? data.language.value : this.language,
+      isFinal: data.isFinal.present ? data.isFinal.value : this.isFinal,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -3273,6 +3308,7 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
           ..write('characters: $characters, ')
           ..write('openThreads: $openThreads, ')
           ..write('language: $language, ')
+          ..write('isFinal: $isFinal, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -3293,6 +3329,7 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
     characters,
     openThreads,
     language,
+    isFinal,
     createdAt,
   );
   @override
@@ -3312,6 +3349,7 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
           other.characters == this.characters &&
           other.openThreads == this.openThreads &&
           other.language == this.language &&
+          other.isFinal == this.isFinal &&
           other.createdAt == this.createdAt);
 }
 
@@ -3329,6 +3367,7 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
   final Value<List<String>> characters;
   final Value<List<String>> openThreads;
   final Value<String> language;
+  final Value<bool> isFinal;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const BeatsCompanion({
@@ -3345,6 +3384,7 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
     this.characters = const Value.absent(),
     this.openThreads = const Value.absent(),
     this.language = const Value.absent(),
+    this.isFinal = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3362,6 +3402,7 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
     required List<String> characters,
     required List<String> openThreads,
     this.language = const Value.absent(),
+    this.isFinal = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -3388,6 +3429,7 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
     Expression<String>? characters,
     Expression<String>? openThreads,
     Expression<String>? language,
+    Expression<bool>? isFinal,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -3405,6 +3447,7 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
       if (characters != null) 'characters': characters,
       if (openThreads != null) 'open_threads': openThreads,
       if (language != null) 'language': language,
+      if (isFinal != null) 'is_final': isFinal,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3424,6 +3467,7 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
     Value<List<String>>? characters,
     Value<List<String>>? openThreads,
     Value<String>? language,
+    Value<bool>? isFinal,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -3441,6 +3485,7 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
       characters: characters ?? this.characters,
       openThreads: openThreads ?? this.openThreads,
       language: language ?? this.language,
+      isFinal: isFinal ?? this.isFinal,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -3496,6 +3541,9 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
     if (language.present) {
       map['language'] = Variable<String>(language.value);
     }
+    if (isFinal.present) {
+      map['is_final'] = Variable<bool>(isFinal.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3521,6 +3569,7 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
           ..write('characters: $characters, ')
           ..write('openThreads: $openThreads, ')
           ..write('language: $language, ')
+          ..write('isFinal: $isFinal, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -5931,6 +5980,7 @@ typedef $$BeatsTableCreateCompanionBuilder =
       required List<String> characters,
       required List<String> openThreads,
       Value<String> language,
+      Value<bool> isFinal,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -5949,6 +5999,7 @@ typedef $$BeatsTableUpdateCompanionBuilder =
       Value<List<String>> characters,
       Value<List<String>> openThreads,
       Value<String> language,
+      Value<bool> isFinal,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -6044,6 +6095,11 @@ class $$BeatsTableFilterComposer extends Composer<_$AppDatabase, $BeatsTable> {
 
   ColumnFilters<String> get language => $composableBuilder(
     column: $table.language,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isFinal => $composableBuilder(
+    column: $table.isFinal,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6145,6 +6201,11 @@ class $$BeatsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isFinal => $composableBuilder(
+    column: $table.isFinal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -6227,6 +6288,9 @@ class $$BeatsTableAnnotationComposer
   GeneratedColumn<String> get language =>
       $composableBuilder(column: $table.language, builder: (column) => column);
 
+  GeneratedColumn<bool> get isFinal =>
+      $composableBuilder(column: $table.isFinal, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -6295,6 +6359,7 @@ class $$BeatsTableTableManager
                 Value<List<String>> characters = const Value.absent(),
                 Value<List<String>> openThreads = const Value.absent(),
                 Value<String> language = const Value.absent(),
+                Value<bool> isFinal = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BeatsCompanion(
@@ -6311,6 +6376,7 @@ class $$BeatsTableTableManager
                 characters: characters,
                 openThreads: openThreads,
                 language: language,
+                isFinal: isFinal,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -6329,6 +6395,7 @@ class $$BeatsTableTableManager
                 required List<String> characters,
                 required List<String> openThreads,
                 Value<String> language = const Value.absent(),
+                Value<bool> isFinal = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BeatsCompanion.insert(
@@ -6345,6 +6412,7 @@ class $$BeatsTableTableManager
                 characters: characters,
                 openThreads: openThreads,
                 language: language,
+                isFinal: isFinal,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

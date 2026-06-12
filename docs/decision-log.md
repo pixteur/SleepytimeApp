@@ -222,6 +222,22 @@
 
 ---
 
+## 2026-06-12 — Streaming narration, auto-complete stories, chapter navigation
+
+**Context:** User feedback after hearing the voices: (1) start narration faster (don't synthesize the whole page), (2) Back should go to the previous chapter, (3) a Home button, (4) stories should auto-generate to the end and auto-save for reuse.
+
+**Implemented:**
+- **Streaming/chunked TTS** — `CloudTtsProvider` now splits a chapter into paragraphs (long ones by sentence), synthesizes + plays the FIRST paragraph immediately, and prefetches the next one-ahead while playing. First audio starts after ~one paragraph, not the whole page. Advances on `audioplayers` `onPlayerComplete`; manual state so no idle flicker between chunks.
+- **Auto-generate to the end** — added `is_final` to `StorySegment` + all provider schemas (Claude/OpenAI JSON Schema, Gemini UPPERCASE) and to `Beat` (Drift **schema v3** migration `addColumn`, verified on the existing DB). PromptBuilder now frames "one complete story across ~3–6 short chapters; set is_final on the last." Starting a story (roll/option/request) generates chapter 1, opens it, and **`_autoComplete`** generates the rest in the background (capped at 6, stops on is_final), refreshing after each so the reader can page ahead. Beats were already auto-saved → reusable.
+- **Chapter navigation** — Story view reworked: Back (app bar + button) → **previous chapter** (or pop at ch1); **Next chapter** (existing or generate if not final); **Home** (🏠) → `popUntil(isFirst)` (app home). "The End 🌙" on the final chapter. Series-home "Continue our story" → **"Open our story"** (opens the saved story at ch1, read/listen mode, no new generation).
+- `StoryRequest.chapterNumber` carries the 1-based chapter to the prompt.
+
+**Notes / open:** background auto-complete vs a user tapping "Continue" could race on `nextSeq` (low risk — auto-fill usually wins; Next prefers an existing beat). Consider caching synthesized audio per beat so replays don't re-pay TTS. No read-position tracking yet (Open starts at ch1).
+
+**Verified:** 49 tests pass (added final-chapter test) · analyze clean · Windows build + v3 migration + boot OK.
+
+---
+
 ## Template for new entries
 
 ```

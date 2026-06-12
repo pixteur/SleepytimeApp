@@ -5,9 +5,10 @@ import '../../adapters/tts/tts_provider.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 
-/// Displays a chapter and reads it aloud (auto-plays on open) with playback
-/// controls. "Continue" runs another turn. Character voices + cloud narration
-/// come in Phase 3b. See `docs/voice-tts.md`.
+/// Displays one chapter, reads it aloud (auto-plays, streamed paragraph-by-
+/// paragraph), and pages through the story: Back = previous chapter, Next =
+/// next chapter (generating it if needed), Home = back to the app home.
+/// See `docs/ui-ux.md`, `docs/voice-tts.md`.
 class StoryViewScreen extends ConsumerStatefulWidget {
   const StoryViewScreen({
     super.key,
@@ -17,7 +18,7 @@ class StoryViewScreen extends ConsumerStatefulWidget {
 
   final Beat beat;
 
-  /// False when viewing an old chapter from the archive (no "Continue").
+  /// False when viewing from the archive (no generating new chapters).
   final bool canContinue;
 
   @override
@@ -42,6 +43,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   }
 
   String get _lang => ref.read(activeChildProvider)?.language ?? 'en';
+  String? get _seriesId => ref.read(activeSeriesProvider)?.id;
 
   Future<void> _speak() async {
     try {
@@ -54,7 +56,57 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     }
   }
 
-  Future<void> _continue() async {
+  Beat? _find(List<Beat> beats, int seq) {
+    for (final b in beats) {
+      if (b.seq == seq) return b;
+    }
+    return null;
+  }
+
+  Future<void> _open(Beat beat) async {
+    await _tts.stop();
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            StoryViewScreen(beat: beat, canContinue: widget.canContinue),
+      ),
+    );
+  }
+
+  Future<void> _goToSeq(int seq) async {
+    final id = _seriesId;
+    if (id == null) return;
+    final beats = await ref.read(storageRepoProvider).loadBeats(id);
+    final target = _find(beats, seq);
+    if (target != null) await _open(target);
+  }
+
+  Future<void> _back() async {
+    if (widget.beat.seq > 0) {
+      await _goToSeq(widget.beat.seq - 1);
+    } else {
+      await _tts.stop();
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
+  Future<void> _home() async {
+    await _tts.stop();
+    if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+  }
+
+  Future<void> _next() async {
+    final id = _seriesId;
+    if (id == null) return;
+    final beats = await ref.read(storageRepoProvider).loadBeats(id);
+    final existing = _find(beats, widget.beat.seq + 1);
+    if (existing != null) {
+      await _open(existing);
+      return;
+    }
+    if (!widget.canContinue || widget.beat.isFinal) return;
     final child = ref.read(activeChildProvider);
     final series = ref.read(activeSeriesProvider);
     if (child == null || series == null) return;
@@ -63,20 +115,39 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     final beat = await ref
         .read(storyEngineProvider)
         .takeTurn(child: child, series: series, intent: StoryIntent.continued);
-    ref.invalidate(beatsForSeriesProvider(series.id));
+    ref.invalidate(beatsForSeriesProvider(id));
     if (!mounted) return;
     setState(() => _busy = false);
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => StoryViewScreen(beat: beat)),
-    );
+    await _open(beat);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final seriesId = _seriesId;
+    final beats = seriesId == null
+        ? const <Beat>[]
+        : (ref.watch(beatsForSeriesProvider(seriesId)).asData?.value ??
+              const <Beat>[]);
+    final hasNext = beats.any((b) => b.seq == widget.beat.seq + 1);
+    final canGenerate = widget.canContinue && !widget.beat.isFinal && !hasNext;
+
     return Scaffold(
-      appBar: AppBar(title: Text('Chapter ${widget.beat.seq + 1}')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          tooltip: widget.beat.seq > 0 ? 'Previous chapter' : 'Back',
+          onPressed: _busy ? null : _back,
+        ),
+        title: Text('Chapter ${widget.beat.seq + 1}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home_rounded),
+            tooltip: 'Home',
+            onPressed: _busy ? null : _home,
+          ),
+        ],
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
@@ -102,9 +173,9 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                       style: theme.textTheme.titleMedium?.copyWith(height: 1.6),
                     ),
                     const SizedBox(height: 32),
-                    if (widget.canContinue)
+                    if (hasNext || canGenerate)
                       FilledButton.icon(
-                        onPressed: _busy ? null : _continue,
+                        onPressed: _busy ? null : _next,
                         icon: _busy
                             ? const SizedBox(
                                 width: 18,
@@ -114,13 +185,25 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                                 ),
                               )
                             : const Icon(Icons.arrow_forward_rounded),
-                        label: const Text('Continue the story'),
+                        label: Text(
+                          hasNext ? 'Next chapter' : 'Continue the story',
+                        ),
+                      )
+                    else if (widget.beat.isFinal)
+                      Center(
+                        child: Text(
+                          'The End  🌙',
+                          style: theme.textTheme.titleLarge,
+                        ),
                       ),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: _busy ? null : () => Navigator.pop(context),
-                      child: const Text('Back'),
-                    ),
+                    if (widget.beat.seq > 0) ...[
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _back,
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        label: const Text('Previous chapter'),
+                      ),
+                    ],
                   ],
                 ),
               ),

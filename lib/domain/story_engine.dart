@@ -63,6 +63,7 @@ class StoryEngine {
       recentBeats: ctx.recentBeats,
       interests: interests,
       chosenTwist: chosenTwist,
+      chapterNumber: ctx.nextSeq + 1,
     );
     final prompt = _prompt.build(request, bannedThemes: _banned);
     final band = child.ageBand;
@@ -97,6 +98,7 @@ class StoryEngine {
       characters: safe.characters,
       openThreads: safe.openThreads,
       language: child.language,
+      isFinal: safe.isFinal,
     );
     await _beats.append(beat);
     await _recordLearning(child.id, intent, chosenTwist);

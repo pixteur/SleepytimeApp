@@ -15,6 +15,7 @@ class Beat {
     this.characters = const [],
     this.openThreads = const [],
     this.language = 'en',
+    this.isFinal = false,
   });
 
   final String id;
@@ -40,6 +41,9 @@ class Beat {
   /// Unresolved hooks to (maybe) pay off later.
   final List<String> openThreads;
   final String language;
+
+  /// True when this is the last chapter of the story (a complete ending).
+  final bool isFinal;
 }
 
 /// How tonight's episode began. See `docs/00-overview.md`.

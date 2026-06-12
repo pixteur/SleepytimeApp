@@ -35,6 +35,21 @@ class _ThrowingProvider implements AiProvider {
       throw StateError('boom');
 }
 
+/// Returns a safe segment marked as the final chapter.
+class _FinalProvider implements AiProvider {
+  @override
+  ProviderId get id => ProviderId.fake;
+  @override
+  Future<bool> isReady() async => true;
+  @override
+  Future<StorySegment> generate(StoryPrompt prompt) async => const StorySegment(
+    storyText: 'And so, warm and sleepy, everyone drifted off. The end.',
+    summary: 'A peaceful ending.',
+    rating: AgeRating.tiny,
+    isFinal: true,
+  );
+}
+
 void main() {
   const child = ChildProfile(id: 'c1', displayName: 'Aiden', age: 3);
   const series = Series(
@@ -115,6 +130,18 @@ void main() {
     );
     expect(beat.text, isNotEmpty);
     expect(beat.rating, AgeRating.tiny);
+  });
+
+  test('persists the final-chapter flag from the segment', () async {
+    final engine = StoryEngine(ai: _FinalProvider(), repo: repo);
+    final beat = await engine.takeTurn(
+      child: child,
+      series: series,
+      intent: StoryIntent.continued,
+    );
+    expect(beat.isFinal, isTrue);
+    final saved = await repo.loadBeats(series.id);
+    expect(saved.last.isFinal, isTrue);
   });
 
   test('dice/option twists feed the learned profile', () async {
