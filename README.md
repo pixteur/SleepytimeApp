@@ -24,14 +24,16 @@ Built **Flutter-first for PC (Windows)**, designed to port cleanly to **macOS an
 
 ## Status
 
-🟢 **Phase 0 — Foundation & planning.** No app code yet. See [build-plan/](build-plan/README.md).
+🟢 **Phases 0–2 complete.** Runnable on Windows: per-child profiles + onboarding quiz, story series/themes, the full nightly story engine with real AI (Claude / ChatGPT / Gemini) behind a parent-gated key screen, safety guard, and an app icon. 43 tests pass. Next: **Phase 3 — voice reader.** See [build-plan/](build-plan/README.md).
+
+App icon: [app_icon.png](app_icon.png) / [app_icon.svg](app_icon.svg) (a sleeping crescent moon).
 
 ## Key decisions (locked)
 
 | Area | Choice |
 |------|--------|
 | UI framework | **Flutter** (Windows → macOS → iOS, one codebase) |
-| AI compute | **Multi-provider BYO-key** (Claude default, + OpenAI/Gemini), behind an abstraction that can switch to a **hosted backend** later |
+| AI compute | **Multi-provider BYO-key** — Claude (default), ChatGPT, and Gemini, behind a parent-gated, consent-disclosed key screen; keys secured via Windows DPAPI. Abstraction can switch to a **hosted backend** later |
 | Data | **Local-only on device** (privacy / COPPA-first); optional cloud sync later |
 | Voice | **Pluggable TTS** — on-device for free/offline, cloud (e.g. ElevenLabs/Azure) for premium character voices |
 

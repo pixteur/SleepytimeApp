@@ -8,7 +8,7 @@ Phased roadmap for SleepytimeApp. Each phase is independently shippable-ish and 
 |-------|-------|------|--------|
 | 0 | [Foundation](phase-0-foundation.md) | Toolchain, Flutter project, architecture skeleton, CI | 🟢 |
 | 1 | [Profiles & Quiz](phase-1-profiles-quiz.md) | Child accounts + onboarding quiz → story seed | 🟢 |
-| 2 | [Story Engine](phase-2-story-engine.md) | The core loop: roll/continue/request → AI chapter → safe → saved | 🟡 |
+| 2 | [Story Engine](phase-2-story-engine.md) | The core loop: roll/continue/request → AI chapter → safe → saved | 🟢 |
 | 3 | [Voice Reader](phase-3-voice-reader.md) | TTS narration, character voices, mic input | ⚪ |
 | 4 | [i18n & Theming](phase-4-i18n-theming.md) | fr/es full, Japanese framework, color/theme personalization | ⚪ |
 | 5 | [Polish & Port](phase-5-polish-port.md) | UX polish, macOS/iOS port, packaging | ⚪ |
@@ -30,4 +30,4 @@ Phased roadmap for SleepytimeApp. Each phase is independently shippable-ish and 
 
 ## Current focus
 
-**Phase 2b — Real AI providers.** Phase 2a is done: the full offline pipeline (series, twist deck, prompt builder, safety guard, beat store, engine, UI) works against the FakeAiProvider, with 35 passing tests and the v1→v2 DB migration verified. Next: the real Claude provider (+ OpenAI/Gemini), `SecretStore`, and a parent-gated, consent-disclosed key screen. See [phase-2-story-engine.md](phase-2-story-engine.md).
+**Phase 3 — Voice Story Reader.** Phases 0–2 complete: the full nightly loop works with real AI (Claude / OpenAI / Gemini behind a parent-gated, consent-disclosed key screen; DPAPI-secured keys), offline fallback, and an app icon. 43 tests pass. Next: TTS narration (device + cloud), character voices, the story archive, and the 🎤 mic input. See [phase-3-voice-reader.md](phase-3-voice-reader.md).

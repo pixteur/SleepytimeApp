@@ -5,6 +5,7 @@ import '../../app_providers.dart';
 import '../../domain/models/child_profile.dart';
 import '../common/parent_gate.dart';
 import '../series/story_library_screen.dart';
+import '../settings/settings_screen.dart';
 import 'create_profile_screen.dart';
 
 /// The launch screen: pick which child is listening tonight, or (behind the
@@ -16,7 +17,23 @@ class ProfileSelectScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profilesAsync = ref.watch(profilesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Who is listening tonight? 🌙')),
+      appBar: AppBar(
+        title: const Text('Who is listening tonight? 🌙'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Grown-up settings',
+            onPressed: () async {
+              final passed = await showParentGate(context);
+              if (!passed || !context.mounted) return;
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
+      ),
       body: profilesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Could not load profiles:\n$e')),

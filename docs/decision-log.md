@@ -163,6 +163,29 @@
 
 ---
 
+## 2026-06-12 — Phase 2b: real providers (Claude + OpenAI + Gemini), app icon
+
+**Context:** Wired in real AI behind a parent-gated, consent-disclosed key screen, and added an app launch icon.
+
+**Providers (all raw HTTP — no official Dart SDK — with structured output):**
+- **ClaudeProvider** (default, `claude-opus-4-8`): `POST /v1/messages`, `output_config.format` JSON Schema. Consulted the `claude-api` skill for model id + structured-output approach.
+- **OpenAiProvider** (`gpt-4o`): Chat Completions, `response_format.json_schema` (strict).
+- **GeminiProvider** (`gemini-2.5-flash`): `generateContent`, `responseSchema` (Gemini's UPPERCASE dialect).
+- Shared `story_segment_codec.dart` (JSON↔StorySegment + JSON Schema) and `provider_exceptions.dart` (NotConfigured / Refusal / RequestException). `AiProvider.generate` takes the built `StoryPrompt`.
+- Provider switching: `aiConfigProvider` (Notifier) → the selected provider only when its key is stored AND `aiConsentGiven`; else the offline `FakeAiProvider`. Selection + consent in `AppPrefs` (shared_preferences); keys in `SecretStore`.
+
+**Parent-gated Settings** (`lib/ui/settings`): provider picker, **third-party-AI disclosure + explicit consent checkbox**, key entry, real "Test connection", "Remove key" — reached via a gear behind `showParentGate`. Honors the `CLAUDE.md` requirements (parent-gated key entry, disclosure + consent before any data leaves the device; no telemetry of prompts/story text).
+
+**Secure storage — DPAPI (not flutter_secure_storage):** the Windows impl of `flutter_secure_storage` requires the VS **ATL** C++ component, which wasn't installed and the VS-installer `modify` proved unreliable (and `vswhere` exits 0 even when a component is absent — a false-positive trap). Pivoted to `DpapiSecretStore` — `CryptProtectData`/`CryptUnprotectData` via FFI (crypt32.dll), encrypted blob in shared_preferences. **No admin, no ATL, per-user encryption.** Verified with a `@TestOn('windows')` round-trip test (CI on Linux skips it). macOS/iOS will add a Keychain-backed `SecretStore` later.
+
+**App icon:** `app_icon.svg` / `app_icon.png` (1024) / `app_icon.ico` in the repo root — a cozy sleeping crescent moon on a night-sky squircle (app palette). Generator at `tools/make_icon.py` (Pillow). Wired into the Windows runner (`windows/runner/resources/app_icon.ico`); `flutter_launcher_icons` can generate macOS/iOS from the PNG later.
+
+**Verified:** 43 tests pass (incl. provider parsing/refusal + DPAPI round-trip) · `flutter analyze` clean · Windows build OK · app boots.
+
+**Open questions:** confirm exact current OpenAI model id for strict structured outputs (`gpt-4o` chosen); add OpenAI/Gemini refusal-shape coverage as we test live; revisit streaming.
+
+---
+
 ## Template for new entries
 
 ```

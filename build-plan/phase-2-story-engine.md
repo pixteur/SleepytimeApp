@@ -2,7 +2,7 @@
 
 **Goal:** The nightly loop works end-to-end with a real AI provider: choose roll/continue/request → AI writes the next chapter → safety-checked → saved as a beat → displayed. **This is the heart of the app.**
 
-## 🟡 Status: Phase 2a COMPLETE (2026-06-12) — offline engine; 2b = real providers
+## 🟢 Status: Phases 2a + 2b COMPLETE (2026-06-12)
 
 **Done (2a — full pipeline against the FakeAiProvider, all offline & tested):**
 - **Drift schema v2** — `series` + `beats` tables (FKs, enum + JSON-list converters); v1→v2 migration verified on the existing DB (all 6 tables present at runtime).
@@ -11,8 +11,12 @@
 - **UI:** story library, new-series setup (grouped theme chooser + hero pick), series home (Continue / Roll / 6 cards / type idea), story view (Continue). Navigation: profile → library → series → story.
 - **Tests:** 35 pass — engine pipeline incl. **unsafe→fallback** and **error→fallback**, safety adversarial cases, prompt golden checks, twist/series. `flutter analyze` clean; Windows build + migration verified.
 
-**Deferred to Phase 2b:**
-- Real `ClaudeProvider` (default) + OpenAI/Gemini with structured output; `SecretStore` (Windows Credential Manager); **parent-gated** provider/key Settings screen with a **third-party-AI disclosure + consent** step (per `CLAUDE.md`).
+**Done (2b — real providers):**
+- **ClaudeProvider** (default, `claude-opus-4-8`), **OpenAiProvider** (`gpt-4o`), **GeminiProvider** (`gemini-2.5-flash`) — all raw HTTP with structured output; shared codec + typed exceptions; engine builds the `StoryPrompt`.
+- **DpapiSecretStore** (Windows DPAPI via FFI) for keys — no ATL/admin needed (flutter_secure_storage's Windows ATL requirement was the blocker). Verified by a Windows-only round-trip test.
+- **Parent-gated Settings**: provider picker + third-party-AI **disclosure + consent** + key entry + real "Test connection" + remove-key. Provider switches to the chosen one only when key + consent present, else offline `FakeAiProvider`.
+
+**Still deferred (later phases / nice-to-have):**
 - Streaming generation; per-child banned-themes/settings UI; custom-theme text + bilingual toggle in new-series setup; offline pre-written story bank.
 
 Original task checklist below for reference.
