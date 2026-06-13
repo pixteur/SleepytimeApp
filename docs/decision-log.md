@@ -238,6 +238,13 @@
 
 ---
 
+## 2026-06-12 — Length toggle + arrow/swipe page navigation
+
+- **Story length toggle** (Short/Medium/Long) on the series home — sets the active child's `detailLevel` (persisted via ProfileService; updates `activeChildProvider` so the next generation uses it). Maps to PromptBuilder's per-chapter word target.
+- **Page navigation**: edge **arrow buttons** (left=previous, right=next, shown only when applicable) overlaid on the Story view, plus **horizontal swipe** (right→previous, left→next via `onHorizontalDragEnd`). Dropped the redundant bottom "Previous chapter" button; kept the bottom Next/Continue/"The End" affordance. Text padding widened so it doesn't sit under the arrows.
+
+---
+
 ## Template for new entries
 
 ```

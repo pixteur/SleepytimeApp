@@ -191,71 +191,116 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
           ),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: Column(
-            children: [
-              StreamBuilder<TtsState>(
-                stream: _tts.stateStream,
-                initialData: _tts.state,
-                builder: (context, snap) => _PlaybackBar(
-                  state: snap.data ?? TtsState.idle,
-                  onPlay: _speak,
-                  onPause: _tts.pause,
-                  onResume: _tts.resume,
-                  onStop: _stop,
-                ),
-              ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragEnd: _onSwipe,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Column(
                   children: [
-                    Text(
-                      widget.beat.text,
-                      style: theme.textTheme.titleMedium?.copyWith(height: 1.6),
+                    StreamBuilder<TtsState>(
+                      stream: _tts.stateStream,
+                      initialData: _tts.state,
+                      builder: (context, snap) => _PlaybackBar(
+                        state: snap.data ?? TtsState.idle,
+                        onPlay: _speak,
+                        onPause: _tts.pause,
+                        onResume: _tts.resume,
+                        onStop: _stop,
+                      ),
                     ),
-                    const SizedBox(height: 32),
-                    if (hasNext || canGenerate)
-                      FilledButton.icon(
-                        onPressed: _busy ? null : _next,
-                        icon: _busy
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.arrow_forward_rounded),
-                        label: Text(
-                          hasNext ? 'Next chapter' : 'Continue the story',
-                        ),
-                      )
-                    else if (widget.beat.isFinal)
-                      Center(
-                        child: Text(
-                          'The End  🌙',
-                          style: theme.textTheme.titleLarge,
-                        ),
+                    Expanded(
+                      child: ListView(
+                        // wider side padding leaves room for the edge arrows
+                        padding: const EdgeInsets.fromLTRB(56, 8, 56, 24),
+                        children: [
+                          Text(
+                            widget.beat.text,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              height: 1.6,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          if (hasNext || canGenerate)
+                            FilledButton.icon(
+                              onPressed: _busy ? null : _next,
+                              icon: _busy
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.arrow_forward_rounded),
+                              label: Text(
+                                hasNext ? 'Next chapter' : 'Continue the story',
+                              ),
+                            )
+                          else if (widget.beat.isFinal)
+                            Center(
+                              child: Text(
+                                'The End  🌙',
+                                style: theme.textTheme.titleLarge,
+                              ),
+                            ),
+                        ],
                       ),
-                    if (widget.beat.seq > 0) ...[
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: _busy ? null : _back,
-                        icon: const Icon(Icons.arrow_back_rounded),
-                        label: const Text('Previous chapter'),
-                      ),
-                    ],
+                    ),
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+            if (widget.beat.seq > 0)
+              Positioned(
+                left: 4,
+                child: _NavArrow(
+                  icon: Icons.chevron_left_rounded,
+                  onTap: _busy ? null : _back,
+                ),
+              ),
+            if (hasNext || canGenerate)
+              Positioned(
+                right: 4,
+                child: _NavArrow(
+                  icon: Icons.chevron_right_rounded,
+                  onTap: _busy ? null : _next,
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
+
+  void _onSwipe(DragEndDetails details) {
+    if (_busy) return;
+    final v = details.primaryVelocity ?? 0;
+    if (v > 250 && widget.beat.seq > 0) {
+      _back(); // swipe right → previous chapter
+    } else if (v < -250) {
+      _next(); // swipe left → next chapter (no-op at the end)
+    }
+  }
+}
+
+class _NavArrow extends StatelessWidget {
+  const _NavArrow({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => IconButton.filledTonal(
+    icon: Icon(icon),
+    iconSize: 32,
+    tooltip: icon == Icons.chevron_left_rounded ? 'Previous' : 'Next',
+    onPressed: onTap,
+  );
 }
 
 class _PlaybackBar extends StatelessWidget {

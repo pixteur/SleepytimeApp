@@ -85,6 +85,16 @@ class _SeriesHomeScreenState extends ConsumerState<SeriesHomeScreen> {
     }
   }
 
+  /// Change the active child's story length (per-chapter), persisted.
+  Future<void> _setLength(DetailLevel level) async {
+    final child = ref.read(activeChildProvider);
+    if (child == null || child.detailLevel == level) return;
+    final updated = child.copyWith(detailLevel: level);
+    await ref.read(profileServiceProvider).update(updated);
+    ref.read(activeChildProvider.notifier).select(updated);
+    ref.invalidate(profilesProvider);
+  }
+
   /// Open the saved story from chapter 1 (read/listen mode).
   Future<void> _openStory() async {
     final series = ref.read(activeSeriesProvider);
@@ -100,6 +110,7 @@ class _SeriesHomeScreenState extends ConsumerState<SeriesHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final series = ref.watch(activeSeriesProvider);
+    final child = ref.watch(activeChildProvider);
     final theme = Theme.of(context);
     if (series == null) {
       return const Scaffold(body: Center(child: Text('No story selected.')));
@@ -159,6 +170,35 @@ class _SeriesHomeScreenState extends ConsumerState<SeriesHomeScreen> {
                       ),
                     ),
                   ],
+                  const SizedBox(height: 20),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Story length',
+                      style: theme.textTheme.titleSmall,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<DetailLevel>(
+                    segments: const [
+                      ButtonSegment(
+                        value: DetailLevel.short,
+                        label: Text('Short'),
+                      ),
+                      ButtonSegment(
+                        value: DetailLevel.medium,
+                        label: Text('Medium'),
+                      ),
+                      ButtonSegment(
+                        value: DetailLevel.long,
+                        label: Text('Long'),
+                      ),
+                    ],
+                    selected: {child?.detailLevel ?? DetailLevel.medium},
+                    onSelectionChanged: _busy
+                        ? null
+                        : (s) => _setLength(s.first),
+                  ),
                   const SizedBox(height: 24),
                   if (hasBeats)
                     FilledButton.icon(
