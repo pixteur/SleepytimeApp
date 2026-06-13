@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,7 +5,6 @@ import '../../adapters/ai/ai_provider.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../../domain/models/child_profile.dart';
-import '../../domain/models/series.dart';
 import 'story_archive_screen.dart';
 import 'story_view_screen.dart';
 
@@ -31,10 +28,9 @@ class _SeriesHomeScreenState extends ConsumerState<SeriesHomeScreen> {
     super.dispose();
   }
 
-  static const int _maxChapters = 6;
-
-  /// Start a new story: generate chapter 1, open it, and auto-generate the rest
-  /// to a natural ending in the background (each chapter auto-saved).
+  /// Start a new story: generate chapter 1 and open it. The story view then
+  /// prefetches each following chapter one-ahead as the child reads/listens, so
+  /// paging forward is instant without generating all six chapters up front.
   Future<void> _runTurn(StoryIntent intent, {String? twist}) async {
     final child = ref.read(activeChildProvider);
     final series = ref.read(activeSeriesProvider);
@@ -43,46 +39,34 @@ class _SeriesHomeScreenState extends ConsumerState<SeriesHomeScreen> {
     // Ensure the configured provider (e.g. Gemini) is resolved before the first
     // generation, so a cold start doesn't silently use the offline placeholder.
     await ref.read(aiConfigProvider.notifier).refresh();
-    final beat = await ref
-        .read(storyEngineProvider)
-        .takeTurn(
-          child: child,
-          series: series,
-          intent: intent,
-          chosenTwist: twist,
-        );
+    final engine = ref.read(storyEngineProvider);
+    final beat = await engine.takeTurn(
+      child: child,
+      series: series,
+      intent: intent,
+      chosenTwist: twist,
+    );
     ref.invalidate(beatsForSeriesProvider(series.id));
     ref.invalidate(seriesForChildProvider(child.id));
     if (!mounted) return;
     setState(() => _busy = false);
+    _warnIfFallback(engine.lastFallbackReason);
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => StoryViewScreen(beat: beat)),
     );
-    if (!beat.isFinal) unawaited(_autoComplete(child, series));
   }
 
-  /// Keep generating chapters (intent=continue) until the story ends or hits
-  /// the chapter cap; refresh after each so the reader can page ahead.
-  Future<void> _autoComplete(ChildProfile child, Series series) async {
-    final engine = ref.read(storyEngineProvider);
-    final repo = ref.read(storageRepoProvider);
-    for (var i = 0; i < _maxChapters; i++) {
-      final beats = await repo.loadBeats(series.id);
-      if (beats.length >= _maxChapters) break;
-      if (beats.isNotEmpty && beats.last.isFinal) break;
-      try {
-        await engine.takeTurn(
-          child: child,
-          series: series,
-          intent: StoryIntent.continued,
-        );
-      } catch (_) {
-        break; // never let background generation crash; reader still has beats
-      }
-      if (!mounted) return;
-      ref.invalidate(beatsForSeriesProvider(series.id));
-    }
+  /// If the engine had to use the safe placeholder (API error / safety reject),
+  /// tell the parent why instead of silently showing a generic chapter.
+  void _warnIfFallback(String? reason) {
+    if (reason == null || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 6),
+        content: Text('Story AI unavailable — using a placeholder. ($reason)'),
+      ),
+    );
   }
 
   /// Change the active child's story length (per-chapter), persisted.

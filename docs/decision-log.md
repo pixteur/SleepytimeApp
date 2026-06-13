@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-06-13 — Fix cold-start config race, slow paging, silent fallbacks
+
+**Context:** Reported symptoms: "Gemini voice not used, pages all generic, unreliable, takes forever to load a page."
+
+**Root cause + fixes:**
+1. **Async config race.** `aiConfigProvider`/`voiceConfigProvider` hydrate *after* the first frame, so the opening story + narration raced them and used the offline defaults (placeholder story + robotic device voice). Fix: `main()` warms a shared `ProviderContainer` and `await`s both `refresh()` calls **before** `runApp` (now via `UncontrolledProviderScope`), so the configured provider (Gemini) is active from the first tap.
+2. **Slow / unreliable paging.** The series home eagerly generated all 6 chapters in the background, contending on the per-series lock and cascading fallbacks. Replaced with **prefetch-one-ahead** in the Story view: while a chapter is read, the next is generated in the background and reused by `_next()` (no duplicate gen). Paging is then instant.
+3. **Silent generic chapters.** `StoryEngine.lastFallbackReason` records *why* a turn fell back (API error / safety reject); the UI now shows a SnackBar instead of a silent placeholder.
+4. **Faster time-to-audio.** Cloud TTS peels the first sentence into its own chunk so narration starts almost immediately rather than after a whole paragraph.
+
+**Affects:** `lib/main.dart`, `lib/domain/story_engine.dart`, `lib/ui/story/series_home_screen.dart`, `lib/ui/story/story_view_screen.dart`, `lib/adapters/tts/cloud_tts_provider.dart`.
+
+---
+
 ## 2026-06-12 — iOS/App Store strategy captured for future agent work
 
 **Context:** Reviewed the actual repo state before planning iOS distribution. The app is Flutter-first, currently Windows-only at the platform layer, with no custom native iOS/macOS implementation yet.

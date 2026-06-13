@@ -130,6 +130,18 @@ void main() {
     );
     expect(beat.text, isNotEmpty);
     expect(beat.rating, AgeRating.tiny);
+    // The reason is exposed so the UI can warn instead of silently going generic.
+    expect(engine.lastFallbackReason, contains('boom'));
+  });
+
+  test('lastFallbackReason is cleared after a successful turn', () async {
+    final engine = StoryEngine(ai: const FakeAiProvider(), repo: repo);
+    await engine.takeTurn(
+      child: child,
+      series: series,
+      intent: StoryIntent.dice,
+    );
+    expect(engine.lastFallbackReason, isNull);
   });
 
   test('concurrent turns are serialized — no duplicate seq', () async {

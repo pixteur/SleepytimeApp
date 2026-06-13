@@ -54,6 +54,11 @@ class StoryEngine {
   /// chapter. Turns for a series run one at a time.
   final Map<String, Future<void>> _locks = {};
 
+  /// Why the last turn used the safe fallback instead of a generated chapter
+  /// (API error or safety rejection), or null if the real provider succeeded.
+  /// The UI surfaces this so silent "generic" chapters become diagnosable.
+  String? lastFallbackReason;
+
   /// Produce, vet, and persist the next beat for [series]. Serialized per series.
   Future<Beat> takeTurn({
     required ChildProfile child,
@@ -105,6 +110,7 @@ class StoryEngine {
     final band = child.ageBand;
 
     StorySegment? safe;
+    String? reason;
     for (var attempt = 0; attempt <= _maxRetries && safe == null; attempt++) {
       try {
         final segment = await _ai.generate(prompt);
@@ -113,12 +119,22 @@ class StoryEngine {
           band: band,
           bannedThemes: _banned,
         );
-        if (verdict.ok) safe = segment;
-      } catch (_) {
+        if (verdict.ok) {
+          safe = segment;
+        } else {
+          reason = 'safety rejected (${verdict.reasons.join(", ")})';
+        }
+      } catch (e) {
         // Swallow and retry; the fallback below guarantees a result.
+        reason = e.toString();
       }
     }
-    safe ??= _fallback();
+    if (safe == null) {
+      lastFallbackReason = reason ?? 'unknown error';
+      safe = _fallback();
+    } else {
+      lastFallbackReason = null;
+    }
 
     final beat = Beat(
       id: _uuid.v4(),

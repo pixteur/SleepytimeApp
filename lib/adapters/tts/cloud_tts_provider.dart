@@ -129,8 +129,10 @@ class CloudTtsProvider implements TtsProvider {
   }
 
   /// Split into paragraphs (blank-line separated); further split very long
-  /// paragraphs by sentence so the first chunk stays short and starts quickly.
-  static List<String> _splitParagraphs(String text, {int maxLen = 600}) {
+  /// paragraphs by sentence so chunks stay short. The very first chunk is forced
+  /// down to a single sentence so playback starts almost immediately instead of
+  /// waiting on a whole paragraph to synthesize.
+  static List<String> _splitParagraphs(String text, {int maxLen = 500}) {
     final paras = text
         .split(RegExp(r'\n\s*\n'))
         .map((p) => p.trim())
@@ -155,6 +157,15 @@ class CloudTtsProvider implements TtsProvider {
     if (out.isEmpty) {
       final t = text.trim();
       return t.isEmpty ? const [] : [t];
+    }
+    // Peel the first sentence off the opening chunk for a fast time-to-audio.
+    if (out.first.length > 220) {
+      final first = out.first;
+      final m = RegExp(r'.*?[.!?](\s|$)').firstMatch(first);
+      if (m != null && m.end < first.length) {
+        out[0] = first.substring(m.end).trim();
+        out.insert(0, first.substring(0, m.end).trim());
+      }
     }
     return out;
   }

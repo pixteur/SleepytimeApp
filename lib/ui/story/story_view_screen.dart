@@ -36,12 +36,41 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   // Cleared when the user stops, so Stop doesn't trigger an advance.
   bool _autoAdvance = false;
 
+  // The next chapter, generated in the background while this one is read, so
+  // paging forward is instant. Reused by _next() rather than regenerated.
+  Future<Beat>? _prefetch;
+
   @override
   void initState() {
     super.initState();
     _tts = ref.read(ttsProvider);
     _stateSub = _tts.stateStream.listen(_onTtsState);
     WidgetsBinding.instance.addPostFrameCallback((_) => _speak());
+    unawaited(_startPrefetch());
+  }
+
+  /// Begin generating the following chapter in the background (one-ahead), if it
+  /// doesn't already exist and the story can continue. Saves + refreshes the
+  /// list when it lands so the Next affordances light up.
+  Future<void> _startPrefetch() async {
+    if (!widget.canContinue || widget.beat.isFinal) return;
+    final id = _seriesId;
+    final child = ref.read(activeChildProvider);
+    final series = ref.read(activeSeriesProvider);
+    if (id == null || child == null || series == null) return;
+    final beats = await ref.read(storageRepoProvider).loadBeats(id);
+    if (beats.any((b) => b.seq == widget.beat.seq + 1)) return; // already there
+    final future = ref
+        .read(storyEngineProvider)
+        .takeTurn(child: child, series: series, intent: StoryIntent.continued);
+    _prefetch = future;
+    future
+        .then((_) {
+          if (mounted) ref.invalidate(beatsForSeriesProvider(id));
+        })
+        .catchError((_) {
+          /* never let prefetch crash the reader */
+        });
   }
 
   @override
@@ -150,13 +179,42 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     if (child == null || series == null) return;
     await _tts.stop();
     setState(() => _busy = true);
-    final beat = await ref
-        .read(storyEngineProvider)
-        .takeTurn(child: child, series: series, intent: StoryIntent.continued);
+    final engine = ref.read(storyEngineProvider);
+    Beat beat;
+    try {
+      // Reuse the one-ahead prefetch if it's running; otherwise generate now.
+      beat =
+          await (_prefetch ??
+              engine.takeTurn(
+                child: child,
+                series: series,
+                intent: StoryIntent.continued,
+              ));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not load the next chapter: $e')),
+      );
+      return;
+    }
+    _prefetch = null;
     ref.invalidate(beatsForSeriesProvider(id));
     if (!mounted) return;
     setState(() => _busy = false);
+    _warnIfFallback(engine.lastFallbackReason);
     await _open(beat);
+  }
+
+  /// Surface a placeholder fallback so a generic chapter isn't silent.
+  void _warnIfFallback(String? reason) {
+    if (reason == null || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 6),
+        content: Text('Story AI unavailable — using a placeholder. ($reason)'),
+      ),
+    );
   }
 
   @override
