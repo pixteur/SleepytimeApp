@@ -18,7 +18,7 @@ class GeminiProvider implements AiProvider {
     required SecretStore secrets,
     http.Client? httpClient,
     String model = 'gemini-2.5-flash',
-    int maxTokens = 2000,
+    int maxTokens = 4096,
   }) : _secrets = secrets, // ignore: prefer_initializing_formals
        _http = httpClient ?? http.Client(),
        _model = model, // ignore: prefer_initializing_formals
@@ -98,6 +98,12 @@ class GeminiProvider implements AiProvider {
           'responseMimeType': 'application/json',
           'responseSchema': _schema,
           'maxOutputTokens': _maxTokens,
+          // Turn OFF "thinking". gemini-2.5-flash otherwise spends part of the
+          // output-token budget on internal reasoning, which can truncate the
+          // JSON (finishReason MAX_TOKENS) → parse failure → generic fallback.
+          // This structured story task doesn't need it, and disabling it also
+          // makes generation noticeably faster.
+          'thinkingConfig': {'thinkingBudget': 0},
         },
       }),
     );
@@ -127,6 +133,13 @@ class GeminiProvider implements AiProvider {
         finish == 'BLOCKLIST' ||
         finish == 'PROHIBITED_CONTENT') {
       throw ProviderRefusal('Stopped: $finish');
+    }
+    if (finish == 'MAX_TOKENS') {
+      throw const ProviderRequestException(
+        200,
+        'Response truncated (MAX_TOKENS) — the chapter exceeded the token '
+        'budget. Try a shorter Story length.',
+      );
     }
 
     final parts =

@@ -5,6 +5,7 @@ import '../../adapters/ai/ai_provider.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../../domain/models/child_profile.dart';
+import '../common/error_banner.dart';
 import 'story_archive_screen.dart';
 import 'story_view_screen.dart';
 
@@ -61,11 +62,9 @@ class _SeriesHomeScreenState extends ConsumerState<SeriesHomeScreen> {
   /// tell the parent why instead of silently showing a generic chapter.
   void _warnIfFallback(String? reason) {
     if (reason == null || !mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 6),
-        content: Text('Story AI unavailable — using a placeholder. ($reason)'),
-      ),
+    showErrorBanner(
+      context,
+      'Story AI unavailable — using a placeholder. ($reason)',
     );
   }
 

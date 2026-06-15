@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../adapters/tts/tts_provider.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
+import '../common/error_banner.dart';
 
 /// Displays one chapter, reads it aloud (auto-plays, streamed paragraph-by-
 /// paragraph), and pages through the story: Back = previous chapter, Next =
@@ -90,9 +91,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     } catch (e) {
       _autoAdvance = false;
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Voice unavailable: $e')));
+      showErrorBanner(context, 'Voice unavailable: $e');
     }
   }
 
@@ -193,9 +192,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not load the next chapter: $e')),
-      );
+      showErrorBanner(context, 'Could not load the next chapter: $e');
       return;
     }
     _prefetch = null;
@@ -209,11 +206,9 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   /// Surface a placeholder fallback so a generic chapter isn't silent.
   void _warnIfFallback(String? reason) {
     if (reason == null || !mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 6),
-        content: Text('Story AI unavailable — using a placeholder. ($reason)'),
-      ),
+    showErrorBanner(
+      context,
+      'Story AI unavailable — using a placeholder. ($reason)',
     );
   }
 

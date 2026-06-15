@@ -141,10 +141,11 @@ void main() {
     final client = MockClient((req) async {
       expect(req.headers['x-goog-api-key'], 'sk-test');
       final body = jsonDecode(req.body) as Map<String, dynamic>;
-      expect(
-        (body['generationConfig'] as Map)['responseMimeType'],
-        'application/json',
-      );
+      final genConfig = body['generationConfig'] as Map;
+      expect(genConfig['responseMimeType'], 'application/json');
+      // Thinking must be OFF so it can't eat the output-token budget and
+      // truncate the JSON.
+      expect((genConfig['thinkingConfig'] as Map)['thinkingBudget'], 0);
       return http.Response(
         jsonEncode({
           'candidates': [
@@ -168,6 +169,24 @@ void main() {
     expect(provider.id, ProviderId.gemini);
     final seg = await provider.generate(prompt);
     expect(seg.characters, contains('Aiden'));
+  });
+
+  test('GeminiProvider surfaces a MAX_TOKENS truncation as an error', () async {
+    final client = MockClient(
+      (_) async => http.Response(
+        jsonEncode({
+          'candidates': [
+            {'finishReason': 'MAX_TOKENS'},
+          ],
+        }),
+        200,
+      ),
+    );
+    final provider = GeminiProvider(
+      secrets: _FakeSecrets('sk-test'),
+      httpClient: client,
+    );
+    expect(provider.generate(prompt), throwsA(isA<ProviderRequestException>()));
   });
 
   test('GeminiProvider treats a SAFETY finish as a refusal', () async {
