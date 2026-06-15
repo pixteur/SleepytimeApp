@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app_providers.dart';
 import '../../domain/models/series.dart';
 import '../common/parent_gate.dart';
-import '../story/series_home_screen.dart';
+import '../story/story_chapters_screen.dart';
 import 'new_series_screen.dart';
 import 'theme_catalog.dart';
 
@@ -92,7 +92,7 @@ class _SeriesCard extends ConsumerWidget {
           ref.read(activeSeriesProvider.notifier).select(series);
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const SeriesHomeScreen()),
+            MaterialPageRoute(builder: (_) => const StoryChaptersScreen()),
           );
         },
       ),

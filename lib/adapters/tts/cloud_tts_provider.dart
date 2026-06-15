@@ -83,19 +83,34 @@ class CloudTtsProvider implements TtsProvider {
   }
 
   Future<void> _play(int i) async {
+    Uint8List bytes;
     try {
-      final bytes = await _synthAt(i); // usually already buffered
+      bytes = await _synthAt(i); // usually already buffered
       // Prefetch exactly ONE chunk ahead while this one plays. Because chunks
       // are large, a chunk's playback comfortably outlasts the next chunk's
       // synthesis, so it's ready in time — and pacing it to playback (rather
       // than firing the whole chapter at once) stays under provider rate limits.
       if (_active && i + 1 < _chunks.length) _synthAt(i + 1);
-      if (!_active) return;
-      await _player.play(BytesSource(bytes, mimeType: _synth.mimeType));
     } catch (_) {
+      // Synthesis failed for real (e.g. rate limit exhausted, no key) — surface
+      // it so the reader knows the voice is unavailable.
       _active = false;
       _set(TtsState.idle);
       rethrow;
+    }
+    if (!_active) return;
+    // A degenerate buffer (empty / header-only WAV) can make the Windows audio
+    // backend throw a RangeError. Skip it and keep the story going instead of
+    // dropping narration entirely.
+    if (bytes.length < 64) {
+      _advance();
+      return;
+    }
+    try {
+      await _player.play(BytesSource(bytes, mimeType: _synth.mimeType));
+    } catch (_) {
+      // This one chunk wouldn't play — skip it and continue with the next.
+      _advance();
     }
   }
 

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app_providers.dart';
 import '../../domain/models/child_profile.dart';
 import '../common/parent_gate.dart';
-import '../series/story_library_screen.dart';
+import '../home/home_screen.dart';
 import '../settings/settings_screen.dart';
 import 'create_profile_screen.dart';
 
@@ -119,7 +119,7 @@ class _ProfileCard extends ConsumerWidget {
             ref.read(activeChildProvider.notifier).select(child);
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const StoryLibraryScreen()),
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
             );
           },
           child: Padding(
