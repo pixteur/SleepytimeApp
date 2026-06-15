@@ -30,6 +30,7 @@ class StoryEngine {
     SafetyGuard safetyGuard = const SafetyGuard(),
     List<String> bannedThemes = BannedThemes.defaults,
     int maxRetries = 2,
+    int maxChapters = 6,
     Uuid? uuid,
   }) : _ai = ai, // ignore: prefer_initializing_formals
        _repo = repo,
@@ -38,6 +39,7 @@ class StoryEngine {
        _safety = safetyGuard,
        _banned = bannedThemes,
        _maxRetries = maxRetries, // ignore: prefer_initializing_formals
+       _maxChapters = maxChapters, // ignore: prefer_initializing_formals
        _uuid = uuid ?? const Uuid();
 
   final AiProvider _ai;
@@ -47,6 +49,7 @@ class StoryEngine {
   final SafetyGuard _safety;
   final List<String> _banned;
   final int _maxRetries;
+  final int _maxChapters;
   final Uuid _uuid;
 
   /// Per-series generation lock so concurrent turns (e.g. background
@@ -105,6 +108,7 @@ class StoryEngine {
       interests: interests,
       chosenTwist: chosenTwist,
       chapterNumber: ctx.nextSeq + 1,
+      maxChapters: _maxChapters,
     );
     final prompt = _prompt.build(request, bannedThemes: _banned);
     final band = child.ageBand;
@@ -136,6 +140,10 @@ class StoryEngine {
       lastFallbackReason = null;
     }
 
+    // Enforce the cap: even if the model won't end the story, the last allowed
+    // chapter is always final. Stops runaway generation (and quota burn).
+    final isFinal = safe.isFinal || request.mustConclude;
+
     final beat = Beat(
       id: _uuid.v4(),
       seriesId: series.id,
@@ -148,9 +156,9 @@ class StoryEngine {
       rating: safe.rating,
       setting: safe.setting,
       characters: safe.characters,
-      openThreads: safe.openThreads,
+      openThreads: isFinal ? const [] : safe.openThreads,
       language: child.language,
-      isFinal: safe.isFinal,
+      isFinal: isFinal,
     );
     await _beats.append(beat);
     await _recordLearning(child.id, intent, chosenTwist);

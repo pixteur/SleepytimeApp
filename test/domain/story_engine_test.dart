@@ -35,6 +35,21 @@ class _ThrowingProvider implements AiProvider {
       throw StateError('boom');
 }
 
+/// Always returns a safe, non-final segment — never wants to end the story.
+class _NeverEndsProvider implements AiProvider {
+  @override
+  ProviderId get id => ProviderId.fake;
+  @override
+  Future<bool> isReady() async => true;
+  @override
+  Future<StorySegment> generate(StoryPrompt prompt) async => const StorySegment(
+    storyText: 'The journey continued on and on.',
+    summary: 'still going',
+    rating: AgeRating.tiny,
+    openThreads: ['what next?'],
+  );
+}
+
 /// Returns a safe segment marked as the final chapter.
 class _FinalProvider implements AiProvider {
   @override
@@ -171,6 +186,32 @@ void main() {
     final saved = await repo.loadBeats(series.id);
     expect(saved.last.isFinal, isTrue);
   });
+
+  test(
+    'the chapter cap forces a final chapter even if the model won\'t',
+    () async {
+      final engine = StoryEngine(
+        ai: _NeverEndsProvider(),
+        repo: repo,
+        maxChapters: 3,
+      );
+      Beat last = await engine.takeTurn(
+        child: child,
+        series: series,
+        intent: StoryIntent.dice,
+      );
+      for (var i = 0; i < 5 && !last.isFinal; i++) {
+        last = await engine.takeTurn(
+          child: child,
+          series: series,
+          intent: StoryIntent.continued,
+        );
+      }
+      expect(last.isFinal, isTrue);
+      expect(last.seq, 2); // 0-based: the 3rd chapter is forced final
+      expect(last.openThreads, isEmpty); // no dangling hook on the last chapter
+    },
+  );
 
   test('dice/option twists feed the learned profile', () async {
     final engine = StoryEngine(ai: const FakeAiProvider(), repo: repo);

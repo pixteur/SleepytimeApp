@@ -7,6 +7,7 @@ import '../../domain/prompt_builder.dart';
 import '../secrets/secret_store.dart';
 import 'ai_provider.dart';
 import 'provider_exceptions.dart';
+import 'rate_limit_retry.dart';
 import 'story_segment_codec.dart';
 
 /// The Google Gemini provider. `generateContent` with a structured
@@ -76,7 +77,11 @@ class GeminiProvider implements AiProvider {
     if (key == null || key.isEmpty) {
       throw const ProviderNotConfigured('No Gemini API key configured.');
     }
+    // Ride out transient rate limits (429) instead of falling back to generic.
+    return retryOnRateLimit(() => _generateOnce(prompt, key));
+  }
 
+  Future<StorySegment> _generateOnce(StoryPrompt prompt, String key) async {
     final response = await _http.post(
       Uri.parse('$_base/$_model:generateContent'),
       headers: {'content-type': 'application/json', 'x-goog-api-key': key},

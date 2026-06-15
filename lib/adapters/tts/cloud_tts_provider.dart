@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
 
+import '../ai/rate_limit_retry.dart';
 import 'tts_provider.dart';
 import 'tts_synthesizer.dart';
 
@@ -53,11 +54,11 @@ class CloudTtsProvider implements TtsProvider {
     if (!_states.isClosed) _states.add(s);
   }
 
-  /// Start (or return the running) synthesis job for chunk [i].
-  Future<Uint8List> _synthAt(int i) => _jobs[i] ??= _synth.synthesize(
-    _chunks[i],
-    language: _lang,
-    voice: _voice,
+  /// Start (or return the running) synthesis job for chunk [i]. Retries through
+  /// transient provider rate limits (429) so narration doesn't drop out.
+  Future<Uint8List> _synthAt(int i) => _jobs[i] ??= retryOnRateLimit(
+    () => _synth.synthesize(_chunks[i], language: _lang, voice: _voice),
+    cancelled: () => !_active,
   );
 
   @override

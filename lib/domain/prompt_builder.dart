@@ -40,12 +40,18 @@ class PromptBuilder {
         'Target length per chapter: ${_lengthFor(req.child.detailLevel)}.',
       )
       ..writeln(
-        'Tell ONE complete bedtime story across about 3–6 short chapters. This '
-        'is chapter ${req.chapterNumber}. Each chapter should end on a gentle, '
-        'calm note. When the story reaches a warm, satisfying resolution, set '
-        '"is_final" to true; otherwise leave a soft hook for the next chapter '
-        'and set "is_final" to false. Always end the FINAL chapter peacefully, '
-        'ready for sleep.',
+        req.mustConclude
+            ? 'This is chapter ${req.chapterNumber} and the FINAL chapter of the '
+                  'story. Bring everything to a warm, satisfying close now, tie '
+                  'off the open threads, end peacefully and ready for sleep, and '
+                  'set "is_final" to true.'
+            : 'Tell ONE complete bedtime story across about 3–${req.maxChapters} '
+                  'short chapters. This is chapter ${req.chapterNumber}. Each '
+                  'chapter should end on a gentle, calm note. When the story '
+                  'reaches a warm, satisfying resolution, set "is_final" to true; '
+                  'otherwise leave a soft hook for the next chapter and set '
+                  '"is_final" to false. Always end the FINAL chapter peacefully, '
+                  'ready for sleep.',
       )
       ..writeln(
         'The audience band is "${band.name}". Write strictly within it and set '

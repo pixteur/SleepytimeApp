@@ -15,6 +15,7 @@ class StoryRequest {
     this.interests = const [],
     this.chosenTwist,
     this.chapterNumber = 1,
+    this.maxChapters = 6,
   });
 
   final ChildProfile child;
@@ -30,4 +31,11 @@ class StoryRequest {
 
   /// 1-based chapter index, so the model can pace a complete multi-chapter story.
   final int chapterNumber;
+
+  /// Hard upper bound on chapters, so a story always ends (and never burns
+  /// through API quota generating endlessly when the model won't conclude).
+  final int maxChapters;
+
+  /// True on/after the last allowed chapter — the model must wrap up now.
+  bool get mustConclude => chapterNumber >= maxChapters;
 }

@@ -16,6 +16,8 @@ void main() {
     String? twist,
     bool bilingual = false,
     List<Interest> interests = const [],
+    int chapterNumber = 1,
+    int maxChapters = 6,
   }) {
     final child = ChildProfile(id: 'c1', displayName: 'Mira', age: age);
     final series = Series(
@@ -33,8 +35,23 @@ void main() {
       intent: intent,
       chosenTwist: twist,
       interests: interests,
+      chapterNumber: chapterNumber,
+      maxChapters: maxChapters,
     );
   }
+
+  test('a mid-story chapter leaves room to continue', () {
+    final p = builder.build(req(chapterNumber: 2, maxChapters: 6));
+    expect(p.system, contains('chapter 2'));
+    expect(p.system, contains('about 3–6'));
+    expect(p.system, isNot(contains('FINAL chapter of the story')));
+  });
+
+  test('the capped chapter is forced to conclude', () {
+    final p = builder.build(req(chapterNumber: 6, maxChapters: 6));
+    expect(p.system, contains('FINAL chapter of the story'));
+    expect(p.system, contains('set "is_final" to true'));
+  });
 
   test('system prompt injects the age-band policy and universal rules', () {
     final p = builder.build(req(age: 6));
