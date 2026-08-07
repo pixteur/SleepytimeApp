@@ -378,6 +378,11 @@ class DriftStorageRepo implements StorageRepo {
         );
   }
 
+  @override
+  Future<void> deleteBeat(String id) async {
+    await (_db.delete(_db.beats)..where((t) => t.id.equals(id))).go();
+  }
+
   Beat _toBeat(BeatRow r) => Beat(
     id: r.id,
     seriesId: r.seriesId,

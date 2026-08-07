@@ -39,6 +39,10 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   // and trigger a rapid jump through chapters.
   bool _autoAdvance = false;
 
+  // True while the cloud voice is synthesizing, before any audio plays. Drives
+  // the child-friendly "story is coming" popup and disables the Listen button.
+  bool _buffering = false;
+
   @override
   void initState() {
     super.initState();
@@ -58,8 +62,10 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   String? get _seriesId => ref.read(activeSeriesProvider)?.id;
 
   Future<void> _speak() async {
+    if (_buffering) return; // ignore double taps while a synth is in flight
     // Stay put until narration actually starts; only then allow auto-advance.
     _autoAdvance = false;
+    setState(() => _buffering = true);
     unawaited(_preloadNext());
     try {
       await _tts.speak(widget.beat.text, language: _lang);
@@ -68,8 +74,19 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
       _autoAdvance = true;
     } catch (e) {
       _autoAdvance = false;
-      if (!mounted) return;
-      showErrorBanner(context, 'Voice unavailable: $e');
+      if (mounted) showErrorBanner(context, 'Voice unavailable: $e');
+    } finally {
+      if (mounted) setState(() => _buffering = false);
+    }
+  }
+
+  /// Single Listen/Stop toggle used by the sticky bar.
+  void _toggleListen(TtsState state) {
+    if (_buffering) return;
+    if (state == TtsState.speaking || state == TtsState.paused) {
+      _stop();
+    } else {
+      _speak();
     }
   }
 
@@ -241,6 +258,13 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     final hasNext = beats.any((b) => b.seq == widget.beat.seq + 1);
     final canGenerate = widget.canContinue && !widget.beat.isFinal && !hasNext;
 
+    final series = ref.watch(activeSeriesProvider);
+    final world = ref.watch(activeWorldProvider);
+    final storyTitle = series?.title ?? 'Story';
+    final worldName = (world != null && series?.worldId == world.id)
+        ? world.name
+        : null;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -248,21 +272,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
           tooltip: widget.beat.seq > 0 ? 'Previous chapter' : 'Back',
           onPressed: _busy ? null : _back,
         ),
-        title: InkWell(
-          onTap: _busy ? null : () => _pickChapter(beats),
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Chapter ${widget.beat.seq + 1}'),
-                const SizedBox(width: 4),
-                const Icon(Icons.arrow_drop_down),
-              ],
-            ),
-          ),
-        ),
+        title: Text(storyTitle, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
             icon: const Icon(Icons.replay_rounded),
@@ -287,15 +297,21 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                 constraints: const BoxConstraints(maxWidth: 640),
                 child: Column(
                   children: [
+                    // ── Sticky header: story/world + chapter (+ icon slot) ──
+                    _StoryHeader(
+                      worldName: worldName,
+                      storyTitle: storyTitle,
+                      chapterLabel: 'Chapter ${widget.beat.seq + 1}',
+                      onTapChapter: _busy ? null : () => _pickChapter(beats),
+                    ),
+                    // ── Sticky Listen/Stop bar ──
                     StreamBuilder<TtsState>(
                       stream: _tts.stateStream,
                       initialData: _tts.state,
-                      builder: (context, snap) => _PlaybackBar(
+                      builder: (context, snap) => _ListenBar(
                         state: snap.data ?? TtsState.idle,
-                        onPlay: _speak,
-                        onPause: _tts.pause,
-                        onResume: _tts.resume,
-                        onStop: _stop,
+                        buffering: _buffering,
+                        onToggle: _toggleListen,
                       ),
                     ),
                     Expanded(
@@ -356,6 +372,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                   onTap: _busy ? null : _next,
                 ),
               ),
+            if (_buffering) const _BufferingPopup(),
           ],
         ),
       ),
@@ -388,52 +405,147 @@ class _NavArrow extends StatelessWidget {
   );
 }
 
-class _PlaybackBar extends StatelessWidget {
-  const _PlaybackBar({
-    required this.state,
-    required this.onPlay,
-    required this.onPause,
-    required this.onResume,
-    required this.onStop,
+/// Sticky title block at the top: the story/world name and the current chapter
+/// (tap to jump), with a slot on the left for a future story icon.
+class _StoryHeader extends StatelessWidget {
+  const _StoryHeader({
+    required this.worldName,
+    required this.storyTitle,
+    required this.chapterLabel,
+    required this.onTapChapter,
   });
 
-  final TtsState state;
-  final VoidCallback onPlay;
-  final VoidCallback onPause;
-  final VoidCallback onResume;
-  final VoidCallback onStop;
+  final String? worldName;
+  final String storyTitle;
+  final String chapterLabel;
+  final VoidCallback? onTapChapter;
 
   @override
   Widget build(BuildContext context) {
-    final speaking = state == TtsState.speaking;
-    final paused = state == TtsState.paused;
-    final label = switch (state) {
-      TtsState.speaking => 'Reading aloud…',
-      TtsState.paused => 'Paused',
-      TtsState.idle => 'Tap to read aloud',
-    };
-    return Card(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            IconButton(
-              icon: Icon(
-                speaking ? Icons.pause_rounded : Icons.volume_up_rounded,
+            // Icon slot — a book placeholder for now; custom art comes later.
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: theme.colorScheme.primaryContainer,
+              child: const Text('📖', style: TextStyle(fontSize: 22)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    worldName == null ? storyTitle : '$worldName · $storyTitle',
+                    style: theme.textTheme.titleMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  InkWell(
+                    onTap: onTapChapter,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(chapterLabel, style: theme.textTheme.bodyMedium),
+                        const Icon(Icons.arrow_drop_down, size: 20),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              tooltip: speaking ? 'Pause' : (paused ? 'Resume' : 'Read aloud'),
-              onPressed: speaking ? onPause : (paused ? onResume : onPlay),
             ),
-            IconButton(
-              icon: const Icon(Icons.stop_rounded),
-              tooltip: 'Stop',
-              onPressed: state == TtsState.idle ? null : onStop,
-            ),
-            const SizedBox(width: 8),
-            Text(label, style: Theme.of(context).textTheme.bodyMedium),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The single sticky Listen/Stop button. Shows a spinner while the cloud voice
+/// is buffering. Reads "LISTEN" until playing, then "STOP".
+class _ListenBar extends StatelessWidget {
+  const _ListenBar({
+    required this.state,
+    required this.buffering,
+    required this.onToggle,
+  });
+
+  final TtsState state;
+  final bool buffering;
+  final void Function(TtsState) onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final playing = state == TtsState.speaking || state == TtsState.paused;
+    final showStop = playing && !buffering;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: buffering ? null : () => onToggle(state),
+          icon: buffering
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Icon(showStop ? Icons.stop_rounded : Icons.volume_up_rounded),
+          label: Text(
+            showStop ? 'STOP' : 'LISTEN',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+        ),
+      ),
+    );
+  }
+}
+
+/// A gentle, non-scary popup shown while the voice buffers, so a waiting child
+/// knows the story is coming.
+class _BufferingPopup extends StatelessWidget {
+  const _BufferingPopup();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Positioned.fill(
+      child: ColoredBox(
+        color: const Color(0x66000000),
+        child: Center(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🌙✨', style: TextStyle(fontSize: 40)),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Warming up the storyteller…',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  const Text('Your story is coming!'),
+                  const SizedBox(height: 16),
+                  const SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

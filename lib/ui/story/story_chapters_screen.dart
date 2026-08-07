@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../common/error_banner.dart';
+import '../common/parent_gate.dart';
 import 'story_view_screen.dart';
 
 /// A single story's chapter list: start from the beginning or jump to any
@@ -100,6 +101,60 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
     );
   }
 
+  /// Delete a chapter (parent-gated) and renumber the rest so numbering stays
+  /// clean (1, 2, 3…). Handy for trimming early placeholder chapters.
+  Future<void> _deleteChapter(Beat beat) async {
+    final series = ref.read(activeSeriesProvider);
+    if (series == null) return;
+    if (!await showParentGate(context) || !mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Delete Chapter ${beat.seq + 1}?'),
+        content: const Text('This removes the chapter and its saved text.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final repo = ref.read(storageRepoProvider);
+    await repo.deleteBeat(beat.id);
+    // Compact seq to 0..n-1 so the list reads 1, 2, 3…
+    final remaining = await repo.loadBeats(series.id);
+    for (var i = 0; i < remaining.length; i++) {
+      if (remaining[i].seq != i) {
+        await repo.saveBeat(_withSeq(remaining[i], i));
+      }
+    }
+    if (!mounted) return;
+    ref.invalidate(beatsForSeriesProvider(series.id));
+  }
+
+  Beat _withSeq(Beat b, int seq) => Beat(
+    id: b.id,
+    seriesId: b.seriesId,
+    childId: b.childId,
+    seq: seq,
+    intent: b.intent,
+    text: b.text,
+    summary: b.summary,
+    rating: b.rating,
+    setting: b.setting,
+    chosenTwist: b.chosenTwist,
+    characters: b.characters,
+    openThreads: b.openThreads,
+    language: b.language,
+    isFinal: b.isFinal,
+  );
+
   @override
   Widget build(BuildContext context) {
     final series = ref.watch(activeSeriesProvider);
@@ -142,7 +197,23 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          trailing: const Icon(Icons.volume_up_rounded),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.volume_up_rounded),
+                              PopupMenuButton<String>(
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text('Delete chapter'),
+                                  ),
+                                ],
+                                onSelected: (v) {
+                                  if (v == 'delete') _deleteChapter(b);
+                                },
+                              ),
+                            ],
+                          ),
                           onTap: () => _open(b),
                         ),
                       );

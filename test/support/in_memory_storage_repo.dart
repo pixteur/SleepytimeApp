@@ -115,6 +115,16 @@ class InMemoryStorageRepo implements StorageRepo {
   }
 
   @override
-  Future<void> saveBeat(Beat beat) async =>
-      (_beats[beat.seriesId] ??= []).add(beat);
+  Future<void> saveBeat(Beat beat) async {
+    final list = _beats[beat.seriesId] ??= [];
+    list.removeWhere((b) => b.id == beat.id); // upsert by id
+    list.add(beat);
+  }
+
+  @override
+  Future<void> deleteBeat(String id) async {
+    for (final list in _beats.values) {
+      list.removeWhere((b) => b.id == id);
+    }
+  }
 }

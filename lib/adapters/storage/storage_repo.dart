@@ -52,4 +52,5 @@ abstract class StorageRepo {
   /// All beats for a series, ordered by `seq` ascending.
   Future<List<Beat>> loadBeats(String seriesId);
   Future<void> saveBeat(Beat beat);
+  Future<void> deleteBeat(String id);
 }
