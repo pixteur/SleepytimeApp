@@ -93,3 +93,42 @@ dart run build_runner build --delete-conflicting-outputs
 ```
 
 **Where data lives:** on-device only — SQLite DB + a `Sleepytime/` story library (audio, `.sleepy` exports) under your Documents folder. See [docs/storage-layout.md](docs/storage-layout.md).
+
+## Windows installer (MSIX)
+
+Build a double-click installer:
+
+```powershell
+pwsh scripts/build_windows_installer.ps1
+# → build\windows\x64\runner\Release\sleepytime.msix
+```
+
+The script does a release build, generates the MSIX manifest (`dart run msix:build`),
+and packs with the **Windows SDK's** `makeappx.exe`. (We use the SDK packer because
+the `msix` package's bundled one can fail with a "side-by-side configuration is
+incorrect" error. Where that packer is healthy, plain `dart run msix:create` also
+works.) Installer settings live under `msix_config` in `pubspec.yaml`.
+
+**Installing the .msix:** it must be **signed** and the signing cert **trusted**,
+or Windows won't install it:
+
+1. Create a self-signed cert (once) and export the public cert:
+   ```powershell
+   $c = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Pixteur" -CertStoreLocation Cert:\CurrentUser\My
+   Export-Certificate -Cert $c -FilePath sleepytime.cer
+   ```
+   Make sure `msix_config.publisher` in `pubspec.yaml` matches the cert subject
+   (`CN=Pixteur`), then rebuild.
+2. Sign the package with the Windows SDK's `signtool.exe` (found under
+   `C:\Program Files (x86)\Windows Kits\10\bin\<ver>\x64\`):
+   ```powershell
+   signtool.exe sign /fd SHA256 /a build\windows\x64\runner\Release\sleepytime.msix
+   ```
+   (`/a` auto-selects your cert; or use `/f cert.pfx /p <password>`.)
+3. On the target PC, import `sleepytime.cer` into **Local Machine → Trusted People**,
+   then double-click the `.msix` to install.
+
+For release, use a real **EV/OV code-signing certificate** or ship via the
+**Microsoft Store** (MSIX is Store-native). Full details — plus the macOS `.dmg`
+path (needs a Mac + Apple Developer ID notarization) and `flutter_distributor` —
+are in [docs/distribution.md](docs/distribution.md).

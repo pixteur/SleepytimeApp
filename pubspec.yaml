@@ -66,6 +66,7 @@ dev_dependencies:
 msix_config:
   display_name: Sleepytime
   publisher_display_name: Pixteur
+  publisher: CN=Pixteur # must match the signing certificate's subject
   identity_name: com.pixteur.sleepytime
   msix_version: 1.0.0.0
   logo_path: app_icon.png
