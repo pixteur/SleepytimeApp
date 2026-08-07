@@ -463,6 +463,7 @@ class _DownloadIconState extends State<_DownloadIcon> {
       await widget.onDownload();
     } catch (e) {
       error = e;
+      debugPrint('SleepytimeApp: chapter download error → $e');
     }
     await _check();
     if (mounted) setState(() => _busy = false);

@@ -83,17 +83,33 @@ class GeminiTtsSynthesizer implements TtsSynthesizer {
     }
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+
+    // Surface content blocks / safety stops with a clear reason (the story
+    // provider does this too) so a rejected chapter isn't a mystery "no audio".
+    final blockReason =
+        (decoded['promptFeedback'] as Map<String, dynamic>?)?['blockReason'];
+    if (blockReason != null) {
+      throw ProviderRefusal('Voice blocked this text: $blockReason');
+    }
+    final candidate =
+        (decoded['candidates'] as List<dynamic>?)?.firstOrNull
+            as Map<String, dynamic>?;
+    final finish = candidate?['finishReason'];
+    if (finish != null && finish != 'STOP') {
+      throw ProviderRefusal('Voice stopped: $finish');
+    }
     final parts =
-        (((decoded['candidates'] as List<dynamic>?)?.firstOrNull
-                    as Map<String, dynamic>?)?['content']
-                as Map<String, dynamic>?)?['parts']
+        (candidate?['content'] as Map<String, dynamic>?)?['parts']
             as List<dynamic>?;
     final inline =
         (parts?.firstOrNull as Map<String, dynamic>?)?['inlineData']
             as Map<String, dynamic>?;
     final data = inline?['data'] as String?;
     if (data == null || data.isEmpty) {
-      throw const ProviderRequestException(200, 'No audio data in response.');
+      throw ProviderRequestException(
+        200,
+        'No audio returned. ${extractApiError(response.body)}',
+      );
     }
     final pcm = base64.decode(data);
     return pcmToWav(pcm, sampleRate: _rateFrom(inline?['mimeType'] as String?));
