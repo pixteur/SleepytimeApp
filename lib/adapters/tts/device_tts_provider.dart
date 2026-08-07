@@ -15,12 +15,19 @@ class DeviceTtsProvider implements TtsProvider {
       ..setCancelHandler(() => _set(TtsState.idle))
       ..setPauseHandler(() => _set(TtsState.paused))
       ..setContinueHandler(() => _set(TtsState.speaking))
-      ..setErrorHandler((_) => _set(TtsState.idle));
+      ..setErrorHandler((_) => _set(TtsState.idle))
+      // Word-boundary progress for read-along highlighting (platform-dependent).
+      ..setProgressHandler((text, start, end, word) {
+        final len = text.isEmpty ? 1 : text.length;
+        if (!_progress.isClosed) _progress.add((end / len).clamp(0.0, 1.0));
+      });
   }
 
   final FlutterTts _tts;
   final StreamController<TtsState> _states =
       StreamController<TtsState>.broadcast();
+  final StreamController<double> _progress =
+      StreamController<double>.broadcast();
   TtsState _state = TtsState.idle;
 
   // Device SAPI/WinRT has no reliable resume; remember the last utterance so
@@ -37,6 +44,9 @@ class DeviceTtsProvider implements TtsProvider {
 
   @override
   Stream<TtsState> get stateStream => _states.stream;
+
+  @override
+  Stream<double> get progressStream => _progress.stream;
 
   void _set(TtsState s) {
     _state = s;
@@ -90,6 +100,7 @@ class DeviceTtsProvider implements TtsProvider {
   Future<void> dispose() async {
     await _tts.stop();
     await _states.close();
+    await _progress.close();
   }
 
   String _bcp47(String lang) => switch (lang) {

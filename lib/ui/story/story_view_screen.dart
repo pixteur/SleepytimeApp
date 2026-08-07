@@ -271,14 +271,77 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
         ? world.name
         : null;
 
+    final footer = Padding(
+      padding: const EdgeInsets.only(top: 28),
+      child: (hasNext || canGenerate)
+          ? FilledButton.icon(
+              onPressed: _busy ? null : _next,
+              icon: _busy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.arrow_forward_rounded),
+              label: Text(hasNext ? 'Next chapter' : 'Continue the story'),
+            )
+          : (widget.beat.isFinal
+                ? Center(
+                    child: Text(
+                      'The End  🌙',
+                      style: theme.textTheme.titleLarge,
+                    ),
+                  )
+                : const SizedBox.shrink()),
+    );
+
     return Scaffold(
+      // ── One compact top bar: story name once, chapter under it ──
       appBar: AppBar(
+        toolbarHeight: 64,
+        titleSpacing: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           tooltip: widget.beat.seq > 0 ? 'Previous chapter' : 'Back',
           onPressed: _busy ? null : _back,
         ),
-        title: Text(storyTitle, overflow: TextOverflow.ellipsis),
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: theme.colorScheme.primaryContainer,
+              child: const Text('📖', style: TextStyle(fontSize: 18)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    worldName == null ? storyTitle : '$worldName · $storyTitle',
+                    style: theme.textTheme.titleMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  InkWell(
+                    onTap: _busy ? null : () => _pickChapter(beats),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Chapter ${widget.beat.seq + 1}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                        const Icon(Icons.arrow_drop_down, size: 18),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.replay_rounded),
@@ -292,6 +355,18 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
           ),
         ],
       ),
+      // ── Play/Stop pinned to the bottom of the screen ──
+      bottomNavigationBar: SafeArea(
+        child: StreamBuilder<TtsState>(
+          stream: _tts.stateStream,
+          initialData: _tts.state,
+          builder: (context, snap) => _ListenBar(
+            state: snap.data ?? TtsState.idle,
+            buffering: _buffering,
+            onToggle: _toggleListen,
+          ),
+        ),
+      ),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onHorizontalDragEnd: _onSwipe,
@@ -301,64 +376,11 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 640),
-                child: Column(
-                  children: [
-                    // ── Sticky header: story/world + chapter (+ icon slot) ──
-                    _StoryHeader(
-                      worldName: worldName,
-                      storyTitle: storyTitle,
-                      chapterLabel: 'Chapter ${widget.beat.seq + 1}',
-                      onTapChapter: _busy ? null : () => _pickChapter(beats),
-                    ),
-                    // ── Sticky Listen/Stop bar ──
-                    StreamBuilder<TtsState>(
-                      stream: _tts.stateStream,
-                      initialData: _tts.state,
-                      builder: (context, snap) => _ListenBar(
-                        state: snap.data ?? TtsState.idle,
-                        buffering: _buffering,
-                        onToggle: _toggleListen,
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView(
-                        // wider side padding leaves room for the edge arrows
-                        padding: const EdgeInsets.fromLTRB(56, 8, 56, 24),
-                        children: [
-                          Text(
-                            widget.beat.text,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              height: 1.6,
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          if (hasNext || canGenerate)
-                            FilledButton.icon(
-                              onPressed: _busy ? null : _next,
-                              icon: _busy
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.arrow_forward_rounded),
-                              label: Text(
-                                hasNext ? 'Next chapter' : 'Continue the story',
-                              ),
-                            )
-                          else if (widget.beat.isFinal)
-                            Center(
-                              child: Text(
-                                'The End  🌙',
-                                style: theme.textTheme.titleLarge,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
+                child: _ReadingText(
+                  text: widget.beat.text,
+                  progress: _tts.progressStream,
+                  style: theme.textTheme.titleMedium?.copyWith(height: 1.6),
+                  footer: footer,
                 ),
               ),
             ),
@@ -411,62 +433,111 @@ class _NavArrow extends StatelessWidget {
   );
 }
 
-/// Sticky title block at the top: the story/world name and the current chapter
-/// (tap to jump), with a slot on the left for a future story icon.
-class _StoryHeader extends StatelessWidget {
-  const _StoryHeader({
-    required this.worldName,
-    required this.storyTitle,
-    required this.chapterLabel,
-    required this.onTapChapter,
+/// The chapter text with read-along behaviour: it auto-scrolls to keep pace
+/// with narration and highlights the word currently being read. Timing is
+/// estimated from the audio's play position (0–1 of the chapter), so it tracks
+/// the reading closely without needing per-word timestamps.
+class _ReadingText extends StatefulWidget {
+  const _ReadingText({
+    required this.text,
+    required this.progress,
+    this.style,
+    this.footer,
   });
 
-  final String? worldName;
-  final String storyTitle;
-  final String chapterLabel;
-  final VoidCallback? onTapChapter;
+  final String text;
+  final Stream<double> progress;
+  final TextStyle? style;
+  final Widget? footer;
+
+  @override
+  State<_ReadingText> createState() => _ReadingTextState();
+}
+
+class _ReadingTextState extends State<_ReadingText> {
+  final ScrollController _scroll = ScrollController();
+  late final List<RegExpMatch> _words;
+  StreamSubscription<double>? _sub;
+  int _current = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _words = RegExp(r'\S+').allMatches(widget.text).toList();
+    _sub = widget.progress.listen(_onProgress);
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _onProgress(double fraction) {
+    if (!mounted || _words.isEmpty) return;
+    final chars = fraction * widget.text.length;
+    var idx = -1;
+    for (var i = 0; i < _words.length; i++) {
+      if (_words[i].start <= chars) {
+        idx = i;
+      } else {
+        break;
+      }
+    }
+    if (idx != _current) setState(() => _current = idx);
+    // Keep the reading position in view by scrolling proportionally.
+    if (_scroll.hasClients) {
+      final max = _scroll.position.maxScrollExtent;
+      final target = (fraction * max).clamp(0.0, max);
+      if ((target - _scroll.offset).abs() > 24) {
+        _scroll.animateTo(
+          target,
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeOut,
+        );
+      }
+    }
+  }
+
+  List<InlineSpan> _spans(TextStyle? base, TextStyle? highlight) {
+    final spans = <InlineSpan>[];
+    var cursor = 0;
+    for (var i = 0; i < _words.length; i++) {
+      final m = _words[i];
+      if (m.start > cursor) {
+        spans.add(TextSpan(text: widget.text.substring(cursor, m.start)));
+      }
+      spans.add(
+        TextSpan(text: m.group(0), style: i == _current ? highlight : null),
+      );
+      cursor = m.end;
+    }
+    if (cursor < widget.text.length) {
+      spans.add(TextSpan(text: widget.text.substring(cursor)));
+    }
+    return spans;
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surfaceContainerHighest,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        child: Row(
-          children: [
-            // Icon slot — a book placeholder for now; custom art comes later.
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              child: const Text('📖', style: TextStyle(fontSize: 22)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    worldName == null ? storyTitle : '$worldName · $storyTitle',
-                    style: theme.textTheme.titleMedium,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  InkWell(
-                    onTap: onTapChapter,
-                    borderRadius: BorderRadius.circular(6),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(chapterLabel, style: theme.textTheme.bodyMedium),
-                        const Icon(Icons.arrow_drop_down, size: 20),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+    final base = widget.style ?? theme.textTheme.titleMedium;
+    final highlight = base?.copyWith(
+      color: theme.colorScheme.onPrimaryContainer,
+      backgroundColor: theme.colorScheme.primaryContainer,
+      fontWeight: FontWeight.w700,
+    );
+    return SingleChildScrollView(
+      controller: _scroll,
+      // wide side padding leaves room for the edge arrows
+      padding: const EdgeInsets.fromLTRB(52, 12, 52, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text.rich(TextSpan(children: _spans(base, highlight)), style: base),
+          if (widget.footer != null) widget.footer!,
+        ],
       ),
     );
   }

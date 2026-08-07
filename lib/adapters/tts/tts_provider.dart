@@ -34,6 +34,11 @@ abstract class TtsProvider {
   TtsState get state;
   Stream<TtsState> get stateStream;
 
+  /// Fraction (0.0–1.0) of the current chapter that has been read, for
+  /// read-along scrolling + word highlighting. Best-effort; may stay at 0 for
+  /// engines that don't report progress.
+  Stream<double> get progressStream;
+
   /// Narrate [text] in the given [language] (BCP-47-ish tag) with [voice].
   Future<void> speak(
     String text, {

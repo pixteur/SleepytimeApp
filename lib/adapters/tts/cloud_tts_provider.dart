@@ -28,6 +28,13 @@ class CloudTtsProvider implements TtsProvider {
   }) : _cache = cache, // ignore: prefer_initializing_formals
        _player = player ?? AudioPlayer() {
     _completeSub = _player.onPlayerComplete.listen((_) => _advance());
+    _durSub = _player.onDurationChanged.listen((d) => _duration = d);
+    _posSub = _player.onPositionChanged.listen((p) {
+      final ms = _duration.inMilliseconds;
+      if (ms > 0 && !_progress.isClosed) {
+        _progress.add((p.inMilliseconds / ms).clamp(0.0, 1.0));
+      }
+    });
   }
 
   final TtsSynthesizer _synth;
@@ -35,8 +42,13 @@ class CloudTtsProvider implements TtsProvider {
   final AudioCache? _cache;
   final AudioPlayer _player;
   late final StreamSubscription<void> _completeSub;
+  late final StreamSubscription<Duration> _durSub;
+  late final StreamSubscription<Duration> _posSub;
+  Duration _duration = Duration.zero;
   final StreamController<TtsState> _states =
       StreamController<TtsState>.broadcast();
+  final StreamController<double> _progress =
+      StreamController<double>.broadcast();
   TtsState _state = TtsState.idle;
 
   // Chunk queue + a cache of in-flight/finished synthesis jobs, keyed by index.
@@ -55,6 +67,9 @@ class CloudTtsProvider implements TtsProvider {
 
   @override
   Stream<TtsState> get stateStream => _states.stream;
+
+  @override
+  Stream<double> get progressStream => _progress.stream;
 
   void _set(TtsState s) {
     _state = s;
@@ -124,6 +139,8 @@ class CloudTtsProvider implements TtsProvider {
     _jobs.clear();
     _i = 0;
     _active = true;
+    _duration = Duration.zero;
+    if (!_progress.isClosed) _progress.add(0);
     if (_chunks.isEmpty) {
       _set(TtsState.idle);
       return;
@@ -198,6 +215,7 @@ class CloudTtsProvider implements TtsProvider {
     _chunks = const [];
     _jobs.clear();
     await _player.stop();
+    if (!_progress.isClosed) _progress.add(0);
     _set(TtsState.idle);
   }
 
@@ -205,8 +223,11 @@ class CloudTtsProvider implements TtsProvider {
   Future<void> dispose() async {
     _active = false;
     await _completeSub.cancel();
+    await _posSub.cancel();
+    await _durSub.cancel();
     await _player.dispose();
     await _states.close();
+    await _progress.close();
   }
 
   /// Synthesize a whole chapter as ONE request when possible: a single request
