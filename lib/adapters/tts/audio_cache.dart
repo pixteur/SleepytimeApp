@@ -3,7 +3,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+
+import '../storage/library_paths.dart';
 
 /// Persists synthesized narration audio so a chapter never has to be re-fetched
 /// from the cloud: replaying, paging back, or reopening a saved story all play
@@ -38,10 +39,7 @@ class FileAudioCache implements AudioCache {
   Future<Directory?> _ensureDir() async {
     if (_dir != null) return _dir;
     try {
-      final base = await getApplicationSupportDirectory();
-      final dir = Directory(p.join(base.path, 'audio_cache'));
-      if (!await dir.exists()) await dir.create(recursive: true);
-      return _dir = dir;
+      return _dir = await LibraryPaths.audio();
     } catch (_) {
       return null;
     }

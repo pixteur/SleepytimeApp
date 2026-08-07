@@ -393,49 +393,64 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
         behavior: HitTestBehavior.opaque,
         onTap: _pokeControls,
         onHorizontalDragEnd: _onSwipe,
-        child: Stack(
-          alignment: Alignment.center,
+        // Column + Expanded forces the reading area to full height so the text
+        // always lays out (a bare Stack collapsed and hid the text).
+        child: Column(
           children: [
-            // Positioned.fill gives the scroll view a tight, bounded height so
-            // the text always lays out (a Center left it unbounded → blank).
-            Positioned.fill(
-              child: _ReadingText(
-                text: widget.beat.text,
-                progress: _tts.progressStream,
-                style: theme.textTheme.titleMedium?.copyWith(height: 1.6),
-                footer: footer,
-              ),
-            ),
-            // Edge arrows fade out after inactivity and sit clear of the text.
-            AnimatedOpacity(
-              opacity: _controlsVisible ? 1 : 0,
-              duration: const Duration(milliseconds: 250),
-              child: IgnorePointer(
-                ignoring: !_controlsVisible,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    if (widget.beat.seq > 0)
-                      Positioned(
-                        left: 0,
-                        child: _NavArrow(
-                          icon: Icons.chevron_left_rounded,
-                          onTap: _busy ? null : _back,
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: _ReadingText(
+                      text: widget.beat.text,
+                      progress: _tts.progressStream,
+                      style: theme.textTheme.titleMedium?.copyWith(height: 1.6),
+                      footer: footer,
+                    ),
+                  ),
+                  // Edge arrows: fill the area, centre each arrow vertically, and
+                  // fade out after inactivity so they never cover the text.
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      ignoring: !_controlsVisible,
+                      child: AnimatedOpacity(
+                        opacity: _controlsVisible ? 1 : 0,
+                        duration: const Duration(milliseconds: 250),
+                        child: Stack(
+                          children: [
+                            if (widget.beat.seq > 0)
+                              Positioned(
+                                left: 0,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: _NavArrow(
+                                    icon: Icons.chevron_left_rounded,
+                                    onTap: _busy ? null : _back,
+                                  ),
+                                ),
+                              ),
+                            if (hasNext || canGenerate)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: _NavArrow(
+                                    icon: Icons.chevron_right_rounded,
+                                    onTap: _busy ? null : _next,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                    if (hasNext || canGenerate)
-                      Positioned(
-                        right: 0,
-                        child: _NavArrow(
-                          icon: Icons.chevron_right_rounded,
-                          onTap: _busy ? null : _next,
-                        ),
-                      ),
-                  ],
-                ),
+                    ),
+                  ),
+                  if (_buffering) const _BufferingPopup(),
+                ],
               ),
             ),
-            if (_buffering) const _BufferingPopup(),
           ],
         ),
       ),

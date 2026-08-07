@@ -2,10 +2,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../adapters/export/sleepy_codec.dart';
+import '../adapters/storage/library_paths.dart';
 import '../adapters/storage/storage_repo.dart';
 import '../adapters/tts/audio_cache.dart';
 import 'models/beat.dart';
@@ -111,12 +111,7 @@ class SleepyService {
     return file.path;
   }
 
-  Future<Directory> exportsDir() async {
-    final base = await getApplicationDocumentsDirectory();
-    final dir = Directory(p.join(base.path, 'Sleepytime', 'stories'));
-    if (!await dir.exists()) await dir.create(recursive: true);
-    return dir;
-  }
+  Future<Directory> exportsDir() => LibraryPaths.stories();
 
   /// The `.sleepy` files currently sitting in the exports folder (importable).
   Future<List<File>> listSleepyFiles() async {

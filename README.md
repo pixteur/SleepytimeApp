@@ -24,9 +24,17 @@ Built **Flutter-first for PC (Windows)**, designed to port cleanly to **macOS an
 
 ## Status
 
-🟢 **Phases 0–2 complete.** Runnable on Windows: per-child profiles + onboarding quiz, story series/themes, the full nightly story engine with real AI (Claude / ChatGPT / Gemini) behind a parent-gated key screen, safety guard, and an app icon. 43 tests pass. Next: **Phase 3 — voice reader.** See [build-plan/](build-plan/README.md).
+🟢 **Runnable on Windows**, with the full nightly loop working end to end:
 
-App icon: [app_icon.png](app_icon.png) / [app_icon.svg](app_icon.svg) (a sleeping crescent moon).
+- Per-child profiles + onboarding quiz; safety guard + banned themes.
+- Story engine with real AI (Claude / ChatGPT / Gemini) behind a parent-gated, consent-disclosed key screen (keys secured via Windows DPAPI).
+- **Voice reader** — natural cloud voices (Gemini / OpenAI / ElevenLabs) or free on-device TTS. Narration is **cached on device** for instant, gap-free replays.
+- **Bookshelf → Worlds → Episodes → Characters** — a loved world (e.g. "Splat the Cat") spawns endless consistent episodes.
+- **Read-along** — text auto-scrolls and highlights the word being read.
+- **`.sleepy` files** — export/import a story (text + audio) as one shareable file.
+- **Parent mode** — grown-up controls (delete/rename) are hidden by default so kids can't change things.
+
+~60 tests pass; CI (format + analyze + test) green on `main`. App icon: [app_icon.png](app_icon.png) / [app_icon.svg](app_icon.svg) (a sleeping crescent moon).
 
 ## Key decisions (locked)
 
@@ -39,19 +47,49 @@ App icon: [app_icon.png](app_icon.png) / [app_icon.svg](app_icon.svg) (a sleepin
 
 ## Documentation
 
-- [docs/](docs/) — architecture, safety, data model, AI providers, voice, i18n, UI/UX, and a running decision log.
-- [build-plan/](build-plan/README.md) — phased roadmap, Phase 0 → Phase 6.
+- [docs/](docs/) — architecture, safety, data model, AI providers, voice, i18n, UI/UX, storage layout, and a running decision log.
 - [CLAUDE.md](CLAUDE.md) — repo guidance for Claude/coding agents, including iOS/App Store constraints.
+
+_(The phased internal roadmap under `build-plan/` is kept local and is git-ignored.)_
 
 ## Getting started (dev)
 
-Flutter **3.44.2** is installed at `C:\src\flutter`. Requires Windows **Developer Mode** on (for plugin symlinks).
+**Prerequisites**
+
+- **Flutter 3.44+** with the Dart SDK (this repo uses Dart 3.12). `flutter doctor` should be clean for the Windows desktop toolchain (Visual Studio with "Desktop development with C++").
+- **Windows Developer Mode ON** — Settings → For developers (needed for plugin symlinks).
+- On Windows, `flutter_tts` builds against **NuGet**; if the build complains, put `nuget.exe` on your PATH (e.g. in your Flutter `bin` folder).
+
+**Run**
 
 ```powershell
-flutter doctor          # verify toolchain
-flutter pub get         # install dependencies
-flutter run -d windows  # run the desktop app
+git clone https://github.com/pixteur/SleepytimeApp.git
+cd SleepytimeApp
+flutter pub get           # install dependencies
+flutter run -d windows    # run the desktop app (opens portrait, phone-sized)
 ```
 
-> Generated code (`*.g.dart`) is committed. After changing Drift tables, regenerate with:
-> `dart run build_runner build`
+Or build a debug exe and launch it directly:
+
+```powershell
+flutter build windows --debug
+.\build\windows\x64\runner\Debug\sleepytime.exe
+```
+
+**Configure AI + voice (in-app):** open the ⚙️ grown-up settings (parental gate) → add a provider API key + consent (Claude/OpenAI/Gemini) → open Voice setup to pick a cloud voice. Keys are stored securely on-device (DPAPI); nothing is sent until you add a key and consent.
+
+**Tests / checks**
+
+```powershell
+dart format .            # format
+flutter analyze          # static analysis (CI-gated)
+flutter test             # unit/widget tests
+```
+
+**Generated code:** Drift `*.g.dart` files are committed. After changing tables/schema, regenerate:
+
+```powershell
+dart run build_runner build --delete-conflicting-outputs
+```
+
+**Where data lives:** on-device only — SQLite DB + a `Sleepytime/` story library (audio, `.sleepy` exports) under your Documents folder. See [docs/storage-layout.md](docs/storage-layout.md).

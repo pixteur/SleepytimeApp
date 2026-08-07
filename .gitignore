@@ -50,3 +50,6 @@ Thumbs.db
 # ── Local app data (test profiles, generated stories) ─────────────
 local_data/
 *.sleepytime.db
+
+# ── Internal build plan (kept local, not shared) ──────────────────
+build-plan/
