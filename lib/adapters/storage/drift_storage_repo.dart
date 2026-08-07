@@ -8,6 +8,8 @@ import '../../domain/models/interest.dart';
 import '../../domain/models/learned_profile.dart';
 import '../../domain/models/quiz_result.dart';
 import '../../domain/models/series.dart';
+import '../../domain/models/story_character.dart';
+import '../../domain/models/world.dart';
 import 'app_database.dart';
 import 'storage_repo.dart';
 
@@ -189,6 +191,90 @@ class DriftStorageRepo implements StorageRepo {
     'observedTone': p.observedTone,
   });
 
+  // ── Worlds ──────────────────────────────────────────────────────
+  @override
+  Future<List<World>> loadWorlds(String childId) async {
+    final rows =
+        await (_db.select(_db.worlds)
+              ..where((t) => t.childId.equals(childId))
+              ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+            .get();
+    return rows.map(_toWorld).toList();
+  }
+
+  @override
+  Future<World?> loadWorldById(String id) async {
+    final row = await (_db.select(
+      _db.worlds,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    return row == null ? null : _toWorld(row);
+  }
+
+  @override
+  Future<void> saveWorld(World w) async {
+    await _db
+        .into(_db.worlds)
+        .insertOnConflictUpdate(
+          WorldsCompanion.insert(
+            id: w.id,
+            childId: w.childId,
+            name: w.name,
+            theme: w.theme,
+            premise: Value(w.premise),
+          ),
+        );
+  }
+
+  @override
+  Future<void> deleteWorld(String id) async {
+    await (_db.delete(_db.worlds)..where((t) => t.id.equals(id))).go();
+  }
+
+  World _toWorld(WorldRow r) => World(
+    id: r.id,
+    childId: r.childId,
+    name: r.name,
+    premise: r.premise,
+    theme: r.theme,
+  );
+
+  // ── Characters ──────────────────────────────────────────────────
+  @override
+  Future<List<StoryCharacter>> loadCharacters(String worldId) async {
+    final rows =
+        await (_db.select(_db.storyCharacters)
+              ..where((t) => t.worldId.equals(worldId))
+              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+            .get();
+    return rows.map(_toCharacter).toList();
+  }
+
+  @override
+  Future<void> saveCharacter(StoryCharacter c) async {
+    await _db
+        .into(_db.storyCharacters)
+        .insertOnConflictUpdate(
+          StoryCharactersCompanion.insert(
+            id: c.id,
+            worldId: c.worldId,
+            name: c.name,
+            description: Value(c.description),
+          ),
+        );
+  }
+
+  @override
+  Future<void> deleteCharacter(String id) async {
+    await (_db.delete(_db.storyCharacters)..where((t) => t.id.equals(id))).go();
+  }
+
+  StoryCharacter _toCharacter(CharacterRow r) => StoryCharacter(
+    id: r.id,
+    worldId: r.worldId,
+    name: r.name,
+    description: r.description,
+  );
+
   // ── Series ──────────────────────────────────────────────────────
   @override
   Future<List<Series>> loadSeries(String childId) async {
@@ -220,6 +306,7 @@ class DriftStorageRepo implements StorageRepo {
             theme: s.theme,
             heroMode: s.heroMode,
             status: s.status,
+            worldId: Value(s.worldId),
             customTheme: Value(s.customTheme),
             heroName: Value(s.heroName),
             bilingualEnabled: Value(s.bilingualEnabled),
@@ -243,6 +330,7 @@ class DriftStorageRepo implements StorageRepo {
     childId: r.childId,
     title: r.title,
     theme: r.theme,
+    worldId: r.worldId,
     customTheme: r.customTheme,
     heroMode: r.heroMode,
     heroName: r.heroName,

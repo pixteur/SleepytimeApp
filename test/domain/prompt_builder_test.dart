@@ -97,4 +97,28 @@ void main() {
       contains('Bilingual mode'),
     );
   });
+
+  test('world premise + cast are injected for an episode', () {
+    final child = const ChildProfile(id: 'c1', displayName: 'Mira', age: 6);
+    final series = const Series(
+      id: 's1',
+      childId: 'c1',
+      title: 'Splat on the Moon',
+      theme: StoryTheme.adventure,
+      seedSummary: 'A moon trip.',
+    );
+    final p = builder.build(
+      StoryRequest(
+        child: child,
+        series: series,
+        intent: StoryIntent.dice,
+        worldPremise: 'The world of Splat the Cat.',
+        cast: const ['Splat — a big black cat who loves adventures'],
+      ),
+    );
+    expect(p.user, contains('new episode in an ongoing world'));
+    expect(p.user, contains('Splat the Cat'));
+    expect(p.user, contains('Recurring characters'));
+    expect(p.user, contains('big black cat'));
+  });
 }

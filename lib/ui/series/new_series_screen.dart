@@ -5,14 +5,17 @@ import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../../domain/models/child_profile.dart';
 import '../../domain/models/series.dart';
+import '../../domain/models/world.dart';
 import '../../domain/twist_deck.dart';
 import '../story/story_chapters_screen.dart';
 import 'theme_catalog.dart';
 
-/// The single story creator: name + theme + hero + length + how tonight begins
-/// (dice / option / typed idea), optionally based on a previous story. Builds a
-/// brand-new story and opens its chapter list (chapters generate in the
-/// background). See `docs/ui-ux.md`.
+/// The story creator. Reached two ways:
+///  * from the bookshelf / home → a fresh story, which can be standalone, start
+///    a new world, or join an existing world;
+///  * from a world's "New episode" → locked to that world (its characters +
+///    premise carry over automatically).
+/// Builds the story and opens its chapter list. See `docs/ui-ux.md`.
 class NewSeriesScreen extends ConsumerStatefulWidget {
   const NewSeriesScreen({super.key});
 
@@ -24,14 +27,15 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
   final _title = TextEditingController(text: 'Our New Story');
   final _heroName = TextEditingController();
   final _idea = TextEditingController();
+  final _worldName = TextEditingController();
   StoryTheme _theme = StoryTheme.cozy;
   HeroMode _heroMode = HeroMode.childAsHero;
 
   /// The opening choice: a twist-card id, or 'dice' for a random surprise.
   String _opening = 'dice';
 
-  /// When set, the new story is based on (branched from) this existing series.
-  String? _baseSeriesId;
+  /// Where to save it: null = standalone, 'new' = a new world, else a world id.
+  String? _worldChoice;
 
   bool _creating = false;
 
@@ -40,6 +44,7 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
     _title.dispose();
     _heroName.dispose();
     _idea.dispose();
+    _worldName.dispose();
     super.dispose();
   }
 
@@ -52,36 +57,47 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
     ref.invalidate(profilesProvider);
   }
 
-  Future<void> _create(List<Series> existing) async {
+  Future<void> _create(World? episodeWorld) async {
     final child = ref.read(activeChildProvider);
     if (child == null) return;
     setState(() => _creating = true);
-    final svc = ref.read(seriesServiceProvider);
     final title = _title.text.trim().isEmpty
         ? 'Our New Story'
         : _title.text.trim();
 
-    Series series;
-    final base = _baseSeriesId == null
-        ? null
-        : existing.where((s) => s.id == _baseSeriesId).firstOrNull;
-    if (base != null) {
-      series = await svc.branch(from: base, title: title);
-    } else {
-      final quiz = await ref
-          .read(storageRepoProvider)
-          .latestQuizResult(child.id);
-      series = await svc.create(
-        childId: child.id,
-        title: title,
-        theme: _theme,
-        heroMode: _heroMode,
-        heroName: _heroMode == HeroMode.namedHero
-            ? _heroName.text.trim()
-            : null,
-        seedSummary: quiz?.seedSummary ?? '',
-      );
+    // Resolve the world (if any) and the theme it implies.
+    String? worldId;
+    var theme = _theme;
+    if (episodeWorld != null) {
+      worldId = episodeWorld.id;
+      theme = episodeWorld.theme;
+    } else if (_worldChoice == 'new') {
+      final name = _worldName.text.trim().isEmpty
+          ? title
+          : _worldName.text.trim();
+      final world = await ref
+          .read(worldServiceProvider)
+          .create(childId: child.id, name: name, theme: _theme);
+      worldId = world.id;
+      ref.invalidate(worldsForChildProvider(child.id));
+    } else if (_worldChoice != null) {
+      worldId = _worldChoice;
     }
+
+    final quiz = await ref.read(storageRepoProvider).latestQuizResult(child.id);
+    final series = await ref
+        .read(seriesServiceProvider)
+        .create(
+          childId: child.id,
+          title: title,
+          theme: theme,
+          worldId: worldId,
+          heroMode: _heroMode,
+          heroName: _heroMode == HeroMode.namedHero
+              ? _heroName.text.trim()
+              : null,
+          seedSummary: quiz?.seedSummary ?? '',
+        );
 
     // Resolve how chapter 1 begins.
     final idea = _idea.text.trim();
@@ -114,50 +130,86 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final child = ref.watch(activeChildProvider);
-    final existing =
-        ref.watch(seriesForChildProvider(child?.id ?? '')).asData?.value ??
-        const <Series>[];
-    final basing = _baseSeriesId != null;
+    // Locked to a world when we arrived via "New episode".
+    final episodeWorld = ref.watch(activeWorldProvider);
+    final worlds =
+        ref.watch(worldsForChildProvider(child?.id ?? '')).asData?.value ??
+        const <World>[];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('New story')),
+      appBar: AppBar(
+        title: Text(episodeWorld == null ? 'New story' : 'New episode'),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (episodeWorld != null)
+            Card(
+              color: theme.colorScheme.secondaryContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  '✨ New episode in the world of “${episodeWorld.name}”. Its '
+                  'characters and premise carry over automatically.',
+                  style: TextStyle(
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
           TextField(
             controller: _title,
             textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(labelText: 'Story name'),
+            decoration: InputDecoration(
+              labelText: episodeWorld == null ? 'Story name' : 'Episode name',
+            ),
           ),
 
-          if (existing.isNotEmpty) ...[
+          // Where to save it — only when not already locked to a world.
+          if (episodeWorld == null) ...[
             const SizedBox(height: 24),
-            Text('Base it on…', style: theme.textTheme.titleMedium),
+            Text('Save to…', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             DropdownButtonFormField<String?>(
-              initialValue: _baseSeriesId,
+              initialValue: _worldChoice,
               decoration: const InputDecoration(border: OutlineInputBorder()),
               items: [
                 const DropdownMenuItem(
                   value: null,
-                  child: Text('A fresh story'),
+                  child: Text('Just this story'),
                 ),
-                for (final s in existing)
+                const DropdownMenuItem(
+                  value: 'new',
+                  child: Text('➕ A new world'),
+                ),
+                for (final w in worlds)
                   DropdownMenuItem(
-                    value: s.id,
+                    value: w.id,
                     child: Text(
-                      'Same world as “${s.title}”',
+                      'World: ${w.name}',
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
               ],
-              onChanged: (v) => setState(() => _baseSeriesId = v),
+              onChanged: (v) => setState(() => _worldChoice = v),
             ),
+            if (_worldChoice == 'new') ...[
+              const SizedBox(height: 8),
+              TextField(
+                controller: _worldName,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'World name (e.g. Splat the Cat)',
+                  helperText: 'Add characters to the world afterwards',
+                ),
+              ),
+            ],
           ],
 
-          // Theme + hero only matter for a fresh story; a based-on story
-          // inherits them from the original.
-          if (!basing) ...[
+          // Theme + hero: theme only matters for a fresh (non-episode) story;
+          // an episode inherits its world's theme.
+          if (episodeWorld == null) ...[
             const SizedBox(height: 24),
             Text('Pick a theme', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
@@ -179,35 +231,33 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
                 ],
               ),
             ],
-            const SizedBox(height: 24),
-            Text('Who is the hero?', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            SegmentedButton<HeroMode>(
-              segments: const [
-                ButtonSegment(
-                  value: HeroMode.childAsHero,
-                  label: Text('The child'),
-                ),
-                ButtonSegment(
-                  value: HeroMode.namedHero,
-                  label: Text('A named hero'),
-                ),
-                ButtonSegment(
-                  value: HeroMode.surprise,
-                  label: Text('Surprise'),
-                ),
-              ],
-              selected: {_heroMode},
-              onSelectionChanged: (s) => setState(() => _heroMode = s.first),
-            ),
-            if (_heroMode == HeroMode.namedHero) ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: _heroName,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: "Hero's name"),
+          ],
+
+          const SizedBox(height: 24),
+          Text('Who is the hero?', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          SegmentedButton<HeroMode>(
+            segments: const [
+              ButtonSegment(
+                value: HeroMode.childAsHero,
+                label: Text('The child'),
               ),
+              ButtonSegment(
+                value: HeroMode.namedHero,
+                label: Text('A named hero'),
+              ),
+              ButtonSegment(value: HeroMode.surprise, label: Text('Surprise')),
             ],
+            selected: {_heroMode},
+            onSelectionChanged: (s) => setState(() => _heroMode = s.first),
+          ),
+          if (_heroMode == HeroMode.namedHero) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _heroName,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: "Hero's name"),
+            ),
           ],
 
           const SizedBox(height: 24),
@@ -255,7 +305,7 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
 
           const SizedBox(height: 32),
           FilledButton.icon(
-            onPressed: _creating ? null : () => _create(existing),
+            onPressed: _creating ? null : () => _create(episodeWorld),
             icon: _creating
                 ? const SizedBox(
                     width: 18,
@@ -263,7 +313,9 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.auto_stories),
-            label: const Text('Create & build story'),
+            label: Text(
+              episodeWorld == null ? 'Create & build story' : 'Build episode',
+            ),
           ),
         ],
       ),

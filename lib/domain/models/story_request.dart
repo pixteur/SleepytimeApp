@@ -16,6 +16,8 @@ class StoryRequest {
     this.chosenTwist,
     this.chapterNumber = 1,
     this.maxChapters = 6,
+    this.worldPremise = '',
+    this.cast = const [],
   });
 
   final ChildProfile child;
@@ -38,4 +40,11 @@ class StoryRequest {
 
   /// True on/after the last allowed chapter — the model must wrap up now.
   bool get mustConclude => chapterNumber >= maxChapters;
+
+  /// The world/universe premise this episode belongs to (empty for standalone).
+  final String worldPremise;
+
+  /// Recurring characters (one prompt line each) to keep consistent across the
+  /// whole universe, e.g. "Splat — a big black cat who loves adventures".
+  final List<String> cast;
 }

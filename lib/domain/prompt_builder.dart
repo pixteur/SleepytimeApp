@@ -67,6 +67,20 @@ class PromptBuilder {
       ..writeln('Series: "${req.series.title}".')
       ..writeln('Premise: ${req.series.seedSummary}');
 
+    if (req.worldPremise.trim().isNotEmpty) {
+      user.writeln(
+        'This is a new episode in an ongoing world: ${req.worldPremise.trim()}. '
+        'Keep the world, tone, and characters consistent, but tell a fresh, '
+        'self-contained adventure.',
+      );
+    }
+    if (req.cast.isNotEmpty) {
+      user.writeln('Recurring characters (keep them recognisable):');
+      for (final c in req.cast) {
+        user.writeln('- $c');
+      }
+    }
+
     if (req.series.storyBible.trim().isNotEmpty) {
       user.writeln('Story so far: ${req.series.storyBible}');
     }

@@ -5,6 +5,8 @@ import 'package:sleepytime/domain/models/interest.dart';
 import 'package:sleepytime/domain/models/learned_profile.dart';
 import 'package:sleepytime/domain/models/quiz_result.dart';
 import 'package:sleepytime/domain/models/series.dart';
+import 'package:sleepytime/domain/models/story_character.dart';
+import 'package:sleepytime/domain/models/world.dart';
 
 /// A pure-Dart [StorageRepo] for tests — no Drift, no native sqlite, no
 /// platform channels. The real DriftStorageRepo is exercised at app runtime.
@@ -55,6 +57,37 @@ class InMemoryStorageRepo implements StorageRepo {
   @override
   Future<void> saveLearnedProfile(LearnedProfile profile) async =>
       _learned[profile.childId] = profile;
+
+  final Map<String, World> _worlds = {};
+  final Map<String, StoryCharacter> _characters = {};
+
+  @override
+  Future<List<World>> loadWorlds(String childId) async =>
+      _worlds.values.where((w) => w.childId == childId).toList();
+
+  @override
+  Future<World?> loadWorldById(String id) async => _worlds[id];
+
+  @override
+  Future<void> saveWorld(World world) async => _worlds[world.id] = world;
+
+  @override
+  Future<void> deleteWorld(String id) async {
+    _worlds.remove(id);
+    _characters.removeWhere((_, c) => c.worldId == id);
+    _series.removeWhere((_, s) => s.worldId == id);
+  }
+
+  @override
+  Future<List<StoryCharacter>> loadCharacters(String worldId) async =>
+      _characters.values.where((c) => c.worldId == worldId).toList();
+
+  @override
+  Future<void> saveCharacter(StoryCharacter character) async =>
+      _characters[character.id] = character;
+
+  @override
+  Future<void> deleteCharacter(String id) async => _characters.remove(id);
 
   final Map<String, Series> _series = {};
   final Map<String, List<Beat>> _beats = {};

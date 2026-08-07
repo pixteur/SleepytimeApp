@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app_providers.dart';
 import '../common/parent_gate.dart';
+import '../series/bookshelf_screen.dart';
 import '../series/new_series_screen.dart';
-import '../series/story_library_screen.dart';
 import '../settings/settings_screen.dart';
 
 /// The per-child hub: choose between the existing story Library or building a
@@ -52,22 +52,25 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               _HubCard(
                 emoji: '📚',
-                title: 'Library stories',
-                subtitle: 'Open a story you\'ve already started',
+                title: 'Bookshelf',
+                subtitle: 'Your worlds and stories',
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const StoryLibraryScreen()),
+                  MaterialPageRoute(builder: (_) => const BookshelfScreen()),
                 ),
               ),
               const SizedBox(height: 16),
               _HubCard(
                 emoji: '✨',
                 title: 'New story',
-                subtitle: 'Pick a theme and how tonight begins',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NewSeriesScreen()),
-                ),
+                subtitle: 'A world, an episode, or a one-off tale',
+                onTap: () {
+                  ref.read(activeWorldProvider.notifier).select(null);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NewSeriesScreen()),
+                  );
+                },
               ),
             ],
           ),

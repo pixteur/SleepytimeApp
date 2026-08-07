@@ -18,14 +18,18 @@ import 'adapters/tts/elevenlabs_tts_synthesizer.dart';
 import 'adapters/tts/gemini_tts_synthesizer.dart';
 import 'adapters/tts/openai_tts_synthesizer.dart';
 import 'adapters/tts/tts_provider.dart';
+import 'domain/character_service.dart';
 import 'domain/models/beat.dart';
 import 'domain/models/child_profile.dart';
 import 'domain/models/series.dart';
+import 'domain/models/story_character.dart';
+import 'domain/models/world.dart';
 import 'domain/profile_service.dart';
 import 'domain/quiz_service.dart';
 import 'domain/series_service.dart';
 import 'domain/story_engine.dart';
 import 'domain/twist_deck.dart';
+import 'domain/world_service.dart';
 
 // ─── AI / story ───────────────────────────────────────────────────────
 
@@ -227,6 +231,37 @@ final quizServiceProvider = Provider<QuizService>(
 final seriesServiceProvider = Provider<SeriesService>(
   (ref) => SeriesService(ref.watch(storageRepoProvider)),
 );
+
+final worldServiceProvider = Provider<WorldService>(
+  (ref) => WorldService(ref.watch(storageRepoProvider)),
+);
+
+final characterServiceProvider = Provider<CharacterService>(
+  (ref) => CharacterService(ref.watch(storageRepoProvider)),
+);
+
+/// The child's worlds (the bookshelf). Invalidate after create/delete.
+final worldsForChildProvider = FutureProvider.family<List<World>, String>(
+  (ref, childId) => ref.watch(worldServiceProvider).forChild(childId),
+);
+
+/// A world's saved characters. Invalidate after create/edit/delete.
+final charactersForWorldProvider =
+    FutureProvider.family<List<StoryCharacter>, String>(
+      (ref, worldId) => ref.watch(characterServiceProvider).forWorld(worldId),
+    );
+
+/// The currently open world (null = none / standalone).
+final activeWorldProvider = NotifierProvider<ActiveWorld, World?>(
+  ActiveWorld.new,
+);
+
+class ActiveWorld extends Notifier<World?> {
+  @override
+  World? build() => null;
+
+  void select(World? world) => state = world;
+}
 
 /// Active (non-archived) series for a given child — the story library.
 /// Invalidate after creating/archiving a series to refresh.

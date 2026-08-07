@@ -76,6 +76,36 @@ class LearnedProfiles extends Table {
   Set<Column<Object>> get primaryKey => {childId};
 }
 
+@DataClassName('WorldRow')
+class Worlds extends Table {
+  TextColumn get id => text()();
+  TextColumn get childId =>
+      text().references(ChildProfiles, #id, onDelete: KeyAction.cascade)();
+  TextColumn get name => text()();
+  TextColumn get premise => text().withDefault(const Constant(''))();
+  IntColumn get theme => intEnum<StoryTheme>()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+@DataClassName('CharacterRow')
+class StoryCharacters extends Table {
+  @override
+  String get tableName => 'characters';
+
+  TextColumn get id => text()();
+  TextColumn get worldId =>
+      text().references(Worlds, #id, onDelete: KeyAction.cascade)();
+  TextColumn get name => text()();
+  TextColumn get description => text().withDefault(const Constant(''))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 @DataClassName('SeriesRow')
 class SeriesTable extends Table {
   @override
@@ -84,6 +114,8 @@ class SeriesTable extends Table {
   TextColumn get id => text()();
   TextColumn get childId =>
       text().references(ChildProfiles, #id, onDelete: KeyAction.cascade)();
+  TextColumn get worldId =>
+      text().nullable().references(Worlds, #id, onDelete: KeyAction.cascade)();
   TextColumn get title => text()();
   IntColumn get theme => intEnum<StoryTheme>()();
   TextColumn get customTheme => text().nullable()();
@@ -161,6 +193,8 @@ class _StringListConverter extends TypeConverter<List<String>, String> {
     QuizResults,
     Interests,
     LearnedProfiles,
+    Worlds,
+    StoryCharacters,
     SeriesTable,
     Beats,
   ],
@@ -172,7 +206,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.memory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   /// Opens the on-device database file (app documents dir). Foreign keys on.
   static AppDatabase open() {
@@ -194,6 +228,13 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await m.addColumn(beats, beats.isFinal);
+      }
+      // v3 → v4: Worlds + Characters (the bookshelf), and episodes gain a
+      // nullable worldId (existing stories stay standalone with worldId = null).
+      if (from < 4) {
+        await m.createTable(worlds);
+        await m.createTable(storyCharacters);
+        await m.addColumn(seriesTable, seriesTable.worldId);
       }
     },
     beforeOpen: (details) async {

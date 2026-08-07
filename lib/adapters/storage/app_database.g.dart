@@ -1762,6 +1762,778 @@ class LearnedProfilesCompanion extends UpdateCompanion<LearnedProfileRow> {
   }
 }
 
+class $WorldsTable extends Worlds with TableInfo<$WorldsTable, WorldRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WorldsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _childIdMeta = const VerificationMeta(
+    'childId',
+  );
+  @override
+  late final GeneratedColumn<String> childId = GeneratedColumn<String>(
+    'child_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES child_profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _premiseMeta = const VerificationMeta(
+    'premise',
+  );
+  @override
+  late final GeneratedColumn<String> premise = GeneratedColumn<String>(
+    'premise',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<StoryTheme, int> theme =
+      GeneratedColumn<int>(
+        'theme',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<StoryTheme>($WorldsTable.$convertertheme);
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    childId,
+    name,
+    premise,
+    theme,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'worlds';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WorldRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('child_id')) {
+      context.handle(
+        _childIdMeta,
+        childId.isAcceptableOrUnknown(data['child_id']!, _childIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_childIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('premise')) {
+      context.handle(
+        _premiseMeta,
+        premise.isAcceptableOrUnknown(data['premise']!, _premiseMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  WorldRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WorldRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      childId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}child_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      premise: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}premise'],
+      )!,
+      theme: $WorldsTable.$convertertheme.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}theme'],
+        )!,
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $WorldsTable createAlias(String alias) {
+    return $WorldsTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<StoryTheme, int, int> $convertertheme =
+      const EnumIndexConverter<StoryTheme>(StoryTheme.values);
+}
+
+class WorldRow extends DataClass implements Insertable<WorldRow> {
+  final String id;
+  final String childId;
+  final String name;
+  final String premise;
+  final StoryTheme theme;
+  final DateTime createdAt;
+  const WorldRow({
+    required this.id,
+    required this.childId,
+    required this.name,
+    required this.premise,
+    required this.theme,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['child_id'] = Variable<String>(childId);
+    map['name'] = Variable<String>(name);
+    map['premise'] = Variable<String>(premise);
+    {
+      map['theme'] = Variable<int>($WorldsTable.$convertertheme.toSql(theme));
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  WorldsCompanion toCompanion(bool nullToAbsent) {
+    return WorldsCompanion(
+      id: Value(id),
+      childId: Value(childId),
+      name: Value(name),
+      premise: Value(premise),
+      theme: Value(theme),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory WorldRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WorldRow(
+      id: serializer.fromJson<String>(json['id']),
+      childId: serializer.fromJson<String>(json['childId']),
+      name: serializer.fromJson<String>(json['name']),
+      premise: serializer.fromJson<String>(json['premise']),
+      theme: $WorldsTable.$convertertheme.fromJson(
+        serializer.fromJson<int>(json['theme']),
+      ),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'childId': serializer.toJson<String>(childId),
+      'name': serializer.toJson<String>(name),
+      'premise': serializer.toJson<String>(premise),
+      'theme': serializer.toJson<int>(
+        $WorldsTable.$convertertheme.toJson(theme),
+      ),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  WorldRow copyWith({
+    String? id,
+    String? childId,
+    String? name,
+    String? premise,
+    StoryTheme? theme,
+    DateTime? createdAt,
+  }) => WorldRow(
+    id: id ?? this.id,
+    childId: childId ?? this.childId,
+    name: name ?? this.name,
+    premise: premise ?? this.premise,
+    theme: theme ?? this.theme,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  WorldRow copyWithCompanion(WorldsCompanion data) {
+    return WorldRow(
+      id: data.id.present ? data.id.value : this.id,
+      childId: data.childId.present ? data.childId.value : this.childId,
+      name: data.name.present ? data.name.value : this.name,
+      premise: data.premise.present ? data.premise.value : this.premise,
+      theme: data.theme.present ? data.theme.value : this.theme,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WorldRow(')
+          ..write('id: $id, ')
+          ..write('childId: $childId, ')
+          ..write('name: $name, ')
+          ..write('premise: $premise, ')
+          ..write('theme: $theme, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, childId, name, premise, theme, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WorldRow &&
+          other.id == this.id &&
+          other.childId == this.childId &&
+          other.name == this.name &&
+          other.premise == this.premise &&
+          other.theme == this.theme &&
+          other.createdAt == this.createdAt);
+}
+
+class WorldsCompanion extends UpdateCompanion<WorldRow> {
+  final Value<String> id;
+  final Value<String> childId;
+  final Value<String> name;
+  final Value<String> premise;
+  final Value<StoryTheme> theme;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const WorldsCompanion({
+    this.id = const Value.absent(),
+    this.childId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.premise = const Value.absent(),
+    this.theme = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  WorldsCompanion.insert({
+    required String id,
+    required String childId,
+    required String name,
+    this.premise = const Value.absent(),
+    required StoryTheme theme,
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       childId = Value(childId),
+       name = Value(name),
+       theme = Value(theme);
+  static Insertable<WorldRow> custom({
+    Expression<String>? id,
+    Expression<String>? childId,
+    Expression<String>? name,
+    Expression<String>? premise,
+    Expression<int>? theme,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (childId != null) 'child_id': childId,
+      if (name != null) 'name': name,
+      if (premise != null) 'premise': premise,
+      if (theme != null) 'theme': theme,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  WorldsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? childId,
+    Value<String>? name,
+    Value<String>? premise,
+    Value<StoryTheme>? theme,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return WorldsCompanion(
+      id: id ?? this.id,
+      childId: childId ?? this.childId,
+      name: name ?? this.name,
+      premise: premise ?? this.premise,
+      theme: theme ?? this.theme,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (childId.present) {
+      map['child_id'] = Variable<String>(childId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (premise.present) {
+      map['premise'] = Variable<String>(premise.value);
+    }
+    if (theme.present) {
+      map['theme'] = Variable<int>(
+        $WorldsTable.$convertertheme.toSql(theme.value),
+      );
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WorldsCompanion(')
+          ..write('id: $id, ')
+          ..write('childId: $childId, ')
+          ..write('name: $name, ')
+          ..write('premise: $premise, ')
+          ..write('theme: $theme, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StoryCharactersTable extends StoryCharacters
+    with TableInfo<$StoryCharactersTable, CharacterRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StoryCharactersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _worldIdMeta = const VerificationMeta(
+    'worldId',
+  );
+  @override
+  late final GeneratedColumn<String> worldId = GeneratedColumn<String>(
+    'world_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES worlds (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    worldId,
+    name,
+    description,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'characters';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CharacterRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('world_id')) {
+      context.handle(
+        _worldIdMeta,
+        worldId.isAcceptableOrUnknown(data['world_id']!, _worldIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_worldIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CharacterRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CharacterRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      worldId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}world_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $StoryCharactersTable createAlias(String alias) {
+    return $StoryCharactersTable(attachedDatabase, alias);
+  }
+}
+
+class CharacterRow extends DataClass implements Insertable<CharacterRow> {
+  final String id;
+  final String worldId;
+  final String name;
+  final String description;
+  final DateTime createdAt;
+  const CharacterRow({
+    required this.id,
+    required this.worldId,
+    required this.name,
+    required this.description,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['world_id'] = Variable<String>(worldId);
+    map['name'] = Variable<String>(name);
+    map['description'] = Variable<String>(description);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  StoryCharactersCompanion toCompanion(bool nullToAbsent) {
+    return StoryCharactersCompanion(
+      id: Value(id),
+      worldId: Value(worldId),
+      name: Value(name),
+      description: Value(description),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CharacterRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CharacterRow(
+      id: serializer.fromJson<String>(json['id']),
+      worldId: serializer.fromJson<String>(json['worldId']),
+      name: serializer.fromJson<String>(json['name']),
+      description: serializer.fromJson<String>(json['description']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'worldId': serializer.toJson<String>(worldId),
+      'name': serializer.toJson<String>(name),
+      'description': serializer.toJson<String>(description),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CharacterRow copyWith({
+    String? id,
+    String? worldId,
+    String? name,
+    String? description,
+    DateTime? createdAt,
+  }) => CharacterRow(
+    id: id ?? this.id,
+    worldId: worldId ?? this.worldId,
+    name: name ?? this.name,
+    description: description ?? this.description,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CharacterRow copyWithCompanion(StoryCharactersCompanion data) {
+    return CharacterRow(
+      id: data.id.present ? data.id.value : this.id,
+      worldId: data.worldId.present ? data.worldId.value : this.worldId,
+      name: data.name.present ? data.name.value : this.name,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CharacterRow(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, worldId, name, description, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CharacterRow &&
+          other.id == this.id &&
+          other.worldId == this.worldId &&
+          other.name == this.name &&
+          other.description == this.description &&
+          other.createdAt == this.createdAt);
+}
+
+class StoryCharactersCompanion extends UpdateCompanion<CharacterRow> {
+  final Value<String> id;
+  final Value<String> worldId;
+  final Value<String> name;
+  final Value<String> description;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const StoryCharactersCompanion({
+    this.id = const Value.absent(),
+    this.worldId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.description = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  StoryCharactersCompanion.insert({
+    required String id,
+    required String worldId,
+    required String name,
+    this.description = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       worldId = Value(worldId),
+       name = Value(name);
+  static Insertable<CharacterRow> custom({
+    Expression<String>? id,
+    Expression<String>? worldId,
+    Expression<String>? name,
+    Expression<String>? description,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (worldId != null) 'world_id': worldId,
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  StoryCharactersCompanion copyWith({
+    Value<String>? id,
+    Value<String>? worldId,
+    Value<String>? name,
+    Value<String>? description,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return StoryCharactersCompanion(
+      id: id ?? this.id,
+      worldId: worldId ?? this.worldId,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (worldId.present) {
+      map['world_id'] = Variable<String>(worldId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoryCharactersCompanion(')
+          ..write('id: $id, ')
+          ..write('worldId: $worldId, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SeriesTableTable extends SeriesTable
     with TableInfo<$SeriesTableTable, SeriesRow> {
   @override
@@ -1789,6 +2561,20 @@ class $SeriesTableTable extends SeriesTable
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'REFERENCES child_profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _worldIdMeta = const VerificationMeta(
+    'worldId',
+  );
+  @override
+  late final GeneratedColumn<String> worldId = GeneratedColumn<String>(
+    'world_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES worlds (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
@@ -1948,6 +2734,7 @@ class $SeriesTableTable extends SeriesTable
   List<GeneratedColumn> get $columns => [
     id,
     childId,
+    worldId,
     title,
     theme,
     customTheme,
@@ -1987,6 +2774,12 @@ class $SeriesTableTable extends SeriesTable
       );
     } else if (isInserting) {
       context.missing(_childIdMeta);
+    }
+    if (data.containsKey('world_id')) {
+      context.handle(
+        _worldIdMeta,
+        worldId.isAcceptableOrUnknown(data['world_id']!, _worldIdMeta),
+      );
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -2082,6 +2875,10 @@ class $SeriesTableTable extends SeriesTable
         DriftSqlType.string,
         data['${effectivePrefix}child_id'],
       )!,
+      worldId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}world_id'],
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -2171,6 +2968,7 @@ class $SeriesTableTable extends SeriesTable
 class SeriesRow extends DataClass implements Insertable<SeriesRow> {
   final String id;
   final String childId;
+  final String? worldId;
   final String title;
   final StoryTheme theme;
   final String? customTheme;
@@ -2188,6 +2986,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
   const SeriesRow({
     required this.id,
     required this.childId,
+    this.worldId,
     required this.title,
     required this.theme,
     this.customTheme,
@@ -2208,6 +3007,9 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['child_id'] = Variable<String>(childId);
+    if (!nullToAbsent || worldId != null) {
+      map['world_id'] = Variable<String>(worldId);
+    }
     map['title'] = Variable<String>(title);
     {
       map['theme'] = Variable<int>(
@@ -2253,6 +3055,9 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     return SeriesTableCompanion(
       id: Value(id),
       childId: Value(childId),
+      worldId: worldId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(worldId),
       title: Value(title),
       theme: Value(theme),
       customTheme: customTheme == null && nullToAbsent
@@ -2288,6 +3093,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     return SeriesRow(
       id: serializer.fromJson<String>(json['id']),
       childId: serializer.fromJson<String>(json['childId']),
+      worldId: serializer.fromJson<String?>(json['worldId']),
       title: serializer.fromJson<String>(json['title']),
       theme: $SeriesTableTable.$convertertheme.fromJson(
         serializer.fromJson<int>(json['theme']),
@@ -2322,6 +3128,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'childId': serializer.toJson<String>(childId),
+      'worldId': serializer.toJson<String?>(worldId),
       'title': serializer.toJson<String>(title),
       'theme': serializer.toJson<int>(
         $SeriesTableTable.$convertertheme.toJson(theme),
@@ -2350,6 +3157,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
   SeriesRow copyWith({
     String? id,
     String? childId,
+    Value<String?> worldId = const Value.absent(),
     String? title,
     StoryTheme? theme,
     Value<String?> customTheme = const Value.absent(),
@@ -2367,6 +3175,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
   }) => SeriesRow(
     id: id ?? this.id,
     childId: childId ?? this.childId,
+    worldId: worldId.present ? worldId.value : this.worldId,
     title: title ?? this.title,
     theme: theme ?? this.theme,
     customTheme: customTheme.present ? customTheme.value : this.customTheme,
@@ -2392,6 +3201,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     return SeriesRow(
       id: data.id.present ? data.id.value : this.id,
       childId: data.childId.present ? data.childId.value : this.childId,
+      worldId: data.worldId.present ? data.worldId.value : this.worldId,
       title: data.title.present ? data.title.value : this.title,
       theme: data.theme.present ? data.theme.value : this.theme,
       customTheme: data.customTheme.present
@@ -2428,6 +3238,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     return (StringBuffer('SeriesRow(')
           ..write('id: $id, ')
           ..write('childId: $childId, ')
+          ..write('worldId: $worldId, ')
           ..write('title: $title, ')
           ..write('theme: $theme, ')
           ..write('customTheme: $customTheme, ')
@@ -2450,6 +3261,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
   int get hashCode => Object.hash(
     id,
     childId,
+    worldId,
     title,
     theme,
     customTheme,
@@ -2471,6 +3283,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
       (other is SeriesRow &&
           other.id == this.id &&
           other.childId == this.childId &&
+          other.worldId == this.worldId &&
           other.title == this.title &&
           other.theme == this.theme &&
           other.customTheme == this.customTheme &&
@@ -2490,6 +3303,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
 class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
   final Value<String> id;
   final Value<String> childId;
+  final Value<String?> worldId;
   final Value<String> title;
   final Value<StoryTheme> theme;
   final Value<String?> customTheme;
@@ -2508,6 +3322,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
   const SeriesTableCompanion({
     this.id = const Value.absent(),
     this.childId = const Value.absent(),
+    this.worldId = const Value.absent(),
     this.title = const Value.absent(),
     this.theme = const Value.absent(),
     this.customTheme = const Value.absent(),
@@ -2527,6 +3342,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
   SeriesTableCompanion.insert({
     required String id,
     required String childId,
+    this.worldId = const Value.absent(),
     required String title,
     required StoryTheme theme,
     this.customTheme = const Value.absent(),
@@ -2551,6 +3367,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
   static Insertable<SeriesRow> custom({
     Expression<String>? id,
     Expression<String>? childId,
+    Expression<String>? worldId,
     Expression<String>? title,
     Expression<int>? theme,
     Expression<String>? customTheme,
@@ -2570,6 +3387,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (childId != null) 'child_id': childId,
+      if (worldId != null) 'world_id': worldId,
       if (title != null) 'title': title,
       if (theme != null) 'theme': theme,
       if (customTheme != null) 'custom_theme': customTheme,
@@ -2592,6 +3410,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
   SeriesTableCompanion copyWith({
     Value<String>? id,
     Value<String>? childId,
+    Value<String?>? worldId,
     Value<String>? title,
     Value<StoryTheme>? theme,
     Value<String?>? customTheme,
@@ -2611,6 +3430,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     return SeriesTableCompanion(
       id: id ?? this.id,
       childId: childId ?? this.childId,
+      worldId: worldId ?? this.worldId,
       title: title ?? this.title,
       theme: theme ?? this.theme,
       customTheme: customTheme ?? this.customTheme,
@@ -2637,6 +3457,9 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     }
     if (childId.present) {
       map['child_id'] = Variable<String>(childId.value);
+    }
+    if (worldId.present) {
+      map['world_id'] = Variable<String>(worldId.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -2699,6 +3522,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     return (StringBuffer('SeriesTableCompanion(')
           ..write('id: $id, ')
           ..write('childId: $childId, ')
+          ..write('worldId: $worldId, ')
           ..write('title: $title, ')
           ..write('theme: $theme, ')
           ..write('customTheme: $customTheme, ')
@@ -3586,6 +4410,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LearnedProfilesTable learnedProfiles = $LearnedProfilesTable(
     this,
   );
+  late final $WorldsTable worlds = $WorldsTable(this);
+  late final $StoryCharactersTable storyCharacters = $StoryCharactersTable(
+    this,
+  );
   late final $SeriesTableTable seriesTable = $SeriesTableTable(this);
   late final $BeatsTable beats = $BeatsTable(this);
   @override
@@ -3597,6 +4425,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     quizResults,
     interests,
     learnedProfiles,
+    worlds,
+    storyCharacters,
     seriesTable,
     beats,
   ];
@@ -3626,6 +4456,27 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     WritePropagation(
       on: TableUpdateQuery.onTableName(
         'child_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('worlds', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'worlds',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('characters', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'child_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('series', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'worlds',
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('series', kind: UpdateKind.delete)],
@@ -3727,6 +4578,25 @@ final class $$ChildProfilesTableReferences
     final cache = $_typedResult.readTableOrNull(
       _learnedProfilesRefsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$WorldsTable, List<WorldRow>> _worldsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.worlds,
+    aliasName: 'child_profiles__id__worlds__child_id',
+  );
+
+  $$WorldsTableProcessedTableManager get worldsRefs {
+    final manager = $$WorldsTableTableManager(
+      $_db,
+      $_db.worlds,
+    ).filter((f) => f.childId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_worldsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -3872,6 +4742,31 @@ class $$ChildProfilesTableFilterComposer
           }) => $$LearnedProfilesTableFilterComposer(
             $db: $db,
             $table: $db.learnedProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> worldsRefs(
+    Expression<bool> Function($$WorldsTableFilterComposer f) f,
+  ) {
+    final $$WorldsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.childId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableFilterComposer(
+            $db: $db,
+            $table: $db.worlds,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4082,6 +4977,31 @@ class $$ChildProfilesTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> worldsRefs<T extends Object>(
+    Expression<T> Function($$WorldsTableAnnotationComposer a) f,
+  ) {
+    final $$WorldsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.childId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> seriesTableRefs<T extends Object>(
     Expression<T> Function($$SeriesTableTableAnnotationComposer a) f,
   ) {
@@ -4125,6 +5045,7 @@ class $$ChildProfilesTableTableManager
             bool quizResultsRefs,
             bool interestsRefs,
             bool learnedProfilesRefs,
+            bool worldsRefs,
             bool seriesTableRefs,
           })
         > {
@@ -4200,6 +5121,7 @@ class $$ChildProfilesTableTableManager
                 quizResultsRefs = false,
                 interestsRefs = false,
                 learnedProfilesRefs = false,
+                worldsRefs = false,
                 seriesTableRefs = false,
               }) {
                 return PrefetchHooks(
@@ -4208,6 +5130,7 @@ class $$ChildProfilesTableTableManager
                     if (quizResultsRefs) db.quizResults,
                     if (interestsRefs) db.interests,
                     if (learnedProfilesRefs) db.learnedProfiles,
+                    if (worldsRefs) db.worlds,
                     if (seriesTableRefs) db.seriesTable,
                   ],
                   addJoins: null,
@@ -4276,6 +5199,27 @@ class $$ChildProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (worldsRefs)
+                        await $_getPrefetchedData<
+                          ChildProfileRow,
+                          $ChildProfilesTable,
+                          WorldRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ChildProfilesTableReferences
+                              ._worldsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ChildProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).worldsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.childId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (seriesTableRefs)
                         await $_getPrefetchedData<
                           ChildProfileRow,
@@ -4321,6 +5265,7 @@ typedef $$ChildProfilesTableProcessedTableManager =
         bool quizResultsRefs,
         bool interestsRefs,
         bool learnedProfilesRefs,
+        bool worldsRefs,
         bool seriesTableRefs,
       })
     >;
@@ -5335,10 +6280,870 @@ typedef $$LearnedProfilesTableProcessedTableManager =
       LearnedProfileRow,
       PrefetchHooks Function({bool childId})
     >;
+typedef $$WorldsTableCreateCompanionBuilder =
+    WorldsCompanion Function({
+      required String id,
+      required String childId,
+      required String name,
+      Value<String> premise,
+      required StoryTheme theme,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$WorldsTableUpdateCompanionBuilder =
+    WorldsCompanion Function({
+      Value<String> id,
+      Value<String> childId,
+      Value<String> name,
+      Value<String> premise,
+      Value<StoryTheme> theme,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$WorldsTableReferences
+    extends BaseReferences<_$AppDatabase, $WorldsTable, WorldRow> {
+  $$WorldsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ChildProfilesTable _childIdTable(_$AppDatabase db) =>
+      db.childProfiles.createAlias('worlds__child_id__child_profiles__id');
+
+  $$ChildProfilesTableProcessedTableManager get childId {
+    final $_column = $_itemColumn<String>('child_id')!;
+
+    final manager = $$ChildProfilesTableTableManager(
+      $_db,
+      $_db.childProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_childIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$StoryCharactersTable, List<CharacterRow>>
+  _storyCharactersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.storyCharacters,
+    aliasName: 'worlds__id__characters__world_id',
+  );
+
+  $$StoryCharactersTableProcessedTableManager get storyCharactersRefs {
+    final manager = $$StoryCharactersTableTableManager(
+      $_db,
+      $_db.storyCharacters,
+    ).filter((f) => f.worldId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _storyCharactersRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$SeriesTableTable, List<SeriesRow>>
+  _seriesTableRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.seriesTable,
+    aliasName: 'worlds__id__series__world_id',
+  );
+
+  $$SeriesTableTableProcessedTableManager get seriesTableRefs {
+    final manager = $$SeriesTableTableTableManager(
+      $_db,
+      $_db.seriesTable,
+    ).filter((f) => f.worldId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_seriesTableRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$WorldsTableFilterComposer
+    extends Composer<_$AppDatabase, $WorldsTable> {
+  $$WorldsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get premise => $composableBuilder(
+    column: $table.premise,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<StoryTheme, StoryTheme, int> get theme =>
+      $composableBuilder(
+        column: $table.theme,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ChildProfilesTableFilterComposer get childId {
+    final $$ChildProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.childId,
+      referencedTable: $db.childProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChildProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.childProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> storyCharactersRefs(
+    Expression<bool> Function($$StoryCharactersTableFilterComposer f) f,
+  ) {
+    final $$StoryCharactersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.storyCharacters,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryCharactersTableFilterComposer(
+            $db: $db,
+            $table: $db.storyCharacters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> seriesTableRefs(
+    Expression<bool> Function($$SeriesTableTableFilterComposer f) f,
+  ) {
+    final $$SeriesTableTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.seriesTable,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeriesTableTableFilterComposer(
+            $db: $db,
+            $table: $db.seriesTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$WorldsTableOrderingComposer
+    extends Composer<_$AppDatabase, $WorldsTable> {
+  $$WorldsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get premise => $composableBuilder(
+    column: $table.premise,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get theme => $composableBuilder(
+    column: $table.theme,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ChildProfilesTableOrderingComposer get childId {
+    final $$ChildProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.childId,
+      referencedTable: $db.childProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChildProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.childProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WorldsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $WorldsTable> {
+  $$WorldsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get premise =>
+      $composableBuilder(column: $table.premise, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<StoryTheme, int> get theme =>
+      $composableBuilder(column: $table.theme, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ChildProfilesTableAnnotationComposer get childId {
+    final $$ChildProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.childId,
+      referencedTable: $db.childProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ChildProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.childProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> storyCharactersRefs<T extends Object>(
+    Expression<T> Function($$StoryCharactersTableAnnotationComposer a) f,
+  ) {
+    final $$StoryCharactersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.storyCharacters,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StoryCharactersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.storyCharacters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> seriesTableRefs<T extends Object>(
+    Expression<T> Function($$SeriesTableTableAnnotationComposer a) f,
+  ) {
+    final $$SeriesTableTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.seriesTable,
+      getReferencedColumn: (t) => t.worldId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeriesTableTableAnnotationComposer(
+            $db: $db,
+            $table: $db.seriesTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$WorldsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $WorldsTable,
+          WorldRow,
+          $$WorldsTableFilterComposer,
+          $$WorldsTableOrderingComposer,
+          $$WorldsTableAnnotationComposer,
+          $$WorldsTableCreateCompanionBuilder,
+          $$WorldsTableUpdateCompanionBuilder,
+          (WorldRow, $$WorldsTableReferences),
+          WorldRow,
+          PrefetchHooks Function({
+            bool childId,
+            bool storyCharactersRefs,
+            bool seriesTableRefs,
+          })
+        > {
+  $$WorldsTableTableManager(_$AppDatabase db, $WorldsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WorldsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WorldsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WorldsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> childId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> premise = const Value.absent(),
+                Value<StoryTheme> theme = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => WorldsCompanion(
+                id: id,
+                childId: childId,
+                name: name,
+                premise: premise,
+                theme: theme,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String childId,
+                required String name,
+                Value<String> premise = const Value.absent(),
+                required StoryTheme theme,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => WorldsCompanion.insert(
+                id: id,
+                childId: childId,
+                name: name,
+                premise: premise,
+                theme: theme,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) =>
+                    (e.readTable(table), $$WorldsTableReferences(db, table, e)),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                childId = false,
+                storyCharactersRefs = false,
+                seriesTableRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (storyCharactersRefs) db.storyCharacters,
+                    if (seriesTableRefs) db.seriesTable,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (childId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.childId,
+                                    referencedTable: $$WorldsTableReferences
+                                        ._childIdTable(db),
+                                    referencedColumn: $$WorldsTableReferences
+                                        ._childIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (storyCharactersRefs)
+                        await $_getPrefetchedData<
+                          WorldRow,
+                          $WorldsTable,
+                          CharacterRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorldsTableReferences
+                              ._storyCharactersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorldsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).storyCharactersRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.worldId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (seriesTableRefs)
+                        await $_getPrefetchedData<
+                          WorldRow,
+                          $WorldsTable,
+                          SeriesRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$WorldsTableReferences
+                              ._seriesTableRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$WorldsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).seriesTableRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.worldId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$WorldsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $WorldsTable,
+      WorldRow,
+      $$WorldsTableFilterComposer,
+      $$WorldsTableOrderingComposer,
+      $$WorldsTableAnnotationComposer,
+      $$WorldsTableCreateCompanionBuilder,
+      $$WorldsTableUpdateCompanionBuilder,
+      (WorldRow, $$WorldsTableReferences),
+      WorldRow,
+      PrefetchHooks Function({
+        bool childId,
+        bool storyCharactersRefs,
+        bool seriesTableRefs,
+      })
+    >;
+typedef $$StoryCharactersTableCreateCompanionBuilder =
+    StoryCharactersCompanion Function({
+      required String id,
+      required String worldId,
+      required String name,
+      Value<String> description,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$StoryCharactersTableUpdateCompanionBuilder =
+    StoryCharactersCompanion Function({
+      Value<String> id,
+      Value<String> worldId,
+      Value<String> name,
+      Value<String> description,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$StoryCharactersTableReferences
+    extends BaseReferences<_$AppDatabase, $StoryCharactersTable, CharacterRow> {
+  $$StoryCharactersTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $WorldsTable _worldIdTable(_$AppDatabase db) =>
+      db.worlds.createAlias('characters__world_id__worlds__id');
+
+  $$WorldsTableProcessedTableManager get worldId {
+    final $_column = $_itemColumn<String>('world_id')!;
+
+    final manager = $$WorldsTableTableManager(
+      $_db,
+      $_db.worlds,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_worldIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$StoryCharactersTableFilterComposer
+    extends Composer<_$AppDatabase, $StoryCharactersTable> {
+  $$StoryCharactersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WorldsTableFilterComposer get worldId {
+    final $$WorldsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableFilterComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StoryCharactersTableOrderingComposer
+    extends Composer<_$AppDatabase, $StoryCharactersTable> {
+  $$StoryCharactersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WorldsTableOrderingComposer get worldId {
+    final $$WorldsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableOrderingComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StoryCharactersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StoryCharactersTable> {
+  $$StoryCharactersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$WorldsTableAnnotationComposer get worldId {
+    final $$WorldsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StoryCharactersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StoryCharactersTable,
+          CharacterRow,
+          $$StoryCharactersTableFilterComposer,
+          $$StoryCharactersTableOrderingComposer,
+          $$StoryCharactersTableAnnotationComposer,
+          $$StoryCharactersTableCreateCompanionBuilder,
+          $$StoryCharactersTableUpdateCompanionBuilder,
+          (CharacterRow, $$StoryCharactersTableReferences),
+          CharacterRow,
+          PrefetchHooks Function({bool worldId})
+        > {
+  $$StoryCharactersTableTableManager(
+    _$AppDatabase db,
+    $StoryCharactersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StoryCharactersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StoryCharactersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StoryCharactersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> worldId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StoryCharactersCompanion(
+                id: id,
+                worldId: worldId,
+                name: name,
+                description: description,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String worldId,
+                required String name,
+                Value<String> description = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StoryCharactersCompanion.insert(
+                id: id,
+                worldId: worldId,
+                name: name,
+                description: description,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StoryCharactersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({worldId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (worldId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.worldId,
+                                referencedTable:
+                                    $$StoryCharactersTableReferences
+                                        ._worldIdTable(db),
+                                referencedColumn:
+                                    $$StoryCharactersTableReferences
+                                        ._worldIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$StoryCharactersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StoryCharactersTable,
+      CharacterRow,
+      $$StoryCharactersTableFilterComposer,
+      $$StoryCharactersTableOrderingComposer,
+      $$StoryCharactersTableAnnotationComposer,
+      $$StoryCharactersTableCreateCompanionBuilder,
+      $$StoryCharactersTableUpdateCompanionBuilder,
+      (CharacterRow, $$StoryCharactersTableReferences),
+      CharacterRow,
+      PrefetchHooks Function({bool worldId})
+    >;
 typedef $$SeriesTableTableCreateCompanionBuilder =
     SeriesTableCompanion Function({
       required String id,
       required String childId,
+      Value<String?> worldId,
       required String title,
       required StoryTheme theme,
       Value<String?> customTheme,
@@ -5359,6 +7164,7 @@ typedef $$SeriesTableTableUpdateCompanionBuilder =
     SeriesTableCompanion Function({
       Value<String> id,
       Value<String> childId,
+      Value<String?> worldId,
       Value<String> title,
       Value<StoryTheme> theme,
       Value<String?> customTheme,
@@ -5391,6 +7197,23 @@ final class $$SeriesTableTableReferences
       $_db.childProfiles,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_childIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $WorldsTable _worldIdTable(_$AppDatabase db) =>
+      db.worlds.createAlias('series__world_id__worlds__id');
+
+  $$WorldsTableProcessedTableManager? get worldId {
+    final $_column = $_itemColumn<String>('world_id');
+    if ($_column == null) return null;
+    final manager = $$WorldsTableTableManager(
+      $_db,
+      $_db.worlds,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_worldIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -5519,6 +7342,29 @@ class $$SeriesTableTableFilterComposer
           }) => $$ChildProfilesTableFilterComposer(
             $db: $db,
             $table: $db.childProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$WorldsTableFilterComposer get worldId {
+    final $$WorldsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableFilterComposer(
+            $db: $db,
+            $table: $db.worlds,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5660,6 +7506,29 @@ class $$SeriesTableTableOrderingComposer
     );
     return composer;
   }
+
+  $$WorldsTableOrderingComposer get worldId {
+    final $$WorldsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableOrderingComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$SeriesTableTableAnnotationComposer
@@ -5754,6 +7623,29 @@ class $$SeriesTableTableAnnotationComposer
     return composer;
   }
 
+  $$WorldsTableAnnotationComposer get worldId {
+    final $$WorldsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.worldId,
+      referencedTable: $db.worlds,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WorldsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.worlds,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   Expression<T> beatsRefs<T extends Object>(
     Expression<T> Function($$BeatsTableAnnotationComposer a) f,
   ) {
@@ -5793,7 +7685,7 @@ class $$SeriesTableTableTableManager
           $$SeriesTableTableUpdateCompanionBuilder,
           (SeriesRow, $$SeriesTableTableReferences),
           SeriesRow,
-          PrefetchHooks Function({bool childId, bool beatsRefs})
+          PrefetchHooks Function({bool childId, bool worldId, bool beatsRefs})
         > {
   $$SeriesTableTableTableManager(_$AppDatabase db, $SeriesTableTable table)
     : super(
@@ -5810,6 +7702,7 @@ class $$SeriesTableTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> childId = const Value.absent(),
+                Value<String?> worldId = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<StoryTheme> theme = const Value.absent(),
                 Value<String?> customTheme = const Value.absent(),
@@ -5828,6 +7721,7 @@ class $$SeriesTableTableTableManager
               }) => SeriesTableCompanion(
                 id: id,
                 childId: childId,
+                worldId: worldId,
                 title: title,
                 theme: theme,
                 customTheme: customTheme,
@@ -5848,6 +7742,7 @@ class $$SeriesTableTableTableManager
               ({
                 required String id,
                 required String childId,
+                Value<String?> worldId = const Value.absent(),
                 required String title,
                 required StoryTheme theme,
                 Value<String?> customTheme = const Value.absent(),
@@ -5866,6 +7761,7 @@ class $$SeriesTableTableTableManager
               }) => SeriesTableCompanion.insert(
                 id: id,
                 childId: childId,
+                worldId: worldId,
                 title: title,
                 theme: theme,
                 customTheme: customTheme,
@@ -5890,63 +7786,87 @@ class $$SeriesTableTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({childId = false, beatsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (beatsRefs) db.beats],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (childId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.childId,
-                                referencedTable: $$SeriesTableTableReferences
-                                    ._childIdTable(db),
-                                referencedColumn: $$SeriesTableTableReferences
-                                    ._childIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({childId = false, worldId = false, beatsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [if (beatsRefs) db.beats],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (childId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.childId,
+                                    referencedTable:
+                                        $$SeriesTableTableReferences
+                                            ._childIdTable(db),
+                                    referencedColumn:
+                                        $$SeriesTableTableReferences
+                                            ._childIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (worldId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.worldId,
+                                    referencedTable:
+                                        $$SeriesTableTableReferences
+                                            ._worldIdTable(db),
+                                    referencedColumn:
+                                        $$SeriesTableTableReferences
+                                            ._worldIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (beatsRefs)
+                        await $_getPrefetchedData<
+                          SeriesRow,
+                          $SeriesTableTable,
+                          BeatRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SeriesTableTableReferences
+                              ._beatsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SeriesTableTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).beatsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.seriesId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (beatsRefs)
-                    await $_getPrefetchedData<
-                      SeriesRow,
-                      $SeriesTableTable,
-                      BeatRow
-                    >(
-                      currentTable: table,
-                      referencedTable: $$SeriesTableTableReferences
-                          ._beatsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$SeriesTableTableReferences(db, table, p0).beatsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.seriesId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -5963,7 +7883,7 @@ typedef $$SeriesTableTableProcessedTableManager =
       $$SeriesTableTableUpdateCompanionBuilder,
       (SeriesRow, $$SeriesTableTableReferences),
       SeriesRow,
-      PrefetchHooks Function({bool childId, bool beatsRefs})
+      PrefetchHooks Function({bool childId, bool worldId, bool beatsRefs})
     >;
 typedef $$BeatsTableCreateCompanionBuilder =
     BeatsCompanion Function({
@@ -6493,6 +8413,10 @@ class $AppDatabaseManager {
       $$InterestsTableTableManager(_db, _db.interests);
   $$LearnedProfilesTableTableManager get learnedProfiles =>
       $$LearnedProfilesTableTableManager(_db, _db.learnedProfiles);
+  $$WorldsTableTableManager get worlds =>
+      $$WorldsTableTableManager(_db, _db.worlds);
+  $$StoryCharactersTableTableManager get storyCharacters =>
+      $$StoryCharactersTableTableManager(_db, _db.storyCharacters);
   $$SeriesTableTableTableManager get seriesTable =>
       $$SeriesTableTableTableManager(_db, _db.seriesTable);
   $$BeatsTableTableManager get beats =>

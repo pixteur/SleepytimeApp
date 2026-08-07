@@ -4,8 +4,10 @@ import 'package:sleepytime/adapters/tts/audio_cache.dart';
 void main() {
   group('audioCacheKey', () {
     test('is deterministic for the same input', () {
-      expect(audioCacheKey('gemini/Aoede|en|Hello'),
-          audioCacheKey('gemini/Aoede|en|Hello'));
+      expect(
+        audioCacheKey('gemini/Aoede|en|Hello'),
+        audioCacheKey('gemini/Aoede|en|Hello'),
+      );
     });
 
     test('differs by voice, language, and text', () {

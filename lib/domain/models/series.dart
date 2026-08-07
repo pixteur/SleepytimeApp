@@ -6,6 +6,7 @@ class Series {
     required this.childId,
     required this.title,
     required this.theme,
+    this.worldId,
     this.customTheme,
     this.heroMode = HeroMode.surprise,
     this.heroName,
@@ -21,6 +22,10 @@ class Series {
   final String id;
   final String childId;
   final String title;
+
+  /// The World (universe) this episode belongs to, or null for a standalone
+  /// story. Episodes in the same world share characters + premise.
+  final String? worldId;
 
   /// The series' overall flavour, chosen at start.
   final StoryTheme theme;
@@ -58,6 +63,7 @@ class Series {
       childId: childId,
       title: title ?? this.title,
       theme: theme,
+      worldId: worldId,
       customTheme: customTheme,
       heroMode: heroMode,
       heroName: heroName,

@@ -100,6 +100,14 @@ class StoryEngine {
   }) async {
     final ctx = await _beats.recentContext(series.id);
     final interests = await _repo.loadInterests(child.id);
+    // Pull in the world premise + saved cast so episodes stay in-universe.
+    final worldId = series.worldId;
+    final world = worldId == null ? null : await _repo.loadWorldById(worldId);
+    final cast = worldId == null
+        ? const <String>[]
+        : (await _repo.loadCharacters(
+            worldId,
+          )).map((c) => c.promptLine).toList();
     final request = StoryRequest(
       child: child,
       series: series,
@@ -109,6 +117,8 @@ class StoryEngine {
       chosenTwist: chosenTwist,
       chapterNumber: ctx.nextSeq + 1,
       maxChapters: _maxChapters,
+      worldPremise: world?.premise ?? '',
+      cast: cast,
     );
     final prompt = _prompt.build(request, bannedThemes: _banned);
     final band = child.ageBand;

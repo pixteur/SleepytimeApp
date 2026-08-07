@@ -4,6 +4,8 @@ import '../../domain/models/interest.dart';
 import '../../domain/models/learned_profile.dart';
 import '../../domain/models/quiz_result.dart';
 import '../../domain/models/series.dart';
+import '../../domain/models/story_character.dart';
+import '../../domain/models/world.dart';
 
 /// Local-only persistence at launch; the same interface backs optional cloud
 /// sync later. Backed by Drift (SQLite). Series/Beats are added in Phase 2.
@@ -28,6 +30,17 @@ abstract class StorageRepo {
   // ── Learned profile ─────────────────────────────────────────────
   Future<LearnedProfile?> loadLearnedProfile(String childId);
   Future<void> saveLearnedProfile(LearnedProfile profile);
+
+  // ── Worlds (the bookshelf) ──────────────────────────────────────
+  Future<List<World>> loadWorlds(String childId);
+  Future<World?> loadWorldById(String id);
+  Future<void> saveWorld(World world);
+  Future<void> deleteWorld(String id);
+
+  // ── Characters ──────────────────────────────────────────────────
+  Future<List<StoryCharacter>> loadCharacters(String worldId);
+  Future<void> saveCharacter(StoryCharacter character);
+  Future<void> deleteCharacter(String id);
 
   // ── Series ──────────────────────────────────────────────────────
   Future<List<Series>> loadSeries(String childId);

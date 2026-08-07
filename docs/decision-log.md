@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-06-14 — Bookshelf: Worlds → Episodes → Characters, + audio persistence
+
+**Bookshelf / universes.** New 3-level structure so a loved world (e.g. "Splat the
+Cat") can spawn endless different episodes ("Splat on the Moon", "…learns to ride
+a bike") with a consistent cast:
+- New `World` + `StoryCharacter` domain entities; `Series` gains a nullable
+  `worldId` (an episode belongs to a world; existing stories stay standalone).
+- Drift schema v3→v4: `worlds` + `characters` tables, `series.world_id` column;
+  additive migration (no data loss). Cascade delete world → characters + episodes.
+- Engine injects the world premise + saved cast into every episode's prompt, so
+  the universe stays consistent while each episode is a fresh, self-contained tale.
+- UI: **Bookshelf** (worlds + single stories) → **World detail** (characters +
+  episodes + "New episode") → chapter list. The creator now saves to a new world,
+  an existing world, or standalone; "New episode" locks to its world. Home hub's
+  "Library" → Bookshelf. Old `story_library_screen` removed.
+
+**Audio persistence + preload.** `AudioCache` (content-addressed on-disk cache keyed
+by voice+language+text) stores every synthesized chunk, so replays / paging back /
+reopening play instantly from disk with no gaps and no extra API cost. The story
+view preloads the next chapter's audio while the current one plays, so page turns
+have no synthesis pause. `TtsProvider.preload` warms the cache (no-op for device).
+
+---
+
 ## 2026-06-13 — Fix cold-start config race, slow paging, silent fallbacks
 
 **Context:** Reported symptoms: "Gemini voice not used, pages all generic, unreliable, takes forever to load a page."
