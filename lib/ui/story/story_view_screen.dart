@@ -44,11 +44,6 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   // the child-friendly "story is coming" popup and disables the Listen button.
   bool _buffering = false;
 
-  // The edge nav arrows fade away after a few seconds of no interaction, and
-  // reappear on any tap/swipe, so they never sit over the text for long.
-  bool _controlsVisible = true;
-  Timer? _hideTimer;
-
   @override
   void initState() {
     super.initState();
@@ -62,25 +57,14 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _speak());
-    _pokeControls();
   }
 
   @override
   void dispose() {
-    _hideTimer?.cancel();
     _stateSub?.cancel();
     _doneSub?.cancel();
     _tts.stop();
     super.dispose();
-  }
-
-  /// Show the arrows and (re)start the inactivity timer that hides them.
-  void _pokeControls() {
-    _hideTimer?.cancel();
-    if (!_controlsVisible && mounted) setState(() => _controlsVisible = true);
-    _hideTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _controlsVisible = false);
-    });
   }
 
   String get _lang => ref.read(activeChildProvider)?.language ?? 'en';
@@ -404,7 +388,6 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
       ),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: _pokeControls,
         onHorizontalDragEnd: _onSwipe,
         // Column + Expanded forces the reading area to full height so the text
         // always lays out (a bare Stack collapsed and hid the text).
@@ -421,45 +404,31 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                       footer: footer,
                     ),
                   ),
-                  // Edge arrows: fill the area, centre each arrow vertically, and
-                  // fade out after inactivity so they never cover the text.
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      ignoring: !_controlsVisible,
-                      child: AnimatedOpacity(
-                        opacity: _controlsVisible ? 1 : 0,
-                        duration: const Duration(milliseconds: 250),
-                        child: Stack(
-                          children: [
-                            if (widget.beat.seq > 0)
-                              Positioned(
-                                left: 0,
-                                top: 0,
-                                bottom: 0,
-                                child: Center(
-                                  child: _NavArrow(
-                                    icon: Icons.chevron_left_rounded,
-                                    onTap: _busy ? null : _back,
-                                  ),
-                                ),
-                              ),
-                            if (hasNext || canGenerate)
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                bottom: 0,
-                                child: Center(
-                                  child: _NavArrow(
-                                    icon: Icons.chevron_right_rounded,
-                                    onTap: _busy ? null : _next,
-                                  ),
-                                ),
-                              ),
-                          ],
+                  // Edge arrows, vertically centred at each side, always visible.
+                  if (widget.beat.seq > 0)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: _NavArrow(
+                          icon: Icons.chevron_left_rounded,
+                          onTap: _busy ? null : _back,
                         ),
                       ),
                     ),
-                  ),
+                  if (hasNext || canGenerate)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: _NavArrow(
+                          icon: Icons.chevron_right_rounded,
+                          onTap: _busy ? null : _next,
+                        ),
+                      ),
+                    ),
                   if (_buffering) const _BufferingPopup(),
                 ],
               ),
@@ -471,7 +440,6 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   }
 
   void _onSwipe(DragEndDetails details) {
-    _pokeControls();
     if (_busy) return;
     final v = details.primaryVelocity ?? 0;
     if (v > 250 && widget.beat.seq > 0) {

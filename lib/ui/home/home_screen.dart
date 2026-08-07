@@ -15,7 +15,6 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final child = ref.watch(activeChildProvider);
-    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -43,13 +42,6 @@ class HomeScreen extends ConsumerWidget {
             shrinkWrap: true,
             padding: const EdgeInsets.all(24),
             children: [
-              Text('🌙', style: theme.textTheme.displayMedium),
-              const SizedBox(height: 8),
-              Text(
-                'What shall we do tonight?',
-                style: theme.textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 24),
               _HubCard(
                 emoji: '📚',
                 title: 'Bookshelf',

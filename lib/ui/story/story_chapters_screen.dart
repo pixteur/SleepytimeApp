@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -363,6 +362,9 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                                 cacheKey: audioCacheKey(
                                   '$voiceSig|$lang|${b.text}',
                                 ),
+                                onDownload: () => ref
+                                    .read(ttsProvider)
+                                    .preload(b.text, language: lang),
                               ),
                               if (parentMode)
                                 PopupMenuButton<String>(
@@ -411,28 +413,80 @@ class _Writing extends StatelessWidget {
   );
 }
 
-/// Shows whether a chapter's narration audio is saved on the device: a filled
-/// "downloaded" badge when cached, or a faint cloud while it's still being
-/// prepared. Replaces the old speaker icon.
-class _DownloadIcon extends StatelessWidget {
-  const _DownloadIcon({required this.cache, required this.cacheKey});
+/// Per-chapter narration status + on-demand download. A filled "downloaded"
+/// badge when the audio is saved on-device; otherwise a tappable cloud that
+/// synthesizes (with the current cloud voice), downloads, and saves it.
+class _DownloadIcon extends StatefulWidget {
+  const _DownloadIcon({
+    required this.cache,
+    required this.cacheKey,
+    required this.onDownload,
+  });
 
   final AudioCache cache;
   final String cacheKey;
+  final Future<void> Function() onDownload;
+
+  @override
+  State<_DownloadIcon> createState() => _DownloadIconState();
+}
+
+class _DownloadIconState extends State<_DownloadIcon> {
+  bool? _has;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  @override
+  void didUpdateWidget(_DownloadIcon old) {
+    super.didUpdateWidget(old);
+    if (old.cacheKey != widget.cacheKey) _check();
+  }
+
+  Future<void> _check() async {
+    final bytes = await widget.cache.get(widget.cacheKey);
+    if (mounted) setState(() => _has = bytes != null && bytes.isNotEmpty);
+  }
+
+  Future<void> _download() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await widget.onDownload();
+    } catch (_) {
+      /* surfaced elsewhere; badge just stays a cloud */
+    }
+    await _check();
+    if (mounted) setState(() => _busy = false);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return FutureBuilder<Uint8List?>(
-      future: cache.get(cacheKey),
-      builder: (context, snap) {
-        final has = snap.data != null && snap.data!.isNotEmpty;
-        return Icon(
-          has ? Icons.download_done_rounded : Icons.cloud_outlined,
-          size: 22,
-          color: has ? theme.colorScheme.primary : theme.disabledColor,
-        );
-      },
+    if (_busy) {
+      return const SizedBox(
+        width: 22,
+        height: 22,
+        child: Padding(
+          padding: EdgeInsets.all(2),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    final has = _has ?? false;
+    return IconButton(
+      visualDensity: VisualDensity.compact,
+      icon: Icon(
+        has ? Icons.download_done_rounded : Icons.cloud_download_outlined,
+        size: 22,
+        color: has ? theme.colorScheme.primary : theme.disabledColor,
+      ),
+      tooltip: has ? 'Saved on device' : 'Download narration',
+      onPressed: has ? null : _download,
     );
   }
 }
