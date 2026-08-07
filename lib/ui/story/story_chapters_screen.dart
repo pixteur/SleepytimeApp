@@ -89,25 +89,9 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
     } finally {
       if (mounted) setState(() => _building = false);
     }
-    // Once the text is written, pre-synthesize EVERY chapter's audio into the
-    // on-disk cache so the whole story can be re-listened offline with no more
-    // API calls. Runs quietly in the background; cache hits are skipped fast.
-    unawaited(_prewarmAudio(child.language, series.id));
-  }
-
-  /// Warm the audio cache for all chapters of [seriesId], sequentially.
-  Future<void> _prewarmAudio(String language, String seriesId) async {
-    final tts = ref.read(ttsProvider);
-    final repo = ref.read(storageRepoProvider);
-    final beats = await repo.loadBeats(seriesId);
-    for (final b in beats) {
-      if (!_active || !mounted) return;
-      try {
-        await tts.preload(b.text, language: language);
-      } catch (_) {
-        return; // best-effort; on-demand synthesis still works
-      }
-    }
+    // NB: we intentionally do NOT pre-synthesize every chapter's audio — that
+    // burned through the voice provider's daily quota. Narration is fetched
+    // on demand (Listen, or tapping a chapter's cloud badge) and then cached.
   }
 
   void _warn(String? reason) {

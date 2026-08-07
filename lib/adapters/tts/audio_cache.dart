@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../storage/library_paths.dart';
 import 'audio_compression.dart';
@@ -41,9 +43,33 @@ class FileAudioCache implements AudioCache {
   Future<Directory?> _ensureDir() async {
     if (_dir != null) return _dir;
     try {
-      return _dir = await LibraryPaths.audio();
+      final dir = await LibraryPaths.audio();
+      _dir = dir;
+      unawaited(_migrateLegacy(dir)); // one-time, best-effort
+      return dir;
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Bring across audio cached before the library move (from the old
+  /// `<ApplicationSupport>/audio_cache`), so previously-downloaded chapters keep
+  /// their "downloaded" badge and play offline. Idempotent; only copies what's
+  /// missing.
+  Future<void> _migrateLegacy(Directory newDir) async {
+    try {
+      final support = await getApplicationSupportDirectory();
+      final old = Directory(p.join(support.path, 'audio_cache'));
+      if (!await old.exists()) return;
+      await for (final entity in old.list()) {
+        if (entity is! File) continue;
+        final target = File(p.join(newDir.path, p.basename(entity.path)));
+        if (!await target.exists()) {
+          await entity.copy(target.path);
+        }
+      }
+    } catch (_) {
+      // best-effort — a miss just means re-downloading that chapter
     }
   }
 
