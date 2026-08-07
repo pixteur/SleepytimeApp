@@ -31,6 +31,7 @@ class StoryViewScreen extends ConsumerStatefulWidget {
 class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   late final TtsProvider _tts;
   StreamSubscription<TtsState>? _stateSub;
+  StreamSubscription<void>? _doneSub;
   bool _busy = false;
 
   // When narration finishes naturally, auto-advance to the next chapter. Only
@@ -43,19 +44,43 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   // the child-friendly "story is coming" popup and disables the Listen button.
   bool _buffering = false;
 
+  // The edge nav arrows fade away after a few seconds of no interaction, and
+  // reappear on any tap/swipe, so they never sit over the text for long.
+  bool _controlsVisible = true;
+  Timer? _hideTimer;
+
   @override
   void initState() {
     super.initState();
     _tts = ref.read(ttsProvider);
     _stateSub = _tts.stateStream.listen(_onTtsState);
+    // Auto-advance ONLY on a genuine finish — never on a stop from navigating.
+    _doneSub = _tts.onDone.listen((_) {
+      if (_autoAdvance) {
+        _autoAdvance = false;
+        _autoNext();
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => _speak());
+    _pokeControls();
   }
 
   @override
   void dispose() {
+    _hideTimer?.cancel();
     _stateSub?.cancel();
+    _doneSub?.cancel();
     _tts.stop();
     super.dispose();
+  }
+
+  /// Show the arrows and (re)start the inactivity timer that hides them.
+  void _pokeControls() {
+    _hideTimer?.cancel();
+    if (!_controlsVisible && mounted) setState(() => _controlsVisible = true);
+    _hideTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _controlsVisible = false);
+    });
   }
 
   String get _lang => ref.read(activeChildProvider)?.language ?? 'en';
@@ -105,12 +130,9 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   void _onTtsState(TtsState s) {
     if (s == TtsState.speaking) {
       // Real audio is now playing: hide the buffering popup and arm auto-advance
-      // so the chapter advances only when it genuinely finishes.
+      // so the chapter advances (via onDone) only when it genuinely finishes.
       if (mounted && _buffering) setState(() => _buffering = false);
       _autoAdvance = true;
-    } else if (s == TtsState.idle && _autoAdvance) {
-      _autoAdvance = false;
-      _autoNext();
     }
   }
 
@@ -369,6 +391,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
       ),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
+        onTap: _pokeControls,
         onHorizontalDragEnd: _onSwipe,
         child: Stack(
           alignment: Alignment.center,
@@ -384,22 +407,35 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                 ),
               ),
             ),
-            if (widget.beat.seq > 0)
-              Positioned(
-                left: 4,
-                child: _NavArrow(
-                  icon: Icons.chevron_left_rounded,
-                  onTap: _busy ? null : _back,
+            // Edge arrows fade out after inactivity and sit clear of the text.
+            AnimatedOpacity(
+              opacity: _controlsVisible ? 1 : 0,
+              duration: const Duration(milliseconds: 250),
+              child: IgnorePointer(
+                ignoring: !_controlsVisible,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (widget.beat.seq > 0)
+                      Positioned(
+                        left: 0,
+                        child: _NavArrow(
+                          icon: Icons.chevron_left_rounded,
+                          onTap: _busy ? null : _back,
+                        ),
+                      ),
+                    if (hasNext || canGenerate)
+                      Positioned(
+                        right: 0,
+                        child: _NavArrow(
+                          icon: Icons.chevron_right_rounded,
+                          onTap: _busy ? null : _next,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-            if (hasNext || canGenerate)
-              Positioned(
-                right: 4,
-                child: _NavArrow(
-                  icon: Icons.chevron_right_rounded,
-                  onTap: _busy ? null : _next,
-                ),
-              ),
+            ),
             if (_buffering) const _BufferingPopup(),
           ],
         ),
@@ -408,6 +444,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   }
 
   void _onSwipe(DragEndDetails details) {
+    _pokeControls();
     if (_busy) return;
     final v = details.primaryVelocity ?? 0;
     if (v > 250 && widget.beat.seq > 0) {
@@ -427,7 +464,8 @@ class _NavArrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => IconButton.filledTonal(
     icon: Icon(icon),
-    iconSize: 32,
+    iconSize: 24,
+    visualDensity: VisualDensity.compact,
     tooltip: icon == Icons.chevron_left_rounded ? 'Previous' : 'Next',
     onPressed: onTap,
   );
@@ -454,16 +492,25 @@ class _ReadingText extends StatefulWidget {
   State<_ReadingText> createState() => _ReadingTextState();
 }
 
+class _Para {
+  const _Para(this.start, this.end, this.text);
+  final int start;
+  final int end;
+  final String text;
+}
+
 class _ReadingTextState extends State<_ReadingText> {
   final ScrollController _scroll = ScrollController();
   late final List<RegExpMatch> _words;
+  late final List<_Para> _paras;
   StreamSubscription<double>? _sub;
-  int _current = -1;
+  int _current = -1; // global word index being read (-1 = not started)
 
   @override
   void initState() {
     super.initState();
     _words = RegExp(r'\S+').allMatches(widget.text).toList();
+    _paras = _splitParagraphs(widget.text);
     _sub = widget.progress.listen(_onProgress);
   }
 
@@ -474,8 +521,28 @@ class _ReadingTextState extends State<_ReadingText> {
     super.dispose();
   }
 
+  static List<_Para> _splitParagraphs(String text) {
+    final out = <_Para>[];
+    var cursor = 0;
+    for (final m in RegExp(r'\n\s*\n').allMatches(text)) {
+      if (text.substring(cursor, m.start).trim().isNotEmpty) {
+        out.add(_Para(cursor, m.start, text.substring(cursor, m.start)));
+      }
+      cursor = m.end;
+    }
+    if (text.substring(cursor).trim().isNotEmpty) {
+      out.add(_Para(cursor, text.length, text.substring(cursor)));
+    }
+    if (out.isEmpty) out.add(_Para(0, text.length, text));
+    return out;
+  }
+
   void _onProgress(double fraction) {
     if (!mounted || _words.isEmpty) return;
+    if (fraction <= 0) {
+      if (_current != -1) setState(() => _current = -1);
+      return;
+    }
     final chars = fraction * widget.text.length;
     var idx = -1;
     for (var i = 0; i < _words.length; i++) {
@@ -500,11 +567,24 @@ class _ReadingTextState extends State<_ReadingText> {
     }
   }
 
-  List<InlineSpan> _spans(TextStyle? base, TextStyle? highlight) {
+  int get _currentPara {
+    if (_current < 0) return -1;
+    final c = _words[_current].start;
+    for (var i = 0; i < _paras.length; i++) {
+      if (c >= _paras[i].start && c < _paras[i].end) return i;
+    }
+    return _paras.length - 1;
+  }
+
+  /// Spans for one paragraph, highlighting the current word (colour only — no
+  /// weight/size change — so following text never shifts).
+  List<InlineSpan> _paraSpans(_Para para, TextStyle? highlight) {
     final spans = <InlineSpan>[];
-    var cursor = 0;
+    var cursor = para.start;
     for (var i = 0; i < _words.length; i++) {
       final m = _words[i];
+      if (m.end <= para.start) continue;
+      if (m.start >= para.end) break;
       if (m.start > cursor) {
         spans.add(TextSpan(text: widget.text.substring(cursor, m.start)));
       }
@@ -513,8 +593,8 @@ class _ReadingTextState extends State<_ReadingText> {
       );
       cursor = m.end;
     }
-    if (cursor < widget.text.length) {
-      spans.add(TextSpan(text: widget.text.substring(cursor)));
+    if (cursor < para.end) {
+      spans.add(TextSpan(text: widget.text.substring(cursor, para.end)));
     }
     return spans;
   }
@@ -523,19 +603,35 @@ class _ReadingTextState extends State<_ReadingText> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final base = widget.style ?? theme.textTheme.titleMedium;
+    final dim = base?.copyWith(
+      color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
+    );
     final highlight = base?.copyWith(
       color: theme.colorScheme.onPrimaryContainer,
       backgroundColor: theme.colorScheme.primaryContainer,
-      fontWeight: FontWeight.w700,
     );
+    final activePara = _currentPara;
+
     return SingleChildScrollView(
       controller: _scroll,
-      // wide side padding leaves room for the edge arrows
-      padding: const EdgeInsets.fromLTRB(52, 12, 52, 24),
+      // side padding leaves room for the (auto-hiding) edge arrows
+      padding: const EdgeInsets.fromLTRB(40, 12, 40, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text.rich(TextSpan(children: _spans(base, highlight)), style: base),
+          for (var i = 0; i < _paras.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: (activePara == -1 || i == activePara)
+                  // Reading paragraph (or all, before playback): full brightness
+                  // with the current word highlighted.
+                  ? Text.rich(
+                      TextSpan(children: _paraSpans(_paras[i], highlight)),
+                      style: base,
+                    )
+                  // Other paragraphs are dimmed to keep focus on the reading one.
+                  : Text(_paras[i].text.trim(), style: dim),
+            ),
           if (widget.footer != null) widget.footer!,
         ],
       ),
@@ -561,26 +657,30 @@ class _ListenBar extends StatelessWidget {
     final playing = state == TtsState.speaking || state == TtsState.paused;
     final showStop = playing && !buffering;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-      child: SizedBox(
-        width: double.infinity,
-        child: FilledButton.icon(
-          onPressed: buffering ? null : () => onToggle(state),
-          icon: buffering
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Icon(showStop ? Icons.stop_rounded : Icons.volume_up_rounded),
-          label: Text(
-            showStop ? 'STOP' : 'LISTEN',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 200, maxWidth: 260),
+          child: FilledButton.icon(
+            onPressed: buffering ? null : () => onToggle(state),
+            icon: buffering
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(showStop ? Icons.stop_rounded : Icons.volume_up_rounded),
+            label: Text(
+              showStop ? 'STOP' : 'LISTEN',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(46),
             ),
           ),
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
         ),
       ),
     );

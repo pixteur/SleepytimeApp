@@ -11,7 +11,10 @@ class DeviceTtsProvider implements TtsProvider {
   DeviceTtsProvider([FlutterTts? tts]) : _tts = tts ?? FlutterTts() {
     _tts
       ..setStartHandler(() => _set(TtsState.speaking))
-      ..setCompletionHandler(() => _set(TtsState.idle))
+      ..setCompletionHandler(() {
+        _set(TtsState.idle);
+        if (!_done.isClosed) _done.add(null);
+      })
       ..setCancelHandler(() => _set(TtsState.idle))
       ..setPauseHandler(() => _set(TtsState.paused))
       ..setContinueHandler(() => _set(TtsState.speaking))
@@ -28,6 +31,7 @@ class DeviceTtsProvider implements TtsProvider {
       StreamController<TtsState>.broadcast();
   final StreamController<double> _progress =
       StreamController<double>.broadcast();
+  final StreamController<void> _done = StreamController<void>.broadcast();
   TtsState _state = TtsState.idle;
 
   // Device SAPI/WinRT has no reliable resume; remember the last utterance so
@@ -47,6 +51,9 @@ class DeviceTtsProvider implements TtsProvider {
 
   @override
   Stream<double> get progressStream => _progress.stream;
+
+  @override
+  Stream<void> get onDone => _done.stream;
 
   @override
   String get voiceSignature => 'device';
@@ -104,6 +111,7 @@ class DeviceTtsProvider implements TtsProvider {
     await _tts.stop();
     await _states.close();
     await _progress.close();
+    await _done.close();
   }
 
   String _bcp47(String lang) => switch (lang) {

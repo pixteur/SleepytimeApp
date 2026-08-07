@@ -34,6 +34,10 @@ abstract class TtsProvider {
   TtsState get state;
   Stream<TtsState> get stateStream;
 
+  /// Fires ONLY when a chapter finishes reading naturally (not on stop/cancel),
+  /// so auto-advance can't be triggered by a stop from leaving the screen.
+  Stream<void> get onDone;
+
   /// Fraction (0.0–1.0) of the current chapter that has been read, for
   /// read-along scrolling + word highlighting. Best-effort; may stay at 0 for
   /// engines that don't report progress.

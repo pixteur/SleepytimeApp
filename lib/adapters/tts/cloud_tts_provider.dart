@@ -49,6 +49,7 @@ class CloudTtsProvider implements TtsProvider {
       StreamController<TtsState>.broadcast();
   final StreamController<double> _progress =
       StreamController<double>.broadcast();
+  final StreamController<void> _done = StreamController<void>.broadcast();
   TtsState _state = TtsState.idle;
 
   // Chunk queue + a cache of in-flight/finished synthesis jobs, keyed by index.
@@ -70,6 +71,9 @@ class CloudTtsProvider implements TtsProvider {
 
   @override
   Stream<double> get progressStream => _progress.stream;
+
+  @override
+  Stream<void> get onDone => _done.stream;
 
   @override
   String get voiceSignature => _synth.voiceSignature;
@@ -190,8 +194,11 @@ class CloudTtsProvider implements TtsProvider {
     if (!_active) return;
     _i++;
     if (_i >= _chunks.length) {
+      final playedSomething = _state == TtsState.speaking;
       _active = false;
       _set(TtsState.idle);
+      // Only a genuine finish (we were actually speaking) counts as "done".
+      if (playedSomething && !_done.isClosed) _done.add(null);
       return;
     }
     _play(_i).catchError((_) {
@@ -231,6 +238,7 @@ class CloudTtsProvider implements TtsProvider {
     await _player.dispose();
     await _states.close();
     await _progress.close();
+    await _done.close();
   }
 
   /// Synthesize a whole chapter as ONE request when possible: a single request
