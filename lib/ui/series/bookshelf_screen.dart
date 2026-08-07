@@ -49,12 +49,15 @@ class _BookshelfScreenState extends ConsumerState<BookshelfScreen> {
 
   Future<void> _importDemo(String childId) async {
     try {
-      final existing = await ref.read(seriesServiceProvider).forChild(childId);
-      if (existing.any((s) => s.title == 'Obsidian Stone')) {
+      // Guard on the demo's WORLD ("Bob and Leo") — not the episode title — so a
+      // child who has their own standalone "Obsidian Stone" can still load the
+      // demo world.
+      final worlds = await ref.read(worldServiceProvider).forChild(childId);
+      if (worlds.any((w) => w.name == 'Bob and Leo')) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('“Obsidian Stone” is already on the bookshelf.'),
+              content: Text('The “Bob and Leo” world is already on the shelf.'),
             ),
           );
         }
