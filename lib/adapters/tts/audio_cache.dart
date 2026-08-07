@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
 import '../storage/library_paths.dart';
+import 'audio_compression.dart';
 
 /// Persists synthesized narration audio so a chapter never has to be re-fetched
 /// from the cloud: replaying, paging back, or reopening a saved story all play
@@ -54,7 +56,9 @@ class FileAudioCache implements AudioCache {
     try {
       final f = _fileFor(dir, key)!;
       if (!await f.exists()) return null;
-      return await f.readAsBytes();
+      final raw = await f.readAsBytes();
+      // Transparently decompress (older uncompressed files pass straight through).
+      return decompressAudio(raw);
     } catch (_) {
       return null;
     }
@@ -66,9 +70,11 @@ class FileAudioCache implements AudioCache {
     final dir = await _ensureDir();
     if (dir == null) return;
     try {
+      // Compress off the UI thread (delta-code + gzip; ~2× smaller for WAV).
+      final packed = await Isolate.run(() => compressAudio(bytes));
       // Write to a temp file then rename, so a reader never sees a partial file.
       final tmp = File(p.join(dir.path, '$key.tmp'));
-      await tmp.writeAsBytes(bytes, flush: true);
+      await tmp.writeAsBytes(packed, flush: true);
       await tmp.rename(p.join(dir.path, key));
     } catch (_) {
       // best-effort; a cache miss just means we re-synthesize next time
