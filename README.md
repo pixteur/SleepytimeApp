@@ -1,6 +1,6 @@
 # SleepytimeApp
 
-A kids' nighttime storytelling app. Each night you **seed a story**, then **roll the dice** or pick from **6 options**, and the app uses an AI model (Claude / OpenAI / Gemini) to invent the next chapter on the spot — read aloud in an expressive character voice.
+A kids' nighttime storytelling app. Each night you **seed a story**, then **roll the dice** or pick from **6 openings dealt at random from a ~50-card deck**, and the app uses an AI model (Claude / OpenAI / Gemini) to invent the next chapter on the spot — read aloud in an expressive character voice.
 
 Built **Flutter-first for PC (Windows)**, designed to port cleanly to **macOS and iOS** from a single codebase.
 
@@ -11,7 +11,8 @@ Built **Flutter-first for PC (Windows)**, designed to port cleanly to **macOS an
 - **Per-child accounts** (multi-kid) with an onboarding quiz — including stories they already love — that seeds each kid's story world.
 - **Nightly launch choices:** 🎲 *Roll the dice* for a new twist, ▶️ *Continue where we left off*, or ⌨️/🎤 *Tell it what to hear* (text or microphone).
 - **Multiple story series + branching** — keep several sagas going, or branch off a brand-new one (pick a **theme** and who the hero is).
-- **~16 story themes** — Adventure, Mystery, Superhero, Cozy/Dreamtime, Mindfulness, Feelings & Kindness, Slice-of-Life, Nature, Technical, Documentary, Learning, History, Around the World, Fairytale, Silly, Surprise — plus a **Custom** free-text flavor.
+- **~16 story themes, blend up to 3** — Adventure, Mystery, Superhero, Cozy/Dreamtime, Mindfulness, Feelings & Kindness, Slice-of-Life, Nature, Technical, Documentary, Learning, History, Around the World, Fairytale, Silly, Surprise — plus a **Custom** free-text flavor. Pick one to lead and up to two more to colour it.
+- **Stories name themselves** — leave the title blank and the AI titles it from what actually happened.
 - **Bilingual mode** — toggle on *any* story to weave in a second language and soak it up at bedtime.
 - **Story archive** — browse past episodes with short recaps and replay any of them aloud.
 - **Adjustable detail levels** and **streaming** stories that appear as they're written.
@@ -29,12 +30,13 @@ Built **Flutter-first for PC (Windows)**, designed to port cleanly to **macOS an
 - Per-child profiles + onboarding quiz; safety guard + banned themes.
 - Story engine with real AI (Claude / ChatGPT / Gemini) behind a parent-gated, consent-disclosed key screen (keys secured via Windows DPAPI).
 - **Voice reader** — natural cloud voices (Gemini / OpenAI / ElevenLabs) or free on-device TTS. Narration is **cached on device** for instant, gap-free replays.
-- **Bookshelf → Worlds → Episodes → Characters** — a loved world (e.g. "Splat the Cat") spawns endless consistent episodes.
+- **Bookshelf → Worlds → Episodes → Characters** — a loved world (e.g. "Bob and Leo") spawns endless consistent episodes. A grown-up tunes the world (premise, themes, cast) behind **Edit world**; adding a character introduces them in the next story, and removing one gives them a warm on-the-page goodbye rather than silently deleting them.
 - **Read-along** — text auto-scrolls and highlights the word being read.
 - **`.sleepy` files** — export/import a story (text + audio) as one shareable file.
-- **Parent mode** — grown-up controls (delete/rename) are hidden by default so kids can't change things.
+- **Parent mode** — grown-up controls (delete/rename/edit) are hidden by default so kids can't change things, and every deletion needs the parent gate plus a two-step confirmation.
+- **One settings page** — parent mode, story AI, and voice on a single scroll.
 
-~60 tests pass; CI (format + analyze + test) green on `main`. App icon: [app_icon.png](app_icon.png) / [app_icon.svg](app_icon.svg) (a sleeping crescent moon).
+~80 tests pass; CI (format + analyze + test) green on `main`. App icon: [app_icon.png](app_icon.png) / [app_icon.svg](app_icon.svg) (a sleeping crescent moon).
 
 ## Key decisions (locked)
 
@@ -76,7 +78,7 @@ flutter build windows --debug
 .\build\windows\x64\runner\Debug\sleepytime.exe
 ```
 
-**Configure AI + voice (in-app):** open the ⚙️ grown-up settings (parental gate) → add a provider API key + consent (Claude/OpenAI/Gemini) → open Voice setup to pick a cloud voice. Keys are stored securely on-device (DPAPI); nothing is sent until you add a key and consent.
+**Configure AI + voice (in-app):** open the ⚙️ grown-up settings (parental gate) → add a provider API key + consent (Claude/OpenAI/Gemini) → scroll down to the Voice section to pick a cloud voice. Keys are stored securely on-device (DPAPI); nothing is sent until you add a key and consent.
 
 **Tests / checks**
 

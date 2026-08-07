@@ -1,4 +1,5 @@
 import 'beat.dart';
+import 'cast_changes.dart';
 import 'child_profile.dart';
 import 'interest.dart';
 import 'series.dart';
@@ -18,6 +19,7 @@ class StoryRequest {
     this.maxChapters = 6,
     this.worldPremise = '',
     this.cast = const [],
+    this.castChanges = CastChanges.none,
   });
 
   final ChildProfile child;
@@ -47,4 +49,8 @@ class StoryRequest {
   /// Recurring characters (one prompt line each) to keep consistent across the
   /// whole universe, e.g. "Splat — a big black cat who loves adventures".
   final List<String> cast;
+
+  /// Cast edits made since the last story: arrivals to introduce and departures
+  /// that need a gentle send-off in this chapter.
+  final CastChanges castChanges;
 }

@@ -1820,6 +1820,30 @@ class $WorldsTable extends Worlds with TableInfo<$WorldsTable, WorldRow> {
         type: DriftSqlType.int,
         requiredDuringInsert: true,
       ).withConverter<StoryTheme>($WorldsTable.$convertertheme);
+  static const VerificationMeta _extraThemesMeta = const VerificationMeta(
+    'extraThemes',
+  );
+  @override
+  late final GeneratedColumn<String> extraThemes = GeneratedColumn<String>(
+    'extra_themes',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _castChangesMeta = const VerificationMeta(
+    'castChanges',
+  );
+  @override
+  late final GeneratedColumn<String> castChanges = GeneratedColumn<String>(
+    'cast_changes',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1839,6 +1863,8 @@ class $WorldsTable extends Worlds with TableInfo<$WorldsTable, WorldRow> {
     name,
     premise,
     theme,
+    extraThemes,
+    castChanges,
     createdAt,
   ];
   @override
@@ -1880,6 +1906,24 @@ class $WorldsTable extends Worlds with TableInfo<$WorldsTable, WorldRow> {
         premise.isAcceptableOrUnknown(data['premise']!, _premiseMeta),
       );
     }
+    if (data.containsKey('extra_themes')) {
+      context.handle(
+        _extraThemesMeta,
+        extraThemes.isAcceptableOrUnknown(
+          data['extra_themes']!,
+          _extraThemesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cast_changes')) {
+      context.handle(
+        _castChangesMeta,
+        castChanges.isAcceptableOrUnknown(
+          data['cast_changes']!,
+          _castChangesMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1917,6 +1961,14 @@ class $WorldsTable extends Worlds with TableInfo<$WorldsTable, WorldRow> {
           data['${effectivePrefix}theme'],
         )!,
       ),
+      extraThemes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}extra_themes'],
+      )!,
+      castChanges: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cast_changes'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1939,6 +1991,12 @@ class WorldRow extends DataClass implements Insertable<WorldRow> {
   final String name;
   final String premise;
   final StoryTheme theme;
+
+  /// Up to two extra themes blended with [theme], as comma-separated enum names.
+  final String extraThemes;
+
+  /// Cast edits (arrivals/departures) the next story must acknowledge, as JSON.
+  final String castChanges;
   final DateTime createdAt;
   const WorldRow({
     required this.id,
@@ -1946,6 +2004,8 @@ class WorldRow extends DataClass implements Insertable<WorldRow> {
     required this.name,
     required this.premise,
     required this.theme,
+    required this.extraThemes,
+    required this.castChanges,
     required this.createdAt,
   });
   @override
@@ -1958,6 +2018,8 @@ class WorldRow extends DataClass implements Insertable<WorldRow> {
     {
       map['theme'] = Variable<int>($WorldsTable.$convertertheme.toSql(theme));
     }
+    map['extra_themes'] = Variable<String>(extraThemes);
+    map['cast_changes'] = Variable<String>(castChanges);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -1969,6 +2031,8 @@ class WorldRow extends DataClass implements Insertable<WorldRow> {
       name: Value(name),
       premise: Value(premise),
       theme: Value(theme),
+      extraThemes: Value(extraThemes),
+      castChanges: Value(castChanges),
       createdAt: Value(createdAt),
     );
   }
@@ -1986,6 +2050,8 @@ class WorldRow extends DataClass implements Insertable<WorldRow> {
       theme: $WorldsTable.$convertertheme.fromJson(
         serializer.fromJson<int>(json['theme']),
       ),
+      extraThemes: serializer.fromJson<String>(json['extraThemes']),
+      castChanges: serializer.fromJson<String>(json['castChanges']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -2000,6 +2066,8 @@ class WorldRow extends DataClass implements Insertable<WorldRow> {
       'theme': serializer.toJson<int>(
         $WorldsTable.$convertertheme.toJson(theme),
       ),
+      'extraThemes': serializer.toJson<String>(extraThemes),
+      'castChanges': serializer.toJson<String>(castChanges),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -2010,6 +2078,8 @@ class WorldRow extends DataClass implements Insertable<WorldRow> {
     String? name,
     String? premise,
     StoryTheme? theme,
+    String? extraThemes,
+    String? castChanges,
     DateTime? createdAt,
   }) => WorldRow(
     id: id ?? this.id,
@@ -2017,6 +2087,8 @@ class WorldRow extends DataClass implements Insertable<WorldRow> {
     name: name ?? this.name,
     premise: premise ?? this.premise,
     theme: theme ?? this.theme,
+    extraThemes: extraThemes ?? this.extraThemes,
+    castChanges: castChanges ?? this.castChanges,
     createdAt: createdAt ?? this.createdAt,
   );
   WorldRow copyWithCompanion(WorldsCompanion data) {
@@ -2026,6 +2098,12 @@ class WorldRow extends DataClass implements Insertable<WorldRow> {
       name: data.name.present ? data.name.value : this.name,
       premise: data.premise.present ? data.premise.value : this.premise,
       theme: data.theme.present ? data.theme.value : this.theme,
+      extraThemes: data.extraThemes.present
+          ? data.extraThemes.value
+          : this.extraThemes,
+      castChanges: data.castChanges.present
+          ? data.castChanges.value
+          : this.castChanges,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -2038,13 +2116,24 @@ class WorldRow extends DataClass implements Insertable<WorldRow> {
           ..write('name: $name, ')
           ..write('premise: $premise, ')
           ..write('theme: $theme, ')
+          ..write('extraThemes: $extraThemes, ')
+          ..write('castChanges: $castChanges, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, childId, name, premise, theme, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    childId,
+    name,
+    premise,
+    theme,
+    extraThemes,
+    castChanges,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2054,6 +2143,8 @@ class WorldRow extends DataClass implements Insertable<WorldRow> {
           other.name == this.name &&
           other.premise == this.premise &&
           other.theme == this.theme &&
+          other.extraThemes == this.extraThemes &&
+          other.castChanges == this.castChanges &&
           other.createdAt == this.createdAt);
 }
 
@@ -2063,6 +2154,8 @@ class WorldsCompanion extends UpdateCompanion<WorldRow> {
   final Value<String> name;
   final Value<String> premise;
   final Value<StoryTheme> theme;
+  final Value<String> extraThemes;
+  final Value<String> castChanges;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const WorldsCompanion({
@@ -2071,6 +2164,8 @@ class WorldsCompanion extends UpdateCompanion<WorldRow> {
     this.name = const Value.absent(),
     this.premise = const Value.absent(),
     this.theme = const Value.absent(),
+    this.extraThemes = const Value.absent(),
+    this.castChanges = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2080,6 +2175,8 @@ class WorldsCompanion extends UpdateCompanion<WorldRow> {
     required String name,
     this.premise = const Value.absent(),
     required StoryTheme theme,
+    this.extraThemes = const Value.absent(),
+    this.castChanges = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -2092,6 +2189,8 @@ class WorldsCompanion extends UpdateCompanion<WorldRow> {
     Expression<String>? name,
     Expression<String>? premise,
     Expression<int>? theme,
+    Expression<String>? extraThemes,
+    Expression<String>? castChanges,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -2101,6 +2200,8 @@ class WorldsCompanion extends UpdateCompanion<WorldRow> {
       if (name != null) 'name': name,
       if (premise != null) 'premise': premise,
       if (theme != null) 'theme': theme,
+      if (extraThemes != null) 'extra_themes': extraThemes,
+      if (castChanges != null) 'cast_changes': castChanges,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2112,6 +2213,8 @@ class WorldsCompanion extends UpdateCompanion<WorldRow> {
     Value<String>? name,
     Value<String>? premise,
     Value<StoryTheme>? theme,
+    Value<String>? extraThemes,
+    Value<String>? castChanges,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -2121,6 +2224,8 @@ class WorldsCompanion extends UpdateCompanion<WorldRow> {
       name: name ?? this.name,
       premise: premise ?? this.premise,
       theme: theme ?? this.theme,
+      extraThemes: extraThemes ?? this.extraThemes,
+      castChanges: castChanges ?? this.castChanges,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2146,6 +2251,12 @@ class WorldsCompanion extends UpdateCompanion<WorldRow> {
         $WorldsTable.$convertertheme.toSql(theme.value),
       );
     }
+    if (extraThemes.present) {
+      map['extra_themes'] = Variable<String>(extraThemes.value);
+    }
+    if (castChanges.present) {
+      map['cast_changes'] = Variable<String>(castChanges.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2163,6 +2274,8 @@ class WorldsCompanion extends UpdateCompanion<WorldRow> {
           ..write('name: $name, ')
           ..write('premise: $premise, ')
           ..write('theme: $theme, ')
+          ..write('extraThemes: $extraThemes, ')
+          ..write('castChanges: $castChanges, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2595,6 +2708,33 @@ class $SeriesTableTable extends SeriesTable
         type: DriftSqlType.int,
         requiredDuringInsert: true,
       ).withConverter<StoryTheme>($SeriesTableTable.$convertertheme);
+  static const VerificationMeta _extraThemesMeta = const VerificationMeta(
+    'extraThemes',
+  );
+  @override
+  late final GeneratedColumn<String> extraThemes = GeneratedColumn<String>(
+    'extra_themes',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _autoTitleMeta = const VerificationMeta(
+    'autoTitle',
+  );
+  @override
+  late final GeneratedColumn<bool> autoTitle = GeneratedColumn<bool>(
+    'auto_title',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("auto_title" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _customThemeMeta = const VerificationMeta(
     'customTheme',
   );
@@ -2737,6 +2877,8 @@ class $SeriesTableTable extends SeriesTable
     worldId,
     title,
     theme,
+    extraThemes,
+    autoTitle,
     customTheme,
     heroMode,
     heroName,
@@ -2788,6 +2930,21 @@ class $SeriesTableTable extends SeriesTable
       );
     } else if (isInserting) {
       context.missing(_titleMeta);
+    }
+    if (data.containsKey('extra_themes')) {
+      context.handle(
+        _extraThemesMeta,
+        extraThemes.isAcceptableOrUnknown(
+          data['extra_themes']!,
+          _extraThemesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('auto_title')) {
+      context.handle(
+        _autoTitleMeta,
+        autoTitle.isAcceptableOrUnknown(data['auto_title']!, _autoTitleMeta),
+      );
     }
     if (data.containsKey('custom_theme')) {
       context.handle(
@@ -2889,6 +3046,14 @@ class $SeriesTableTable extends SeriesTable
           data['${effectivePrefix}theme'],
         )!,
       ),
+      extraThemes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}extra_themes'],
+      )!,
+      autoTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}auto_title'],
+      )!,
       customTheme: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}custom_theme'],
@@ -2971,6 +3136,12 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
   final String? worldId;
   final String title;
   final StoryTheme theme;
+
+  /// Up to two extra themes blended with [theme], as comma-separated enum names.
+  final String extraThemes;
+
+  /// True while [title] is a placeholder awaiting a model-suggested title.
+  final bool autoTitle;
   final String? customTheme;
   final HeroMode heroMode;
   final String? heroName;
@@ -2989,6 +3160,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     this.worldId,
     required this.title,
     required this.theme,
+    required this.extraThemes,
+    required this.autoTitle,
     this.customTheme,
     required this.heroMode,
     this.heroName,
@@ -3016,6 +3189,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
         $SeriesTableTable.$convertertheme.toSql(theme),
       );
     }
+    map['extra_themes'] = Variable<String>(extraThemes);
+    map['auto_title'] = Variable<bool>(autoTitle);
     if (!nullToAbsent || customTheme != null) {
       map['custom_theme'] = Variable<String>(customTheme);
     }
@@ -3060,6 +3235,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           : Value(worldId),
       title: Value(title),
       theme: Value(theme),
+      extraThemes: Value(extraThemes),
+      autoTitle: Value(autoTitle),
       customTheme: customTheme == null && nullToAbsent
           ? const Value.absent()
           : Value(customTheme),
@@ -3098,6 +3275,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
       theme: $SeriesTableTable.$convertertheme.fromJson(
         serializer.fromJson<int>(json['theme']),
       ),
+      extraThemes: serializer.fromJson<String>(json['extraThemes']),
+      autoTitle: serializer.fromJson<bool>(json['autoTitle']),
       customTheme: serializer.fromJson<String?>(json['customTheme']),
       heroMode: $SeriesTableTable.$converterheroMode.fromJson(
         serializer.fromJson<int>(json['heroMode']),
@@ -3133,6 +3312,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
       'theme': serializer.toJson<int>(
         $SeriesTableTable.$convertertheme.toJson(theme),
       ),
+      'extraThemes': serializer.toJson<String>(extraThemes),
+      'autoTitle': serializer.toJson<bool>(autoTitle),
       'customTheme': serializer.toJson<String?>(customTheme),
       'heroMode': serializer.toJson<int>(
         $SeriesTableTable.$converterheroMode.toJson(heroMode),
@@ -3160,6 +3341,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     Value<String?> worldId = const Value.absent(),
     String? title,
     StoryTheme? theme,
+    String? extraThemes,
+    bool? autoTitle,
     Value<String?> customTheme = const Value.absent(),
     HeroMode? heroMode,
     Value<String?> heroName = const Value.absent(),
@@ -3178,6 +3361,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     worldId: worldId.present ? worldId.value : this.worldId,
     title: title ?? this.title,
     theme: theme ?? this.theme,
+    extraThemes: extraThemes ?? this.extraThemes,
+    autoTitle: autoTitle ?? this.autoTitle,
     customTheme: customTheme.present ? customTheme.value : this.customTheme,
     heroMode: heroMode ?? this.heroMode,
     heroName: heroName.present ? heroName.value : this.heroName,
@@ -3204,6 +3389,10 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
       worldId: data.worldId.present ? data.worldId.value : this.worldId,
       title: data.title.present ? data.title.value : this.title,
       theme: data.theme.present ? data.theme.value : this.theme,
+      extraThemes: data.extraThemes.present
+          ? data.extraThemes.value
+          : this.extraThemes,
+      autoTitle: data.autoTitle.present ? data.autoTitle.value : this.autoTitle,
       customTheme: data.customTheme.present
           ? data.customTheme.value
           : this.customTheme,
@@ -3241,6 +3430,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           ..write('worldId: $worldId, ')
           ..write('title: $title, ')
           ..write('theme: $theme, ')
+          ..write('extraThemes: $extraThemes, ')
+          ..write('autoTitle: $autoTitle, ')
           ..write('customTheme: $customTheme, ')
           ..write('heroMode: $heroMode, ')
           ..write('heroName: $heroName, ')
@@ -3264,6 +3455,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     worldId,
     title,
     theme,
+    extraThemes,
+    autoTitle,
     customTheme,
     heroMode,
     heroName,
@@ -3286,6 +3479,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           other.worldId == this.worldId &&
           other.title == this.title &&
           other.theme == this.theme &&
+          other.extraThemes == this.extraThemes &&
+          other.autoTitle == this.autoTitle &&
           other.customTheme == this.customTheme &&
           other.heroMode == this.heroMode &&
           other.heroName == this.heroName &&
@@ -3306,6 +3501,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
   final Value<String?> worldId;
   final Value<String> title;
   final Value<StoryTheme> theme;
+  final Value<String> extraThemes;
+  final Value<bool> autoTitle;
   final Value<String?> customTheme;
   final Value<HeroMode> heroMode;
   final Value<String?> heroName;
@@ -3325,6 +3522,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     this.worldId = const Value.absent(),
     this.title = const Value.absent(),
     this.theme = const Value.absent(),
+    this.extraThemes = const Value.absent(),
+    this.autoTitle = const Value.absent(),
     this.customTheme = const Value.absent(),
     this.heroMode = const Value.absent(),
     this.heroName = const Value.absent(),
@@ -3345,6 +3544,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     this.worldId = const Value.absent(),
     required String title,
     required StoryTheme theme,
+    this.extraThemes = const Value.absent(),
+    this.autoTitle = const Value.absent(),
     this.customTheme = const Value.absent(),
     required HeroMode heroMode,
     this.heroName = const Value.absent(),
@@ -3370,6 +3571,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     Expression<String>? worldId,
     Expression<String>? title,
     Expression<int>? theme,
+    Expression<String>? extraThemes,
+    Expression<bool>? autoTitle,
     Expression<String>? customTheme,
     Expression<int>? heroMode,
     Expression<String>? heroName,
@@ -3390,6 +3593,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
       if (worldId != null) 'world_id': worldId,
       if (title != null) 'title': title,
       if (theme != null) 'theme': theme,
+      if (extraThemes != null) 'extra_themes': extraThemes,
+      if (autoTitle != null) 'auto_title': autoTitle,
       if (customTheme != null) 'custom_theme': customTheme,
       if (heroMode != null) 'hero_mode': heroMode,
       if (heroName != null) 'hero_name': heroName,
@@ -3413,6 +3618,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     Value<String?>? worldId,
     Value<String>? title,
     Value<StoryTheme>? theme,
+    Value<String>? extraThemes,
+    Value<bool>? autoTitle,
     Value<String?>? customTheme,
     Value<HeroMode>? heroMode,
     Value<String?>? heroName,
@@ -3433,6 +3640,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
       worldId: worldId ?? this.worldId,
       title: title ?? this.title,
       theme: theme ?? this.theme,
+      extraThemes: extraThemes ?? this.extraThemes,
+      autoTitle: autoTitle ?? this.autoTitle,
       customTheme: customTheme ?? this.customTheme,
       heroMode: heroMode ?? this.heroMode,
       heroName: heroName ?? this.heroName,
@@ -3468,6 +3677,12 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
       map['theme'] = Variable<int>(
         $SeriesTableTable.$convertertheme.toSql(theme.value),
       );
+    }
+    if (extraThemes.present) {
+      map['extra_themes'] = Variable<String>(extraThemes.value);
+    }
+    if (autoTitle.present) {
+      map['auto_title'] = Variable<bool>(autoTitle.value);
     }
     if (customTheme.present) {
       map['custom_theme'] = Variable<String>(customTheme.value);
@@ -3525,6 +3740,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
           ..write('worldId: $worldId, ')
           ..write('title: $title, ')
           ..write('theme: $theme, ')
+          ..write('extraThemes: $extraThemes, ')
+          ..write('autoTitle: $autoTitle, ')
           ..write('customTheme: $customTheme, ')
           ..write('heroMode: $heroMode, ')
           ..write('heroName: $heroName, ')
@@ -6287,6 +6504,8 @@ typedef $$WorldsTableCreateCompanionBuilder =
       required String name,
       Value<String> premise,
       required StoryTheme theme,
+      Value<String> extraThemes,
+      Value<String> castChanges,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -6297,6 +6516,8 @@ typedef $$WorldsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> premise,
       Value<StoryTheme> theme,
+      Value<String> extraThemes,
+      Value<String> castChanges,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -6390,6 +6611,16 @@ class $$WorldsTableFilterComposer
         column: $table.theme,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
+
+  ColumnFilters<String> get extraThemes => $composableBuilder(
+    column: $table.extraThemes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get castChanges => $composableBuilder(
+    column: $table.castChanges,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
@@ -6499,6 +6730,16 @@ class $$WorldsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get extraThemes => $composableBuilder(
+    column: $table.extraThemes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get castChanges => $composableBuilder(
+    column: $table.castChanges,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -6548,6 +6789,16 @@ class $$WorldsTableAnnotationComposer
 
   GeneratedColumnWithTypeConverter<StoryTheme, int> get theme =>
       $composableBuilder(column: $table.theme, builder: (column) => column);
+
+  GeneratedColumn<String> get extraThemes => $composableBuilder(
+    column: $table.extraThemes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get castChanges => $composableBuilder(
+    column: $table.castChanges,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -6663,6 +6914,8 @@ class $$WorldsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> premise = const Value.absent(),
                 Value<StoryTheme> theme = const Value.absent(),
+                Value<String> extraThemes = const Value.absent(),
+                Value<String> castChanges = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => WorldsCompanion(
@@ -6671,6 +6924,8 @@ class $$WorldsTableTableManager
                 name: name,
                 premise: premise,
                 theme: theme,
+                extraThemes: extraThemes,
+                castChanges: castChanges,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -6681,6 +6936,8 @@ class $$WorldsTableTableManager
                 required String name,
                 Value<String> premise = const Value.absent(),
                 required StoryTheme theme,
+                Value<String> extraThemes = const Value.absent(),
+                Value<String> castChanges = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => WorldsCompanion.insert(
@@ -6689,6 +6946,8 @@ class $$WorldsTableTableManager
                 name: name,
                 premise: premise,
                 theme: theme,
+                extraThemes: extraThemes,
+                castChanges: castChanges,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -7146,6 +7405,8 @@ typedef $$SeriesTableTableCreateCompanionBuilder =
       Value<String?> worldId,
       required String title,
       required StoryTheme theme,
+      Value<String> extraThemes,
+      Value<bool> autoTitle,
       Value<String?> customTheme,
       required HeroMode heroMode,
       Value<String?> heroName,
@@ -7167,6 +7428,8 @@ typedef $$SeriesTableTableUpdateCompanionBuilder =
       Value<String?> worldId,
       Value<String> title,
       Value<StoryTheme> theme,
+      Value<String> extraThemes,
+      Value<bool> autoTitle,
       Value<String?> customTheme,
       Value<HeroMode> heroMode,
       Value<String?> heroName,
@@ -7264,6 +7527,16 @@ class $$SeriesTableTableFilterComposer
         column: $table.theme,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
+
+  ColumnFilters<String> get extraThemes => $composableBuilder(
+    column: $table.extraThemes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get autoTitle => $composableBuilder(
+    column: $table.autoTitle,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get customTheme => $composableBuilder(
     column: $table.customTheme,
@@ -7424,6 +7697,16 @@ class $$SeriesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get extraThemes => $composableBuilder(
+    column: $table.extraThemes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get autoTitle => $composableBuilder(
+    column: $table.autoTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get customTheme => $composableBuilder(
     column: $table.customTheme,
     builder: (column) => ColumnOrderings(column),
@@ -7548,6 +7831,14 @@ class $$SeriesTableTableAnnotationComposer
 
   GeneratedColumnWithTypeConverter<StoryTheme, int> get theme =>
       $composableBuilder(column: $table.theme, builder: (column) => column);
+
+  GeneratedColumn<String> get extraThemes => $composableBuilder(
+    column: $table.extraThemes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get autoTitle =>
+      $composableBuilder(column: $table.autoTitle, builder: (column) => column);
 
   GeneratedColumn<String> get customTheme => $composableBuilder(
     column: $table.customTheme,
@@ -7705,6 +7996,8 @@ class $$SeriesTableTableTableManager
                 Value<String?> worldId = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<StoryTheme> theme = const Value.absent(),
+                Value<String> extraThemes = const Value.absent(),
+                Value<bool> autoTitle = const Value.absent(),
                 Value<String?> customTheme = const Value.absent(),
                 Value<HeroMode> heroMode = const Value.absent(),
                 Value<String?> heroName = const Value.absent(),
@@ -7724,6 +8017,8 @@ class $$SeriesTableTableTableManager
                 worldId: worldId,
                 title: title,
                 theme: theme,
+                extraThemes: extraThemes,
+                autoTitle: autoTitle,
                 customTheme: customTheme,
                 heroMode: heroMode,
                 heroName: heroName,
@@ -7745,6 +8040,8 @@ class $$SeriesTableTableTableManager
                 Value<String?> worldId = const Value.absent(),
                 required String title,
                 required StoryTheme theme,
+                Value<String> extraThemes = const Value.absent(),
+                Value<bool> autoTitle = const Value.absent(),
                 Value<String?> customTheme = const Value.absent(),
                 required HeroMode heroMode,
                 Value<String?> heroName = const Value.absent(),
@@ -7764,6 +8061,8 @@ class $$SeriesTableTableTableManager
                 worldId: worldId,
                 title: title,
                 theme: theme,
+                extraThemes: extraThemes,
+                autoTitle: autoTitle,
                 customTheme: customTheme,
                 heroMode: heroMode,
                 heroName: heroName,

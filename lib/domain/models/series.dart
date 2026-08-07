@@ -6,6 +6,8 @@ class Series {
     required this.childId,
     required this.title,
     required this.theme,
+    this.extraThemes = const [],
+    this.autoTitle = false,
     this.worldId,
     this.customTheme,
     this.heroMode = HeroMode.surprise,
@@ -29,6 +31,17 @@ class Series {
 
   /// The series' overall flavour, chosen at start.
   final StoryTheme theme;
+
+  /// Up to two further flavours blended with [theme] (the chooser allows three
+  /// picks in total). Empty for a single-theme story.
+  final List<StoryTheme> extraThemes;
+
+  /// True while [title] is a placeholder waiting to be replaced by a title the
+  /// model derives from the first chapter. Cleared once named.
+  final bool autoTitle;
+
+  /// [theme] plus [extraThemes], in the order they were picked.
+  List<StoryTheme> get allThemes => [theme, ...extraThemes];
 
   /// Free-text flavour when [theme] is [StoryTheme.custom].
   final String? customTheme;
@@ -54,6 +67,7 @@ class Series {
 
   Series copyWith({
     String? title,
+    bool? autoTitle,
     String? seedSummary,
     String? storyBible,
     SeriesStatus? status,
@@ -63,6 +77,8 @@ class Series {
       childId: childId,
       title: title ?? this.title,
       theme: theme,
+      extraThemes: extraThemes,
+      autoTitle: autoTitle ?? this.autoTitle,
       worldId: worldId,
       customTheme: customTheme,
       heroMode: heroMode,

@@ -61,11 +61,24 @@ class PromptBuilder {
         'Return: this chapter\'s text, a one-line summary, the rating, the '
         'setting, recurring characters, any open story threads, and is_final '
         '(true on the last chapter).',
+      )
+      ..writeln(
+        'Also return "story_title": a short, warm title for the WHOLE story '
+        '(2–6 words, no quotes, no subtitle) drawn from what actually happens '
+        'in it — the kind of title a child would recognise on a book spine. '
+        'Keep it the same in later chapters of the same story.',
       );
 
-    final user = StringBuffer()
-      ..writeln('Series: "${req.series.title}".')
-      ..writeln('Premise: ${req.series.seedSummary}');
+    final user = StringBuffer();
+    if (req.series.autoTitle) {
+      user.writeln(
+        'This story has no title yet — invent one in "story_title" from what '
+        'happens in it.',
+      );
+    } else {
+      user.writeln('Series: "${req.series.title}".');
+    }
+    user.writeln('Premise: ${req.series.seedSummary}');
 
     if (req.worldPremise.trim().isNotEmpty) {
       user.writeln(
@@ -80,6 +93,8 @@ class PromptBuilder {
         user.writeln('- $c');
       }
     }
+
+    _writeCastChanges(user, req);
 
     if (req.series.storyBible.trim().isNotEmpty) {
       user.writeln('Story so far: ${req.series.storyBible}');
@@ -118,6 +133,43 @@ class PromptBuilder {
     );
   }
 
+  /// Arrivals and departures the grown-up made in the world's cast since the
+  /// last story. A removed character must be *written out*, warmly and on the
+  /// page — never silently dropped, and never in a way that upsets a child at
+  /// bedtime. See `docs/safety.md`.
+  void _writeCastChanges(StringBuffer user, StoryRequest req) {
+    final changes = req.castChanges;
+    if (changes.isEmpty) return;
+
+    if (changes.joined.isNotEmpty) {
+      user.writeln(
+        'New to this world — introduce them naturally in this chapter with a '
+        'warm first meeting, then treat them as part of the group:',
+      );
+      for (final c in changes.joined) {
+        user.writeln('- $c');
+      }
+    }
+    if (changes.left.isNotEmpty) {
+      user.writeln(
+        'Leaving the story — give each of them a proper send-off in this '
+        'chapter, then never mention them again in later chapters:',
+      );
+      for (final c in changes.left) {
+        user.writeln('- $c');
+      }
+      user.writeln(
+        'Make the farewell gentle, hopeful, and interesting: they set off on '
+        'an adventure of their own, are called home, sail away to somewhere '
+        'wonderful, or go where they are needed. Let the others say a proper '
+        'goodbye and feel glad for them. Absolutely never use illness, death, '
+        'danger, punishment, an argument, or an unexplained disappearance, and '
+        'never make it frightening or sad. Leave the door open for a happy '
+        'letter or visit someday.',
+      );
+    }
+  }
+
   String _intentLine(StoryRequest req) {
     final twist = req.chosenTwist;
     return switch (req.intent) {
@@ -137,7 +189,17 @@ class PromptBuilder {
     if (s.theme == StoryTheme.custom && (s.customTheme?.isNotEmpty ?? false)) {
       return 'Series flavour (custom): ${s.customTheme}.';
     }
-    final phrase = switch (s.theme) {
+    final phrases = s.allThemes.map(_themePhrase).toList();
+    if (phrases.length == 1) {
+      return 'Series flavour: lean into ${phrases.single}.';
+    }
+    return 'Series flavour: blend these into one story — '
+        '${phrases.join('; ')}. Lead with the first and let the others colour '
+        'it, rather than telling separate stories.';
+  }
+
+  String _themePhrase(StoryTheme theme) {
+    return switch (theme) {
       StoryTheme.adventure =>
         'quests, exploration, and brave-but-cozy excitement',
       StoryTheme.technical =>
@@ -164,7 +226,6 @@ class PromptBuilder {
         'any delightful, age-appropriate flavour you choose',
       StoryTheme.custom => 'a delightful, age-appropriate flavour',
     };
-    return 'Series flavour: lean into $phrase.';
   }
 
   String _lengthFor(DetailLevel level) => switch (level) {

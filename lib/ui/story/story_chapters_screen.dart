@@ -8,8 +8,8 @@ import '../../adapters/tts/audio_cache.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../../domain/models/series.dart';
+import '../common/confirm_destructive.dart';
 import '../common/error_banner.dart';
-import '../common/parent_gate.dart';
 import 'story_view_screen.dart';
 
 /// A single story's chapter list: start from the beginning or jump to any
@@ -209,25 +209,14 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
   Future<void> _deleteChapter(Beat beat) async {
     final series = ref.read(activeSeriesProvider);
     if (series == null) return;
-    if (!await showParentGate(context) || !mounted) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Delete Chapter ${beat.seq + 1}?'),
-        content: const Text('This removes the chapter and its saved text.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final ok = await confirmDestructive(
+      context,
+      title: 'Delete Chapter ${beat.seq + 1}?',
+      message: 'This removes the chapter and its saved text.',
+      confirmLabel: 'Delete chapter',
+      doubleCheck: 'Chapter ${beat.seq + 1} can\'t be brought back. Delete it?',
     );
-    if (ok != true) return;
+    if (!ok || !mounted) return;
     final repo = ref.read(storageRepoProvider);
     await repo.deleteBeat(beat.id);
     // Compact seq to 0..n-1 so the list reads 1, 2, 3…

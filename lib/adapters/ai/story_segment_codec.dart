@@ -8,6 +8,7 @@ import '../../domain/models/story_segment.dart';
 /// dialect (JSON Schema / Gemini Schema). See `docs/ai-providers.md`.
 const List<String> storySegmentFields = [
   'story_text',
+  'story_title',
   'summary',
   'rating',
   'setting',
@@ -23,6 +24,7 @@ const Map<String, dynamic> jsonStorySchema = {
   'type': 'object',
   'properties': {
     'story_text': {'type': 'string'},
+    'story_title': {'type': 'string'},
     'summary': {'type': 'string'},
     'rating': {
       'type': 'string',
@@ -51,6 +53,7 @@ const Map<String, dynamic> jsonStorySchema = {
 /// the strictest band so [SafetyGuard] can still reject if it's too high.
 StorySegment storySegmentFromJson(Map<String, dynamic> d) => StorySegment(
   storyText: (d['story_text'] as String?) ?? '',
+  suggestedTitle: (d['story_title'] as String?)?.trim() ?? '',
   summary: (d['summary'] as String?) ?? '',
   rating: _rating(d['rating'] as String?),
   setting: (d['setting'] as String?) ?? '',

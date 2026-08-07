@@ -38,6 +38,7 @@ Target shape (provider-agnostic):
 ```json
 {
   "story_text": "…the chapter, in the child's language…",
+  "story_title": "a 2–6 word title for the whole story, from its content",
   "summary": "one-line recap",
   "rating": "tiny|little|big|older",
   "sensitive_flags": [],

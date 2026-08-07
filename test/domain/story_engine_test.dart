@@ -2,9 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sleepytime/adapters/ai/ai_provider.dart';
 import 'package:sleepytime/adapters/ai/fake_ai_provider.dart';
 import 'package:sleepytime/domain/models/beat.dart';
+import 'package:sleepytime/domain/models/cast_changes.dart';
 import 'package:sleepytime/domain/models/child_profile.dart';
 import 'package:sleepytime/domain/models/series.dart';
 import 'package:sleepytime/domain/models/story_segment.dart';
+import 'package:sleepytime/domain/models/world.dart';
 import 'package:sleepytime/domain/prompt_builder.dart';
 import 'package:sleepytime/domain/story_engine.dart';
 
@@ -63,6 +65,41 @@ class _FinalProvider implements AiProvider {
     rating: AgeRating.tiny,
     isFinal: true,
   );
+}
+
+/// Suggests a title, to exercise auto-naming.
+class _TitlingProvider implements AiProvider {
+  @override
+  ProviderId get id => ProviderId.fake;
+  @override
+  Future<bool> isReady() async => true;
+  @override
+  Future<StorySegment> generate(StoryPrompt prompt) async => const StorySegment(
+    storyText: 'A small lantern glowed in the willow tree.',
+    summary: 'A lantern in a willow.',
+    rating: AgeRating.tiny,
+    // Wrapped in quotes and trailing punctuation, as models often do.
+    suggestedTitle: '"The Lantern in the Willow."',
+  );
+}
+
+/// Records the prompt it was handed so tests can assert on it.
+class _CapturingProvider implements AiProvider {
+  StoryPrompt? lastPrompt;
+
+  @override
+  ProviderId get id => ProviderId.fake;
+  @override
+  Future<bool> isReady() async => true;
+  @override
+  Future<StorySegment> generate(StoryPrompt prompt) async {
+    lastPrompt = prompt;
+    return const StorySegment(
+      storyText: 'They waved from the hilltop until the boat was a dot.',
+      summary: 'A warm goodbye.',
+      rating: AgeRating.tiny,
+    );
+  }
 }
 
 void main() {
@@ -223,5 +260,111 @@ void main() {
     );
     final learned = await repo.loadLearnedProfile(child.id);
     expect(learned?.twistAffinity['mystery_door'], 1);
+  });
+
+  group('auto-naming', () {
+    const unnamed = Series(
+      id: 's2',
+      childId: 'c1',
+      title: 'Naming it…',
+      theme: StoryTheme.cozy,
+      autoTitle: true,
+      seedSummary: 'A cozy sky adventure.',
+    );
+
+    test('the first chapter names the story from its content', () async {
+      await repo.saveSeries(unnamed);
+      final engine = StoryEngine(ai: _TitlingProvider(), repo: repo);
+      await engine.takeTurn(
+        child: child,
+        series: unnamed,
+        intent: StoryIntent.dice,
+      );
+      final saved = await repo.loadSeriesById(unnamed.id);
+      expect(saved!.title, 'The Lantern in the Willow');
+      expect(saved.autoTitle, isFalse); // named once, then left alone
+    });
+
+    test('a title the grown-up chose is never overwritten', () async {
+      final engine = StoryEngine(ai: _TitlingProvider(), repo: repo);
+      await engine.takeTurn(
+        child: child,
+        series: series,
+        intent: StoryIntent.dice,
+      );
+      final saved = await repo.loadSeriesById(series.id);
+      expect(saved!.title, 'Cloud Pirates');
+    });
+
+    test('a fallback chapter leaves the story unnamed for next time', () async {
+      await repo.saveSeries(unnamed);
+      final engine = StoryEngine(ai: _ThrowingProvider(), repo: repo);
+      await engine.takeTurn(
+        child: child,
+        series: unnamed,
+        intent: StoryIntent.dice,
+      );
+      final saved = await repo.loadSeriesById(unnamed.id);
+      expect(saved!.autoTitle, isTrue);
+    });
+  });
+
+  group('cast changes', () {
+    const world = World(
+      id: 'w1',
+      childId: 'c1',
+      name: 'Splat the Cat',
+      pendingCastChanges: CastChanges(left: ['Splat — a big black cat']),
+    );
+    const episode = Series(
+      id: 's3',
+      childId: 'c1',
+      worldId: 'w1',
+      title: 'A New Day',
+      theme: StoryTheme.cozy,
+    );
+
+    setUp(() async {
+      await repo.saveWorld(world);
+      await repo.saveSeries(episode);
+    });
+
+    test('the first chapter is told to write the character out', () async {
+      final ai = _CapturingProvider();
+      await StoryEngine(
+        ai: ai,
+        repo: repo,
+      ).takeTurn(child: child, series: episode, intent: StoryIntent.dice);
+      expect(ai.lastPrompt!.user, contains('Leaving the story'));
+      expect(ai.lastPrompt!.user, contains('Splat'));
+      // Said goodbye — the world's cast is settled again.
+      final saved = await repo.loadWorldById(world.id);
+      expect(saved!.pendingCastChanges.isEmpty, isTrue);
+    });
+
+    test('a later chapter does not repeat the goodbye', () async {
+      final ai = _CapturingProvider();
+      final engine = StoryEngine(ai: ai, repo: repo);
+      await engine.takeTurn(
+        child: child,
+        series: episode,
+        intent: StoryIntent.dice,
+      );
+      await engine.takeTurn(
+        child: child,
+        series: episode,
+        intent: StoryIntent.continued,
+      );
+      expect(ai.lastPrompt!.user, isNot(contains('Leaving the story')));
+    });
+
+    test('a fallback chapter keeps the goodbye pending', () async {
+      await StoryEngine(
+        ai: _ThrowingProvider(),
+        repo: repo,
+      ).takeTurn(child: child, series: episode, intent: StoryIntent.dice);
+      final saved = await repo.loadWorldById(world.id);
+      expect(saved!.pendingCastChanges.left, ['Splat — a big black cat']);
+    });
   });
 }

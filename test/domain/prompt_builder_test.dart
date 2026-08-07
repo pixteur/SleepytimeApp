@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sleepytime/domain/models/beat.dart';
+import 'package:sleepytime/domain/models/cast_changes.dart';
 import 'package:sleepytime/domain/models/child_profile.dart';
 import 'package:sleepytime/domain/models/interest.dart';
 import 'package:sleepytime/domain/models/series.dart';
@@ -120,5 +121,75 @@ void main() {
     expect(p.user, contains('Splat the Cat'));
     expect(p.user, contains('Recurring characters'));
     expect(p.user, contains('big black cat'));
+  });
+
+  test('up to three themes are blended, leading with the first', () {
+    final p = builder.build(
+      StoryRequest(
+        child: const ChildProfile(id: 'c1', displayName: 'Mira', age: 6),
+        series: const Series(
+          id: 's1',
+          childId: 'c1',
+          title: 'Star Garden',
+          theme: StoryTheme.mystery,
+          extraThemes: [StoryTheme.silly, StoryTheme.nature],
+        ),
+        intent: StoryIntent.dice,
+      ),
+    );
+    expect(p.system, contains('blend these into one story'));
+    expect(p.system, contains('puzzle')); // mystery, the lead
+    expect(p.system, contains('giggles')); // silly
+    expect(p.system, contains('ecosystems')); // nature
+    expect(p.system, contains('Lead with the first'));
+  });
+
+  test('a removed character gets a gentle, non-frightening send-off', () {
+    final p = builder.build(
+      StoryRequest(
+        child: const ChildProfile(id: 'c1', displayName: 'Mira', age: 6),
+        series: const Series(
+          id: 's1',
+          childId: 'c1',
+          title: 'Splat on the Moon',
+          theme: StoryTheme.cozy,
+        ),
+        intent: StoryIntent.dice,
+        castChanges: const CastChanges(
+          joined: ['Pip — a small brave mouse'],
+          left: ['Splat — a big black cat who loves adventures'],
+        ),
+      ),
+    );
+    expect(p.user, contains('New to this world'));
+    expect(p.user, contains('Pip'));
+    expect(p.user, contains('Leaving the story'));
+    expect(p.user, contains('Splat'));
+    expect(p.user, contains('gentle, hopeful'));
+    expect(p.user, contains('never use illness, death'));
+  });
+
+  test('no cast changes means no goodbye instructions', () {
+    expect(builder.build(req()).user, isNot(contains('Leaving the story')));
+  });
+
+  test('an unnamed story asks the model for a title', () {
+    final p = builder.build(
+      StoryRequest(
+        child: const ChildProfile(id: 'c1', displayName: 'Mira', age: 6),
+        series: const Series(
+          id: 's1',
+          childId: 'c1',
+          title: 'Naming it…',
+          theme: StoryTheme.cozy,
+          autoTitle: true,
+        ),
+        intent: StoryIntent.dice,
+      ),
+    );
+    expect(p.system, contains('story_title'));
+    expect(p.user, contains('no title yet'));
+    // The placeholder must never leak in as if it were the real title.
+    expect(p.user, isNot(contains('Series: "Naming it…"')));
   });
 }

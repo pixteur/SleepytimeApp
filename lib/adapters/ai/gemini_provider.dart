@@ -39,6 +39,7 @@ class GeminiProvider implements AiProvider {
     'type': 'OBJECT',
     'properties': {
       'story_text': {'type': 'STRING'},
+      'story_title': {'type': 'STRING'},
       'summary': {'type': 'STRING'},
       'rating': {
         'type': 'STRING',

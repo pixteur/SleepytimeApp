@@ -70,6 +70,29 @@ A "new interest" nudge (parent-added or inferred).
 | `source` | enum | `quiz` / `parent` / `inferred` |
 | `addedAt` | datetime | Newer interests can nudge a bit harder |
 
+### World  ← a story universe; spawns many episodes
+A loved world (e.g. "Bob and Leo") holding a premise, flavors, and a cast. Every episode in it is a **Series** with `worldId` set; a standalone story has `worldId == null`.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | uuid | |
+| `childId` | fk | |
+| `name` | string | Shown on the bookshelf, e.g. "Bob and Leo" |
+| `premise` | string | Short description injected into every episode's prompt |
+| `theme` / `extraThemes` | enum / enum[] | Flavors every new episode inherits (up to 3, `theme` leads) |
+| `castChanges` | json | **Pending cast edits the next story must acknowledge** — `{joined: [...], left: [...]}` as prompt lines. Consumed by the first chapter of the next story, then cleared. |
+
+Editing the cast is a story event, not just a row change: a queued **arrival** is introduced in the next story, and a queued **departure** gets a warm, explicit send-off before the character disappears for good (`PromptBuilder` forbids illness/death/danger/vanishing). A character added and removed before any story ever ran cancels out silently — nobody met them. A fallback chapter (API error) does *not* consume the queue, so the goodbye still happens next time.
+
+### Character  ← a reusable member of a World's cast
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | uuid | |
+| `worldId` | fk | Cascade-deleted with the world |
+| `name` | string | e.g. "Leo" |
+| `description` | string | Woven into the prompt as "Leo — Bob's clever robot friend…" |
+
 ### Series  ← a storyline; a child can have several in parallel
 Enables the **story list** (pick which saga to continue) and **branching** (start a fresh series, optionally forked from a point in an existing one).
 
@@ -81,6 +104,8 @@ Enables the **story list** (pick which saga to continue) and **branching** (star
 | `coverEmoji` / `coverColor` | | For the library "shelf" |
 | `seedSummary` | string | Premise for this series |
 | `theme` | enum | **Series flavor, chosen at start.** One of: `adventure` · `technical` · `nature` · `documentary` · `learning` · `cozy` · `feelings` · `mystery` · `silly` · `fairytale` · `history` · `aroundTheWorld` · `superhero` · `mindfulness` · `sliceOfLife` · `surprise` · `custom` |
+| `extraThemes` | enum[] | Up to 2 further flavors blended with `theme` (3 picks total). `theme` leads; these colour it. |
+| `autoTitle` | bool | True while `title` is a placeholder awaiting the model's `story_title` suggestion (see [ui-ux.md](ui-ux.md)); cleared once named |
 | `customTheme` | string? | Free-text flavor if `theme == custom` (e.g. "space archaeology") |
 | `bilingualEnabled` | bool | **Bilingual mode — a modifier, independent of theme.** Any story can be bilingual. |
 | `secondaryLanguage` | locale? | The 2nd language woven in (when `bilingualEnabled`) |

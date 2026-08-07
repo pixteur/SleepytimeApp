@@ -9,12 +9,14 @@ import '../../adapters/prefs/app_prefs.dart';
 import '../../adapters/secrets/secret_store.dart';
 import '../../app_providers.dart';
 import '../../domain/prompt_builder.dart';
-import 'voice_settings_screen.dart';
+import 'settings_section.dart';
+import 'voice_section.dart';
 
-/// Parent-only AI setup: pick a provider, give the third-party-AI consent, add
-/// the API key, and run a real "Test connection". Reached through the parent
-/// gate. Implements the CLAUDE.md rules: parent-gated key entry + explicit
-/// disclosure/consent before any data is sent. See `docs/safety.md`.
+/// The one parent-only settings page: parent mode, then story AI, then voice —
+/// all on a single scroll, so a grown-up sets the app up in one pass. Reached
+/// through the parent gate. Implements the CLAUDE.md rules: parent-gated key
+/// entry + explicit disclosure/consent before any data is sent.
+/// See `docs/safety.md`.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -179,153 +181,152 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         : '${_providers.firstWhere((p) => p.id == active).label} (online)';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Story AI setup'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.record_voice_over_outlined),
-            tooltip: 'Voice setup',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const VoiceSettingsScreen()),
-            ),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Grown-up settings')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              Card(
-                color: theme.colorScheme.surfaceContainerHighest,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Status: $activeLabel',
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Stories are created by sending the story prompt and '
-                        'details derived from your child\'s profile (nickname, '
-                        'age, interests) to the third-party AI provider you '
-                        'choose below. Nothing is sent until you add a key and '
-                        'consent. Your key is stored securely on this device '
-                        'only. Avoid putting personal information into story '
-                        'ideas.',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+              // Parent mode first — it's the switch a grown-up reaches for most.
               Card(
                 child: SwitchListTile(
                   secondary: const Icon(Icons.family_restroom),
                   title: const Text('Parent mode'),
                   subtitle: const Text(
-                    'Show delete & rename controls. Turn off (child mode) so a '
-                    'child can\'t accidentally change or delete stories.',
+                    'Show delete, rename & edit controls. Turn off (child mode) '
+                    'so a child can\'t accidentally change or delete stories.',
                   ),
                   value: ref.watch(parentModeProvider),
                   onChanged: (v) =>
                       ref.read(parentModeProvider.notifier).set(v),
                 ),
               ),
-              const SizedBox(height: 16),
-              Text('Provider', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              SegmentedButton<ProviderId>(
-                segments: [
-                  for (final p in _providers)
-                    ButtonSegment(value: p.id, label: Text(p.label)),
-                ],
-                selected: {_provider},
-                onSelectionChanged: _busy
-                    ? null
-                    : (s) => _onProviderChanged(s.first),
-              ),
-              const SizedBox(height: 16),
-              CheckboxListTile(
-                value: _consent,
-                onChanged: _busy
-                    ? null
-                    : (v) => setState(() => _consent = v ?? false),
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  'I consent to sending prompts and profile-derived context to '
-                  '${_meta.label} to generate stories.',
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _keyController,
-                obscureText: true,
-                enabled: !_busy,
-                decoration: InputDecoration(
-                  labelText: '${_meta.label} API key',
-                  helperText: 'Get one at ${_meta.helpUrl}',
-                  hintText: _hasStoredKey
-                      ? 'A key is saved — type to replace it'
-                      : _meta.hint,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              if (_hasStoredKey) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      size: 18,
-                      color: theme.colorScheme.primary,
+              const Divider(height: 40),
+
+              SettingsSection(
+                icon: Icons.auto_stories_outlined,
+                title: 'Story AI',
+                children: [
+                  Card(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Status: $activeLabel',
+                            style: theme.textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Stories are created by sending the story prompt and '
+                            'details derived from your child\'s profile (nickname, '
+                            'age, interests) to the third-party AI provider you '
+                            'choose below. Nothing is sent until you add a key and '
+                            'consent. Your key is stored securely on this device '
+                            'only. Avoid putting personal information into story '
+                            'ideas.',
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'A ${_meta.label} key is saved on this device.',
-                      style: TextStyle(color: theme.colorScheme.primary),
+                  ),
+                  const SizedBox(height: 16),
+                  OptionChips<ProviderId>(
+                    label: 'Provider',
+                    options: [for (final p in _providers) p.id],
+                    selected: _provider,
+                    labelOf: (id) =>
+                        _providers.firstWhere((p) => p.id == id).label,
+                    enabled: !_busy,
+                    onSelected: _onProviderChanged,
+                  ),
+                  const SizedBox(height: 8),
+                  CheckboxListTile(
+                    value: _consent,
+                    onChanged: _busy
+                        ? null
+                        : (v) => setState(() => _consent = v ?? false),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'I consent to sending prompts and profile-derived context to '
+                      '${_meta.label} to generate stories.',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _keyController,
+                    obscureText: true,
+                    enabled: !_busy,
+                    decoration: InputDecoration(
+                      labelText: '${_meta.label} API key',
+                      helperText: 'Get one at ${_meta.helpUrl}',
+                      hintText: _hasStoredKey
+                          ? 'A key is saved — type to replace it'
+                          : _meta.hint,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  if (_hasStoredKey) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          size: 18,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'A ${_meta.label} key is saved on this device.',
+                          style: TextStyle(color: theme.colorScheme.primary),
+                        ),
+                      ],
                     ),
                   ],
-                ),
-              ],
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  FilledButton.icon(
-                    onPressed: _busy ? null : _saveAndTest,
-                    icon: _busy
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.cloud_done_outlined),
-                    label: const Text('Save & test'),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      FilledButton.icon(
+                        onPressed: _busy ? null : _saveAndTest,
+                        icon: _busy
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.cloud_done_outlined),
+                        label: const Text('Save & test'),
+                      ),
+                      const SizedBox(width: 12),
+                      if (_hasStoredKey)
+                        TextButton(
+                          onPressed: _busy ? null : _clearKey,
+                          child: const Text('Remove key'),
+                        ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  if (_hasStoredKey)
-                    TextButton(
-                      onPressed: _busy ? null : _clearKey,
-                      child: const Text('Remove key'),
+                  if (_status != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      _status!,
+                      style: TextStyle(
+                        color: _statusOk
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.error,
+                      ),
                     ),
+                  ],
                 ],
               ),
-              if (_status != null) ...[
-                const SizedBox(height: 16),
-                Text(
-                  _status!,
-                  style: TextStyle(
-                    color: _statusOk
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.error,
-                  ),
-                ),
-              ],
+
+              const Divider(height: 40),
+              const VoiceSection(),
+              const SizedBox(height: 24),
             ],
           ),
         ),

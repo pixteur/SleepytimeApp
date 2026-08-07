@@ -84,6 +84,12 @@ class Worlds extends Table {
   TextColumn get name => text()();
   TextColumn get premise => text().withDefault(const Constant(''))();
   IntColumn get theme => intEnum<StoryTheme>()();
+
+  /// Up to two extra themes blended with [theme], as comma-separated enum names.
+  TextColumn get extraThemes => text().withDefault(const Constant(''))();
+
+  /// Cast edits (arrivals/departures) the next story must acknowledge, as JSON.
+  TextColumn get castChanges => text().withDefault(const Constant('{}'))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
@@ -118,6 +124,12 @@ class SeriesTable extends Table {
       text().nullable().references(Worlds, #id, onDelete: KeyAction.cascade)();
   TextColumn get title => text()();
   IntColumn get theme => intEnum<StoryTheme>()();
+
+  /// Up to two extra themes blended with [theme], as comma-separated enum names.
+  TextColumn get extraThemes => text().withDefault(const Constant(''))();
+
+  /// True while [title] is a placeholder awaiting a model-suggested title.
+  BoolColumn get autoTitle => boolean().withDefault(const Constant(false))();
   TextColumn get customTheme => text().nullable()();
   IntColumn get heroMode => intEnum<HeroMode>()();
   TextColumn get heroName => text().nullable()();
@@ -206,7 +218,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.memory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   /// Opens the on-device database file (app documents dir). Foreign keys on.
   static AppDatabase open() {
@@ -235,6 +247,14 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(worlds);
         await m.createTable(storyCharacters);
         await m.addColumn(seriesTable, seriesTable.worldId);
+      }
+      // v4 → v5: multi-theme stories, model-suggested titles, and pending cast
+      // changes on a world (so a removed character gets written out).
+      if (from < 5) {
+        await m.addColumn(seriesTable, seriesTable.extraThemes);
+        await m.addColumn(seriesTable, seriesTable.autoTitle);
+        await m.addColumn(worlds, worlds.extraThemes);
+        await m.addColumn(worlds, worlds.castChanges);
       }
     },
     beforeOpen: (details) async {

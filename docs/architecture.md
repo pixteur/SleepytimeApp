@@ -47,7 +47,7 @@ The brain. No `import 'package:flutter/...'`. Key pieces:
 - **`StoryEngine`** — orchestrates a turn: gather context → build prompt → call provider → run SafetyGuard → persist beat → return result.
 - **`PromptBuilder`** — turns (profile + interests + recent beats + chosen twist + language + detail level) into a structured prompt with system constraints. Single source of truth for "how we talk to the model."
 - **`SafetyGuard`** — enforces age-appropriateness on every output (and validates inputs). See [safety.md](safety.md).
-- **`TwistDeck`** — supplies the 6 option cards and the dice roll; tunable by parents.
+- **`TwistDeck`** — a deck of ~50 story openings; the creator draws a random hand of 6 as option cards, and the dice rolls across the whole deck. Tunable by parents.
 - **`SeriesService`** — a child has many **series** (parallel storylines). Create / list (the **story library**) / continue / archive / **branch** (new series, optionally forked from a beat). Beats belong to a series.
 - **`BeatStore`** — reads/writes structured story beats via the StorageRepo, scoped to a series. Handles "continue where we left off", the rolling per-series context window, and the **archive** (past episodes + summaries for replay).
 - **`LearnedProfile`** — a living model updated each turn (twist picks, favorites, inferred interests) so stories improve without re-quizzing; feeds `PromptBuilder` as soft weights.

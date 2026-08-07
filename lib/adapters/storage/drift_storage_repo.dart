@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../../domain/models/beat.dart';
+import '../../domain/models/cast_changes.dart';
 import '../../domain/models/child_profile.dart';
 import '../../domain/models/interest.dart';
 import '../../domain/models/learned_profile.dart';
@@ -221,6 +222,8 @@ class DriftStorageRepo implements StorageRepo {
             name: w.name,
             theme: w.theme,
             premise: Value(w.premise),
+            extraThemes: Value(_encodeThemes(w.extraThemes)),
+            castChanges: Value(w.pendingCastChanges.encode()),
           ),
         );
   }
@@ -236,6 +239,8 @@ class DriftStorageRepo implements StorageRepo {
     name: r.name,
     premise: r.premise,
     theme: r.theme,
+    extraThemes: _decodeThemes(r.extraThemes),
+    pendingCastChanges: CastChanges.decode(r.castChanges),
   );
 
   // ── Characters ──────────────────────────────────────────────────
@@ -306,6 +311,8 @@ class DriftStorageRepo implements StorageRepo {
             theme: s.theme,
             heroMode: s.heroMode,
             status: s.status,
+            extraThemes: Value(_encodeThemes(s.extraThemes)),
+            autoTitle: Value(s.autoTitle),
             worldId: Value(s.worldId),
             customTheme: Value(s.customTheme),
             heroName: Value(s.heroName),
@@ -330,6 +337,8 @@ class DriftStorageRepo implements StorageRepo {
     childId: r.childId,
     title: r.title,
     theme: r.theme,
+    extraThemes: _decodeThemes(r.extraThemes),
+    autoTitle: r.autoTitle,
     worldId: r.worldId,
     customTheme: r.customTheme,
     heroMode: r.heroMode,
@@ -342,6 +351,17 @@ class DriftStorageRepo implements StorageRepo {
     branchedFromBeatId: r.branchedFromBeatId,
     status: r.status,
   );
+
+  /// Extra themes ride in one column as comma-separated enum names.
+  static String _encodeThemes(List<StoryTheme> themes) =>
+      themes.map((t) => t.name).join(',');
+
+  static List<StoryTheme> _decodeThemes(String raw) => [
+    for (final name in raw.split(','))
+      if (name.trim().isNotEmpty)
+        for (final t in StoryTheme.values)
+          if (t.name == name.trim()) t,
+  ];
 
   // ── Beats ───────────────────────────────────────────────────────
   @override

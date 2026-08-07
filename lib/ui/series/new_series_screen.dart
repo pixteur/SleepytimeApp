@@ -8,7 +8,7 @@ import '../../domain/models/series.dart';
 import '../../domain/models/world.dart';
 import '../../domain/twist_deck.dart';
 import '../story/story_chapters_screen.dart';
-import 'theme_catalog.dart';
+import 'theme_picker.dart';
 
 /// The story creator. Reached two ways:
 ///  * from the bookshelf / home → a fresh story, which can be standalone, start
@@ -24,15 +24,28 @@ class NewSeriesScreen extends ConsumerStatefulWidget {
 }
 
 class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
-  final _title = TextEditingController(text: 'Our New Story');
+  /// Placeholder shown until the model names the story from its first chapter.
+  static const String _pendingTitle = 'Naming it…';
+
+  /// The most themes a story can blend at once.
+  static const int _maxThemes = 3;
+
+  final _title = TextEditingController();
   final _heroName = TextEditingController();
   final _idea = TextEditingController();
   final _worldName = TextEditingController();
-  StoryTheme _theme = StoryTheme.cozy;
+
+  /// Up to [_maxThemes] flavours, in the order they were picked (the first is
+  /// the lead theme).
+  final List<StoryTheme> _themes = [StoryTheme.cozy];
   HeroMode _heroMode = HeroMode.childAsHero;
 
   /// The opening choice: a twist-card id, or 'dice' for a random surprise.
   String _opening = 'dice';
+
+  /// A fresh random hand from the ~50-card deck, drawn once per visit so the
+  /// choices don't reshuffle under the child's finger.
+  final List<Twist> _openings = const TwistDeck().options();
 
   /// Where to save it: null = standalone, 'new' = a new world, else a world id.
   String? _worldChoice;
@@ -48,6 +61,13 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
     super.dispose();
   }
 
+  void _toggleTheme(StoryTheme t) => setState(() {
+    final next = ThemePicker.toggled(_themes, t, maxThemes: _maxThemes);
+    _themes
+      ..clear()
+      ..addAll(next);
+  });
+
   Future<void> _setLength(DetailLevel level) async {
     final child = ref.read(activeChildProvider);
     if (child == null || child.detailLevel == level) return;
@@ -61,23 +81,33 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
     final child = ref.read(activeChildProvider);
     if (child == null) return;
     setState(() => _creating = true);
-    final title = _title.text.trim().isEmpty
-        ? 'Our New Story'
-        : _title.text.trim();
+    // An empty name means "you name it" — the model titles the story from the
+    // chapter it writes, and the placeholder is replaced once it does.
+    final named = _title.text.trim();
+    final title = named.isEmpty ? _pendingTitle : named;
 
     // Resolve the world (if any) and the theme it implies.
     String? worldId;
-    var theme = _theme;
+    var theme = _themes.first;
+    var extraThemes = _themes.skip(1).toList();
     if (episodeWorld != null) {
+      // An episode inherits its world's flavour, so editing the world steers
+      // every future episode.
       worldId = episodeWorld.id;
       theme = episodeWorld.theme;
+      extraThemes = episodeWorld.extraThemes;
     } else if (_worldChoice == 'new') {
       final name = _worldName.text.trim().isEmpty
           ? title
           : _worldName.text.trim();
       final world = await ref
           .read(worldServiceProvider)
-          .create(childId: child.id, name: name, theme: _theme);
+          .create(
+            childId: child.id,
+            name: name,
+            theme: theme,
+            extraThemes: extraThemes,
+          );
       worldId = world.id;
       ref.invalidate(worldsForChildProvider(child.id));
     } else if (_worldChoice != null) {
@@ -91,6 +121,8 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
           childId: child.id,
           title: title,
           theme: theme,
+          extraThemes: extraThemes,
+          autoTitle: named.isEmpty,
           worldId: worldId,
           heroMode: _heroMode,
           heroName: _heroMode == HeroMode.namedHero
@@ -163,6 +195,8 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
             textCapitalization: TextCapitalization.words,
             decoration: InputDecoration(
               labelText: episodeWorld == null ? 'Story name' : 'Episode name',
+              hintText: 'Leave blank to let the story name itself',
+              helperText: 'We\'ll name it from what happens in it ✨',
             ),
           ),
 
@@ -211,26 +245,11 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
           // an episode inherits its world's theme.
           if (episodeWorld == null) ...[
             const SizedBox(height: 24),
-            Text('Pick a theme', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            for (final entry in themeGroups.entries) ...[
-              Padding(
-                padding: const EdgeInsets.only(top: 8, bottom: 4),
-                child: Text(entry.key, style: theme.textTheme.labelLarge),
-              ),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final meta in entry.value)
-                    ChoiceChip(
-                      label: Text('${meta.emoji} ${meta.label}'),
-                      selected: _theme == meta.theme,
-                      onSelected: (_) => setState(() => _theme = meta.theme),
-                    ),
-                ],
-              ),
-            ],
+            ThemePicker(
+              selected: _themes,
+              maxThemes: _maxThemes,
+              onToggle: _toggleTheme,
+            ),
           ],
 
           const SizedBox(height: 24),
@@ -285,7 +304,7 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
                 selected: _opening == 'dice',
                 onSelected: (_) => setState(() => _opening = 'dice'),
               ),
-              for (final t in const TwistDeck().options())
+              for (final t in _openings)
                 ChoiceChip(
                   label: Text(t.label),
                   selected: _opening == t.id,

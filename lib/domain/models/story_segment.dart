@@ -7,6 +7,7 @@ class StorySegment {
     required this.storyText,
     required this.summary,
     required this.rating,
+    this.suggestedTitle = '',
     this.setting = '',
     this.sensitiveFlags = const [],
     this.characters = const [],
@@ -22,6 +23,10 @@ class StorySegment {
 
   /// The model's self-reported age rating (validated by SafetyGuard).
   final AgeRating rating;
+
+  /// A short title for the whole story, drawn from what actually happened.
+  /// Used to name a story the grown-up left unnamed. See `StoryEngine`.
+  final String suggestedTitle;
   final String setting;
 
   /// Any sensitive elements the model flagged.

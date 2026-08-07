@@ -10,7 +10,7 @@
 4. **Tone drift over a long saga** — stories that slowly creep darker or more intense across many nights.
 5. **PII leakage** — the child volunteering personal info that ends up persisted or (in a future hosted phase) transmitted.
 
-## Defense in depth — four layers
+## Defense in depth — five layers
 
 ### Layer 1 — Age policy (the contract)
 Each child has an **age** and a derived **age band** with a concrete, written policy. Bands (tunable):
@@ -39,9 +39,14 @@ Every generated segment is checked **before it's ever shown or spoken**:
 - Beats store their rating; `BeatStore` watches the **trend** and reminds the prompt to keep things light if intensity is creeping up.
 - Every bedtime story **must resolve to a calm, safe ending** — enforced as a prompt rule and checked for in the guardrail.
 
+### Layer 5 — Saying goodbye safely
+When a grown-up removes a character from a world, the character does **not** silently disappear from the stories a child already loves. The removal is queued on the world and the next story is instructed to write them out warmly and on the page — they sail away, are called home, or set off on an adventure of their own, with a proper goodbye and the door left open. `PromptBuilder` explicitly forbids illness, death, danger, punishment, an argument, or an unexplained disappearance as the reason. A queued goodbye is only cleared once a *real* generated chapter has told it, so an API fallback can't swallow it. See [ui-ux.md](ui-ux.md), [data-model.md](data-model.md).
+
 ## Parent controls
 
 - Set/adjust child age (moves the band).
+- **Cast changes** — add or remove characters in a world (parent mode only); each change is introduced or written out by the next story, never applied silently.
+- **Deletions** — a world, story, chapter, or character can only be deleted through the parent gate plus a two-step confirmation naming exactly what will be lost.
 - **Banned themes** list — see below (parent toggles + free additions, e.g. "no spiders").
 - **Parent's Brief** — free-text (sentence → paragraphs) to express **values and tone**, not just bans (e.g. "kindness and honesty win; family matters; no scary stuff"). Injected into every prompt for that child/series. The positive-framing companion to the ban list. Stored on `ChildProfile` (and optionally per `Series`). See [data-model.md](data-model.md).
 - **Intensity dial** within a band (cozier ↔ more adventurous).

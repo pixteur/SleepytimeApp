@@ -42,11 +42,11 @@
 └─────────────────────────────────────────┘
 ```
 
-The 6 cards come from the localized **twist deck**; the dice picks one at random with a fun animation. The text/mic input feeds the safety-guarded request path.
+The 6 cards are a **random hand drawn from the ~50-card localized twist deck**, re-dealt each time the creator opens so the choices stay fresh; the dice picks from the whole deck at random with a fun animation. The text/mic input feeds the safety-guarded request path.
 
 ## Starting a new series — theme chooser
 
-When a kid branches a new series they pick a **theme** (the flavor of the whole storyline), then a hero, then answer a short mini-quiz. There are a lot of themes, so the chooser is **grouped** into a few friendly buckets (kid taps a bucket → sees its cards) to avoid an overwhelming grid:
+When a kid branches a new series they pick **up to 3 themes** (the flavors of the whole storyline), then a hero, then answer a short mini-quiz. There are a lot of themes, so the chooser is **grouped** into a few friendly buckets (kid taps a bucket → sees its cards) to avoid an overwhelming grid:
 
 **🚀 Exciting** — 🗺️ Adventure · 🔍 Mystery · 🦸 Superhero
 **🌙 Calm & Bedtime** — 🌙 Cozy / Dreamtime · 🧘 Mindfulness / Calm · 💛 Feelings & Kindness · 🏡 Slice-of-Life / Helper
@@ -74,7 +74,21 @@ When a kid branches a new series they pick a **theme** (the flavor of the whole 
 | 🎲 **Surprise / Mixed** | Let the AI pick the flavor |
 | ✏️ **Custom** | Free-text — type any flavor |
 
-The chosen theme is stored on `Series.theme` and injected by `PromptBuilder` so the whole series keeps that flavor; the per-night **twist deck** still drives each episode's direction *within* the theme. Theme cards are localized.
+Themes are pick-ordered: the first is the **lead** flavor, the other one or two **colour** it (a Mystery that's also Silly and about Nature). They're stored as `Series.theme` + `Series.extraThemes` and blended by `PromptBuilder` into a single instruction, so one story comes out — not three. The per-night **twist deck** still drives each episode's direction *within* those flavors. Theme cards are localized.
+
+### Naming a story
+
+Leave the story-name field blank and the model titles the story itself, from what actually happened in the first chapter (`story_title` in the structured output). Until then the story shows a placeholder; once named, the title sticks and is never overwritten. A name typed by a grown-up always wins.
+
+## Worlds — the child's page vs. the grown-up's
+
+A world page shows only what a child needs: the world's name, what it's about, its flavors, and the list of episodes. Everything that *changes future stories* — renaming the world, its premise, its themes, and the cast — lives behind **Edit world** (parent mode only).
+
+Editing the cast is not a silent database change. Adding a character queues an **introduction**, and removing one queues a **send-off**: the next story writes them out warmly and on the page (they sail away, are called home, set off on their own adventure) so a child is never left wondering where a friend went. Illness, death, danger, and unexplained disappearance are explicitly forbidden. See [safety.md](safety.md).
+
+### Deleting things
+
+Anything that can't be undone — a world, a story, a chapter, a character — goes through **three** steps: the parent gate, a dialog naming exactly what will be lost, and a final "Are you sure?" double-check. Kids tap fast; nothing vanishes on one tap.
 
 ### Bilingual mode — a modifier on top of any theme
 

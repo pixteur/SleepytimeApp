@@ -8,7 +8,7 @@ import '../../adapters/prefs/app_prefs.dart';
 import '../../app_providers.dart';
 import '../../domain/models/series.dart';
 import '../../domain/models/world.dart';
-import '../common/parent_gate.dart';
+import '../common/confirm_destructive.dart';
 import '../story/story_chapters_screen.dart';
 import 'new_series_screen.dart';
 import 'theme_catalog.dart';
@@ -314,25 +314,14 @@ class _StoryCard extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
-    if (!await showParentGate(context) || !context.mounted) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Delete story?'),
-        content: Text('Delete "${series.title}" and all its chapters?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final ok = await confirmDestructive(
+      context,
+      title: 'Delete story?',
+      message: 'This deletes "${series.title}" and all its chapters.',
+      confirmLabel: 'Delete story',
+      doubleCheck: '"${series.title}" will be gone forever. Delete it?',
     );
-    if (ok != true || !context.mounted) return;
+    if (!ok || !context.mounted) return;
     await ref.read(seriesServiceProvider).delete(series.id);
     ref.invalidate(seriesForChildProvider(series.childId));
   }

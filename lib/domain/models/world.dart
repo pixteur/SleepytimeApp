@@ -1,3 +1,4 @@
+import 'cast_changes.dart';
 import 'series.dart';
 
 /// A story "universe" — a reusable world (e.g. "Splat the Cat") that holds a
@@ -10,6 +11,8 @@ class World {
     required this.name,
     this.premise = '',
     this.theme = StoryTheme.cozy,
+    this.extraThemes = const [],
+    this.pendingCastChanges = CastChanges.none,
   });
 
   final String id;
@@ -24,11 +27,30 @@ class World {
   /// Default flavour for episodes in this world.
   final StoryTheme theme;
 
-  World copyWith({String? name, String? premise, StoryTheme? theme}) => World(
+  /// Up to two further flavours blended with [theme] in every episode. Editing
+  /// these changes how future episodes are written.
+  final List<StoryTheme> extraThemes;
+
+  /// [theme] plus [extraThemes], in the order they were picked.
+  List<StoryTheme> get allThemes => [theme, ...extraThemes];
+
+  /// Cast edits the next story still has to acknowledge (arrivals to introduce,
+  /// departures to write out gently). Cleared once a chapter has used them.
+  final CastChanges pendingCastChanges;
+
+  World copyWith({
+    String? name,
+    String? premise,
+    StoryTheme? theme,
+    List<StoryTheme>? extraThemes,
+    CastChanges? pendingCastChanges,
+  }) => World(
     id: id,
     childId: childId,
     name: name ?? this.name,
     premise: premise ?? this.premise,
     theme: theme ?? this.theme,
+    extraThemes: extraThemes ?? this.extraThemes,
+    pendingCastChanges: pendingCastChanges ?? this.pendingCastChanges,
   );
 }

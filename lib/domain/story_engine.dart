@@ -7,6 +7,7 @@ import '../adapters/storage/storage_repo.dart';
 import 'age_policy.dart';
 import 'beat_store.dart';
 import 'models/beat.dart';
+import 'models/cast_changes.dart';
 import 'models/child_profile.dart';
 import 'models/learned_profile.dart';
 import 'models/series.dart';
@@ -108,6 +109,13 @@ class StoryEngine {
         : (await _repo.loadCharacters(
             worldId,
           )).map((c) => c.promptLine).toList();
+    // Cast edits are honoured by the first chapter of the next story, so a
+    // departing character gets their send-off there rather than mid-story.
+    final isFirstChapter = ctx.nextSeq == 0;
+    final castChanges = isFirstChapter
+        ? (world?.pendingCastChanges ?? CastChanges.none)
+        : CastChanges.none;
+
     final request = StoryRequest(
       child: child,
       series: series,
@@ -119,6 +127,7 @@ class StoryEngine {
       maxChapters: _maxChapters,
       worldPremise: world?.premise ?? '',
       cast: cast,
+      castChanges: castChanges,
     );
     final prompt = _prompt.build(request, bannedThemes: _banned);
     final band = child.ageBand;
@@ -172,7 +181,18 @@ class StoryEngine {
     );
     await _beats.append(beat);
     await _recordLearning(child.id, intent, chosenTwist);
-    await _updateStoryBible(series, safe.summary);
+    await _saveSeriesProgress(
+      series,
+      safe,
+      nameIt: series.autoTitle && isFirstChapter && lastFallbackReason == null,
+    );
+    // The send-off has been written, so the world's cast is settled again.
+    // (A fallback chapter didn't say goodbye — keep them pending for next time.)
+    if (world != null && castChanges.isNotEmpty && lastFallbackReason == null) {
+      await _repo.saveWorld(
+        world.copyWith(pendingCastChanges: CastChanges.none),
+      );
+    }
     return beat;
   }
 
@@ -207,12 +227,37 @@ class StoryEngine {
     await _repo.saveLearnedProfile(current.copyWith(twistAffinity: affinity));
   }
 
-  Future<void> _updateStoryBible(Series series, String summary) async {
-    final combined = '${series.storyBible} $summary'.trim();
+  /// Roll the summary into the story bible and, for a story the grown-up left
+  /// unnamed, adopt the title the model drew from the chapter it just wrote.
+  Future<void> _saveSeriesProgress(
+    Series series,
+    StorySegment segment, {
+    required bool nameIt,
+  }) async {
+    final combined = '${series.storyBible} ${segment.summary}'.trim();
     // Keep the bible bounded so context stays cheap.
     final bible = combined.length > 1200
         ? combined.substring(combined.length - 1200)
         : combined;
-    await _repo.saveSeries(series.copyWith(storyBible: bible));
+    final title = nameIt ? _cleanTitle(segment.suggestedTitle) : null;
+    await _repo.saveSeries(
+      series.copyWith(
+        storyBible: bible,
+        title: title,
+        autoTitle: title == null ? null : false,
+      ),
+    );
+  }
+
+  /// Tidy the model's title suggestion: strip wrapping quotes and trailing
+  /// punctuation, cap the length, and reject anything unusable (null → keep
+  /// the placeholder and try again next chapter).
+  static String? _cleanTitle(String raw) {
+    var t = raw
+        .trim()
+        .replaceAll(RegExp(r'^["“”\x27]+|["“”\x27.]+$'), '')
+        .trim();
+    if (t.length > 60) t = t.substring(0, 60).trim();
+    return t.isEmpty ? null : t;
   }
 }
