@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../adapters/prefs/app_prefs.dart';
 import '../../app_providers.dart';
 import '../../domain/models/series.dart';
 import '../../domain/models/world.dart';
@@ -12,13 +14,60 @@ import 'new_series_screen.dart';
 import 'theme_catalog.dart';
 import 'world_detail_screen.dart';
 
+const _demoAsset = 'assets/seeds/obsidian_stone.sleepy';
+
 /// The bookshelf: the child's story worlds (each a universe of episodes) plus
 /// any standalone single stories. See `docs/ui-ux.md`.
-class BookshelfScreen extends ConsumerWidget {
+class BookshelfScreen extends ConsumerStatefulWidget {
   const BookshelfScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BookshelfScreen> createState() => _BookshelfScreenState();
+}
+
+class _BookshelfScreenState extends ConsumerState<BookshelfScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeAutoSeed());
+  }
+
+  /// The first time a child opens an empty bookshelf, load the bundled demo
+  /// story so they have something to read right away.
+  Future<void> _maybeAutoSeed() async {
+    final child = ref.read(activeChildProvider);
+    if (child == null) return;
+    final prefs = await AppPrefs.open();
+    if (prefs.demoSeeded(child.id)) return;
+    final series = await ref.read(seriesServiceProvider).forChild(child.id);
+    final worlds = await ref.read(worldServiceProvider).forChild(child.id);
+    if (series.isEmpty && worlds.isEmpty) {
+      await _importDemo(child.id);
+    }
+    await prefs.setDemoSeeded(child.id);
+  }
+
+  Future<void> _importDemo(String childId) async {
+    try {
+      final data = await rootBundle.load(_demoAsset);
+      await ref
+          .read(sleepyServiceProvider)
+          .importBytes(data.buffer.asUint8List(), childId);
+      if (!mounted) return;
+      ref.invalidate(seriesForChildProvider(childId));
+      ref.invalidate(worldsForChildProvider(childId));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not load demo: $e')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final child = ref.watch(activeChildProvider);
     if (child == null) {
       return const Scaffold(body: Center(child: Text('No child selected.')));
@@ -76,22 +125,33 @@ class BookshelfScreen extends ConsumerWidget {
     );
   }
 
-  Widget _empty(BuildContext context, WidgetRef ref) => Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text('📚', style: Theme.of(context).textTheme.displayMedium),
-        const SizedBox(height: 12),
-        const Text('Your bookshelf is empty.'),
-        const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed: () => _newStory(context, ref),
-          icon: const Icon(Icons.add),
-          label: const Text('Create your first story'),
-        ),
-      ],
-    ),
-  );
+  Widget _empty(BuildContext context, WidgetRef ref) {
+    final child = ref.read(activeChildProvider);
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text('📚', style: Theme.of(context).textTheme.displayMedium),
+          const SizedBox(height: 12),
+          const Text('Your bookshelf is empty.'),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () => _newStory(context, ref),
+            icon: const Icon(Icons.add),
+            label: const Text('Create your first story'),
+          ),
+          if (child != null) ...[
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () => _importDemo(child.id),
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Load the demo story'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
   void _newStory(BuildContext context, WidgetRef ref) {
     ref.read(activeWorldProvider.notifier).select(null);

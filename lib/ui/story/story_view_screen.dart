@@ -515,11 +515,11 @@ class _Para {
 
 class _ReadingTextState extends State<_ReadingText> {
   final ScrollController _scroll = ScrollController();
-  late final List<RegExpMatch> _words;
+  late final List<List<int>> _sentences; // [start, end) offsets into the text
   late final List<_Para> _paras;
   late final List<GlobalKey> _paraKeys;
   StreamSubscription<double>? _sub;
-  int _current = -1; // global word index being read (-1 = not started)
+  int _current = -1; // current sentence index (-1 = not started)
   int _lastPara = -1;
 
   // Auto-scroll follows the reader, but pauses when the user scrolls by hand and
@@ -531,7 +531,7 @@ class _ReadingTextState extends State<_ReadingText> {
   @override
   void initState() {
     super.initState();
-    _words = RegExp(r'\S+').allMatches(widget.text).toList();
+    _sentences = _splitSentences(widget.text);
     _paras = _splitParagraphs(widget.text);
     _paraKeys = List.generate(_paras.length, (_) => GlobalKey());
     _sub = widget.progress.listen(_onProgress);
@@ -543,6 +543,23 @@ class _ReadingTextState extends State<_ReadingText> {
     _resumeTimer?.cancel();
     _scroll.dispose();
     super.dispose();
+  }
+
+  /// Split into sentences (ranges), so we can highlight a whole sentence — much
+  /// steadier than per-word when timing is only estimated.
+  static List<List<int>> _splitSentences(String text) {
+    final out = <List<int>>[];
+    for (final m in RegExp(r'[^.!?]*[.!?]+').allMatches(text)) {
+      if (text.substring(m.start, m.end).trim().isNotEmpty) {
+        out.add([m.start, m.end]);
+      }
+    }
+    final lastEnd = out.isEmpty ? 0 : out.last[1];
+    if (lastEnd < text.length && text.substring(lastEnd).trim().isNotEmpty) {
+      out.add([lastEnd, text.length]);
+    }
+    if (out.isEmpty) out.add([0, text.length]);
+    return out;
   }
 
   static List<_Para> _splitParagraphs(String text) {
@@ -562,16 +579,16 @@ class _ReadingTextState extends State<_ReadingText> {
   }
 
   void _onProgress(double fraction) {
-    if (!mounted || _words.isEmpty) return;
+    if (!mounted || _sentences.isEmpty) return;
     if (fraction <= 0) {
       if (_current != -1) setState(() => _current = -1);
       _lastPara = -1;
       return;
     }
     final chars = fraction * widget.text.length;
-    var idx = -1;
-    for (var i = 0; i < _words.length; i++) {
-      if (_words[i].start <= chars) {
+    var idx = 0;
+    for (var i = 0; i < _sentences.length; i++) {
+      if (_sentences[i][0] <= chars) {
         idx = i;
       } else {
         break;
@@ -621,34 +638,31 @@ class _ReadingTextState extends State<_ReadingText> {
 
   int get _currentPara {
     if (_current < 0) return -1;
-    final c = _words[_current].start;
+    final c = _sentences[_current][0];
     for (var i = 0; i < _paras.length; i++) {
       if (c >= _paras[i].start && c < _paras[i].end) return i;
     }
     return _paras.length - 1;
   }
 
-  /// Spans for one paragraph, highlighting the current word (colour only — no
-  /// weight/size change — so following text never shifts).
+  /// Spans for one paragraph, highlighting the part of the current SENTENCE that
+  /// falls within it (colour + background only — no weight change, no shift).
   List<InlineSpan> _paraSpans(_Para para, TextStyle? highlight) {
-    final spans = <InlineSpan>[];
-    var cursor = para.start;
-    for (var i = 0; i < _words.length; i++) {
-      final m = _words[i];
-      if (m.end <= para.start) continue;
-      if (m.start >= para.end) break;
-      if (m.start > cursor) {
-        spans.add(TextSpan(text: widget.text.substring(cursor, m.start)));
-      }
-      spans.add(
-        TextSpan(text: m.group(0), style: i == _current ? highlight : null),
-      );
-      cursor = m.end;
+    final text = widget.text;
+    if (_current < 0) {
+      return [TextSpan(text: text.substring(para.start, para.end))];
     }
-    if (cursor < para.end) {
-      spans.add(TextSpan(text: widget.text.substring(cursor, para.end)));
+    final hlStart = _sentences[_current][0].clamp(para.start, para.end);
+    final hlEnd = _sentences[_current][1].clamp(para.start, para.end);
+    if (hlStart >= hlEnd) {
+      return [TextSpan(text: text.substring(para.start, para.end))];
     }
-    return spans;
+    return [
+      if (para.start < hlStart)
+        TextSpan(text: text.substring(para.start, hlStart)),
+      TextSpan(text: text.substring(hlStart, hlEnd), style: highlight),
+      if (hlEnd < para.end) TextSpan(text: text.substring(hlEnd, para.end)),
+    ];
   }
 
   @override

@@ -51,4 +51,13 @@ class AppPrefs {
 
   Future<void> setParentMode(bool value) =>
       _prefs.setBool(_parentModeKey, value);
+
+  // ── Demo seed ───────────────────────────────────────────────────
+  /// Whether the bundled demo story has already been offered to this child (so
+  /// we only auto-seed an empty bookshelf once).
+  bool demoSeeded(String childId) =>
+      _prefs.getBool('demo_seeded_$childId') ?? false;
+
+  Future<void> setDemoSeeded(String childId) =>
+      _prefs.setBool('demo_seeded_$childId', true);
 }
