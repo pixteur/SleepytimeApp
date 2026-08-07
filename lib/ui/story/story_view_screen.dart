@@ -672,30 +672,37 @@ class _ListenBar extends StatelessWidget {
     final showStop = playing && !buffering;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 200, maxWidth: 260),
-          child: FilledButton.icon(
-            onPressed: buffering ? null : () => onToggle(state),
-            icon: buffering
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Icon(showStop ? Icons.stop_rounded : Icons.volume_up_rounded),
-            label: Text(
-              showStop ? 'STOP' : 'LISTEN',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
+      // Row (not Center) so this bar hugs the button's height — a Center here
+      // would expand to fill the whole screen and squash the story text.
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 200, maxWidth: 260),
+            child: FilledButton.icon(
+              onPressed: buffering ? null : () => onToggle(state),
+              icon: buffering
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      showStop ? Icons.stop_rounded : Icons.volume_up_rounded,
+                    ),
+              label: Text(
+                showStop ? 'STOP' : 'LISTEN',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
+              ),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(46),
               ),
             ),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(46),
-            ),
           ),
-        ),
+        ],
       ),
     );
   }
