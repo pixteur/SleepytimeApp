@@ -41,6 +41,14 @@ abstract class TtsProvider {
     TtsVoicePref voice = const TtsVoicePref(),
   });
 
+  /// Warm the cache for [text] (e.g. the next chapter) WITHOUT playing it, so a
+  /// page turn has no synthesis pause. No-op for engines that don't cache.
+  Future<void> preload(
+    String text, {
+    String language = 'en',
+    TtsVoicePref voice = const TtsVoicePref(),
+  }) async {}
+
   Future<void> pause();
   Future<void> resume();
   Future<void> stop();

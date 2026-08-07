@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:audioplayers/audioplayers.dart';
+import 'package:audioplayers/audioplayers.dart' hide AudioCache;
 
 import '../ai/rate_limit_retry.dart';
+import 'audio_cache.dart';
 import 'tts_provider.dart';
 import 'tts_synthesizer.dart';
 
@@ -19,13 +20,19 @@ import 'tts_synthesizer.dart';
 ///    next chunk's synthesis.
 /// Plays via `audioplayers`. See `docs/voice-tts.md`.
 class CloudTtsProvider implements TtsProvider {
-  CloudTtsProvider(this._synth, this._id, {AudioPlayer? player})
-    : _player = player ?? AudioPlayer() {
+  CloudTtsProvider(
+    this._synth,
+    this._id, {
+    AudioCache? cache,
+    AudioPlayer? player,
+  }) : _cache = cache, // ignore: prefer_initializing_formals
+       _player = player ?? AudioPlayer() {
     _completeSub = _player.onPlayerComplete.listen((_) => _advance());
   }
 
   final TtsSynthesizer _synth;
   final TtsProviderId _id;
+  final AudioCache? _cache;
   final AudioPlayer _player;
   late final StreamSubscription<void> _completeSub;
   final StreamController<TtsState> _states =
@@ -54,12 +61,55 @@ class CloudTtsProvider implements TtsProvider {
     if (!_states.isClosed) _states.add(s);
   }
 
-  /// Start (or return the running) synthesis job for chunk [i]. Retries through
-  /// transient provider rate limits (429) so narration doesn't drop out.
-  Future<Uint8List> _synthAt(int i) => _jobs[i] ??= retryOnRateLimit(
-    () => _synth.synthesize(_chunks[i], language: _lang, voice: _voice),
+  /// Start (or return the running) synthesis job for chunk [i]. Serves from the
+  /// on-disk cache when possible; otherwise synthesizes (retrying through
+  /// transient 429s) and caches the result for instant replay next time.
+  Future<Uint8List> _synthAt(int i) => _jobs[i] ??= _cachedSynthesize(
+    _chunks[i],
+    _lang,
+    _voice,
     cancelled: () => !_active,
   );
+
+  String _keyFor(String chunk, String language) =>
+      audioCacheKey('${_synth.voiceSignature}|$language|$chunk');
+
+  Future<Uint8List> _cachedSynthesize(
+    String chunk,
+    String language,
+    TtsVoicePref voice, {
+    bool Function()? cancelled,
+  }) async {
+    final key = _keyFor(chunk, language);
+    final hit = await _cache?.get(key);
+    if (hit != null && hit.isNotEmpty) return hit;
+    final bytes = await retryOnRateLimit(
+      () => _synth.synthesize(chunk, language: language, voice: voice),
+      cancelled: cancelled ?? () => false,
+    );
+    await _cache?.put(key, bytes);
+    return bytes;
+  }
+
+  /// Warm the cache for [text] (the next chapter) without playing it, so paging
+  /// forward has no synthesis pause. Runs sequentially in the background and
+  /// swallows errors — it's an optimization, not a hard requirement. Does not
+  /// touch playback state, so it's safe to call while the current chapter plays.
+  @override
+  Future<void> preload(
+    String text, {
+    String language = 'en',
+    TtsVoicePref voice = const TtsVoicePref(),
+  }) async {
+    if (_cache == null) return;
+    for (final chunk in _chunkText(text)) {
+      try {
+        await _cachedSynthesize(chunk, language, voice);
+      } catch (_) {
+        return;
+      }
+    }
+  }
 
   @override
   Future<void> speak(

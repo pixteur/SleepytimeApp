@@ -43,6 +43,9 @@ class OpenAiTtsSynthesizer implements TtsSynthesizer {
   String get mimeType => 'audio/mpeg';
 
   @override
+  String get voiceSignature => 'openai/$model/$voiceName';
+
+  @override
   Future<Uint8List> synthesize(
     String text, {
     String language = 'en',

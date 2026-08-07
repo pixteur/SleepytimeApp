@@ -62,6 +62,15 @@ class DeviceTtsProvider implements TtsProvider {
   }
 
   @override
+  Future<void> preload(
+    String text, {
+    String language = 'en',
+    TtsVoicePref voice = const TtsVoicePref(),
+  }) async {
+    // Device TTS synthesizes instantly on speak; nothing to warm.
+  }
+
+  @override
   Future<void> pause() => _tts.pause();
 
   @override

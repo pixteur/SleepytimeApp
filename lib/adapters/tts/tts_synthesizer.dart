@@ -10,6 +10,11 @@ abstract class TtsSynthesizer {
   /// correctly), e.g. `audio/mpeg` or `audio/wav`.
   String get mimeType;
 
+  /// A stable id for this engine + voice (e.g. `gemini/Aoede`), mixed into the
+  /// audio-cache key so a different voice re-synthesizes instead of replaying
+  /// the wrong audio.
+  String get voiceSignature;
+
   Future<Uint8List> synthesize(
     String text, {
     String language = 'en',

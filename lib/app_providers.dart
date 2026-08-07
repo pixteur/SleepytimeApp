@@ -11,6 +11,7 @@ import 'adapters/secrets/secret_store.dart';
 import 'adapters/storage/app_database.dart';
 import 'adapters/storage/drift_storage_repo.dart';
 import 'adapters/storage/storage_repo.dart';
+import 'adapters/tts/audio_cache.dart';
 import 'adapters/tts/cloud_tts_provider.dart';
 import 'adapters/tts/device_tts_provider.dart';
 import 'adapters/tts/elevenlabs_tts_synthesizer.dart';
@@ -158,10 +159,15 @@ class VoiceConfigController extends Notifier<VoiceConfig> {
   Future<void> refresh() async => state = await _resolve();
 }
 
+/// On-disk cache of synthesized narration, so replays/re-opens are instant and
+/// gap-free and don't re-hit the cloud. Shared across voice-provider rebuilds.
+final audioCacheProvider = Provider<AudioCache>((ref) => FileAudioCache());
+
 /// The active voice reader — device TTS or a cloud engine. Disposed on rebuild.
 final ttsProvider = Provider<TtsProvider>((ref) {
   final cfg = ref.watch(voiceConfigProvider);
   final secrets = ref.watch(secretStoreProvider);
+  final cache = ref.watch(audioCacheProvider);
   final provider = switch (cfg.engine) {
     VoiceEngine.openai => CloudTtsProvider(
       OpenAiTtsSynthesizer(
@@ -169,6 +175,7 @@ final ttsProvider = Provider<TtsProvider>((ref) {
         voiceName: cfg.voiceName.isEmpty ? 'nova' : cfg.voiceName,
       ),
       TtsProviderId.openai,
+      cache: cache,
     ),
     VoiceEngine.elevenlabs => CloudTtsProvider(
       ElevenLabsTtsSynthesizer(
@@ -178,6 +185,7 @@ final ttsProvider = Provider<TtsProvider>((ref) {
             : cfg.voiceName,
       ),
       TtsProviderId.elevenlabs,
+      cache: cache,
     ),
     VoiceEngine.gemini => CloudTtsProvider(
       GeminiTtsSynthesizer(
@@ -185,6 +193,7 @@ final ttsProvider = Provider<TtsProvider>((ref) {
         voiceName: cfg.voiceName.isEmpty ? 'Kore' : cfg.voiceName,
       ),
       TtsProviderId.gemini,
+      cache: cache,
     ),
     VoiceEngine.device => DeviceTtsProvider(),
   };

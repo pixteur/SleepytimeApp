@@ -40,6 +40,9 @@ class ElevenLabsTtsSynthesizer implements TtsSynthesizer {
   String get mimeType => 'audio/mpeg';
 
   @override
+  String get voiceSignature => 'elevenlabs/$model/$voiceName';
+
+  @override
   Future<Uint8List> synthesize(
     String text, {
     String language = 'en',

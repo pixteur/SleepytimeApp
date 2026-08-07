@@ -86,12 +86,27 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
 
   Future<void> _speak() async {
     _autoAdvance = true;
+    unawaited(_preloadNext());
     try {
       await _tts.speak(widget.beat.text, language: _lang);
     } catch (e) {
       _autoAdvance = false;
       if (!mounted) return;
       showErrorBanner(context, 'Voice unavailable: $e');
+    }
+  }
+
+  /// Warm the next chapter's audio while this one plays, so paging/auto-advancing
+  /// forward has no synthesis pause. Best-effort; ignores errors.
+  Future<void> _preloadNext() async {
+    final id = _seriesId;
+    if (id == null || widget.beat.isFinal) return;
+    try {
+      final beats = await ref.read(storageRepoProvider).loadBeats(id);
+      final next = _find(beats, widget.beat.seq + 1);
+      if (next != null) await _tts.preload(next.text, language: _lang);
+    } catch (_) {
+      /* preload is an optimization only */
     }
   }
 

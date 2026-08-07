@@ -42,6 +42,9 @@ class GeminiTtsSynthesizer implements TtsSynthesizer {
   String get mimeType => 'audio/wav';
 
   @override
+  String get voiceSignature => 'gemini/$model/$voiceName';
+
+  @override
   Future<Uint8List> synthesize(
     String text, {
     String language = 'en',
