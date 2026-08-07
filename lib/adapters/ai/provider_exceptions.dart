@@ -37,8 +37,14 @@ String friendlyProviderError(Object error) {
   }
   if (error is ProviderRequestException) {
     if (error.statusCode == 429) {
-      return 'The voice is popular right now (or at today\'s limit). '
-          'Please try again in a little while.';
+      final m = error.message.toLowerCase();
+      if (m.contains('per_day') ||
+          m.contains('quota') ||
+          m.contains('billing')) {
+        return 'You\'ve used today\'s free voice quota (your key is fine). It '
+            'resets in a few hours — or raise the limit in your provider\'s plan.';
+      }
+      return 'The voice is busy right now. Please try again in a moment.';
     }
     if (error.statusCode == 401 || error.statusCode == 403) {
       return 'That voice key was turned away — please check it in Voice setup.';
