@@ -344,8 +344,11 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                             children: [
                               _DownloadIcon(
                                 cache: cache,
+                                // Trim to match how playback keys its audio (it
+                                // synthesizes the trimmed chapter text); otherwise
+                                // a trailing newline makes the badge never match.
                                 cacheKey: audioCacheKey(
-                                  '$voiceSig|$lang|${b.text}',
+                                  '$voiceSig|$lang|${b.text.trim()}',
                                 ),
                                 onDownload: () => ref
                                     .read(ttsProvider)

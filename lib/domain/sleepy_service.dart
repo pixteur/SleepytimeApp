@@ -29,8 +29,11 @@ class SleepyService {
 
   static const int _formatVersion = 1;
 
+  // Trim to match how the voice provider keys cached audio (it synthesizes the
+  // trimmed chapter text), so export finds it and import writes it where
+  // playback will look.
   String _key(String voiceSig, String lang, String text) =>
-      audioCacheKey('$voiceSig|$lang|$text');
+      audioCacheKey('$voiceSig|$lang|${text.trim()}');
 
   // ── Export ──────────────────────────────────────────────────────
   /// Bundle a story as `.sleepy` bytes. With [includeAudio] false it's a small
