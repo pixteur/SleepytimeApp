@@ -454,14 +454,47 @@ class _DownloadIconState extends State<_DownloadIcon> {
 
   Future<void> _download() async {
     if (_busy) return;
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      const SnackBar(
+        duration: Duration(minutes: 2),
+        content: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 14),
+            Text('Downloading narration…'),
+          ],
+        ),
+      ),
+    );
+    var error = false;
     try {
       await widget.onDownload();
     } catch (_) {
-      /* surfaced elsewhere; badge just stays a cloud */
+      error = true;
     }
     await _check();
     if (mounted) setState(() => _busy = false);
+    final ok = _has ?? false;
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          ok
+              ? '✓ Narration saved on this device.'
+              : error
+              ? 'Download failed — check the story-AI/voice setup.'
+              : 'No cloud voice active — set one in Voice setup to save '
+                    'narration (the free device voice reads live, nothing to save).',
+        ),
+      ),
+    );
   }
 
   @override
