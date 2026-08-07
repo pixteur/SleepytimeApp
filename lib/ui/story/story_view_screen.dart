@@ -33,13 +33,11 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   StreamSubscription<TtsState>? _stateSub;
   bool _busy = false;
 
-  // When narration finishes naturally, auto-advance to the next chapter.
-  // Cleared when the user stops, so Stop doesn't trigger an advance.
+  // When narration finishes naturally, auto-advance to the next chapter. Only
+  // set true once narration has actually STARTED playing — so a failed synth
+  // (which also lands the player on "idle") can't be mistaken for "finished"
+  // and trigger a rapid jump through chapters.
   bool _autoAdvance = false;
-
-  // The next chapter, generated in the background while this one is read, so
-  // paging forward is instant. Reused by _next() rather than regenerated.
-  Future<Beat>? _prefetch;
 
   @override
   void initState() {
@@ -47,31 +45,6 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     _tts = ref.read(ttsProvider);
     _stateSub = _tts.stateStream.listen(_onTtsState);
     WidgetsBinding.instance.addPostFrameCallback((_) => _speak());
-    unawaited(_startPrefetch());
-  }
-
-  /// Begin generating the following chapter in the background (one-ahead), if it
-  /// doesn't already exist and the story can continue. Saves + refreshes the
-  /// list when it lands so the Next affordances light up.
-  Future<void> _startPrefetch() async {
-    if (!widget.canContinue || widget.beat.isFinal) return;
-    final id = _seriesId;
-    final child = ref.read(activeChildProvider);
-    final series = ref.read(activeSeriesProvider);
-    if (id == null || child == null || series == null) return;
-    final beats = await ref.read(storageRepoProvider).loadBeats(id);
-    if (beats.any((b) => b.seq == widget.beat.seq + 1)) return; // already there
-    final future = ref
-        .read(storyEngineProvider)
-        .takeTurn(child: child, series: series, intent: StoryIntent.continued);
-    _prefetch = future;
-    future
-        .then((_) {
-          if (mounted) ref.invalidate(beatsForSeriesProvider(id));
-        })
-        .catchError((_) {
-          /* never let prefetch crash the reader */
-        });
   }
 
   @override
@@ -85,10 +58,14 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   String? get _seriesId => ref.read(activeSeriesProvider)?.id;
 
   Future<void> _speak() async {
-    _autoAdvance = true;
+    // Stay put until narration actually starts; only then allow auto-advance.
+    _autoAdvance = false;
     unawaited(_preloadNext());
     try {
       await _tts.speak(widget.beat.text, language: _lang);
+      // speak() returns once playback has begun (it streams). If it didn't
+      // throw, narration is really playing — safe to auto-advance at the end.
+      _autoAdvance = true;
     } catch (e) {
       _autoAdvance = false;
       if (!mounted) return;
@@ -196,26 +173,52 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     final engine = ref.read(storyEngineProvider);
     Beat beat;
     try {
-      // Reuse the one-ahead prefetch if it's running; otherwise generate now.
-      beat =
-          await (_prefetch ??
-              engine.takeTurn(
-                child: child,
-                series: series,
-                intent: StoryIntent.continued,
-              ));
+      beat = await engine.takeTurn(
+        child: child,
+        series: series,
+        intent: StoryIntent.continued,
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
       showErrorBanner(context, 'Could not load the next chapter: $e');
       return;
     }
-    _prefetch = null;
     ref.invalidate(beatsForSeriesProvider(id));
     if (!mounted) return;
     setState(() => _busy = false);
     _warnIfFallback(engine.lastFallbackReason);
     await _open(beat);
+  }
+
+  /// Tapping the chapter title opens a picker to jump to any chapter.
+  Future<void> _pickChapter(List<Beat> beats) async {
+    if (beats.isEmpty) return;
+    final chosen = await showModalBottomSheet<Beat>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => ListView(
+        shrinkWrap: true,
+        children: [
+          for (final b in beats)
+            ListTile(
+              leading: CircleAvatar(child: Text('${b.seq + 1}')),
+              title: Text('Chapter ${b.seq + 1}'),
+              subtitle: Text(
+                b.summary,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              selected: b.seq == widget.beat.seq,
+              trailing: b.seq == widget.beat.seq
+                  ? const Icon(Icons.check)
+                  : null,
+              onTap: () => Navigator.pop(context, b),
+            ),
+        ],
+      ),
+    );
+    if (chosen != null && chosen.seq != widget.beat.seq) await _open(chosen);
   }
 
   /// Surface a placeholder fallback so a generic chapter isn't silent.
@@ -245,7 +248,21 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
           tooltip: widget.beat.seq > 0 ? 'Previous chapter' : 'Back',
           onPressed: _busy ? null : _back,
         ),
-        title: Text('Chapter ${widget.beat.seq + 1}'),
+        title: InkWell(
+          onTap: _busy ? null : () => _pickChapter(beats),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Chapter ${widget.beat.seq + 1}'),
+                const SizedBox(width: 4),
+                const Icon(Icons.arrow_drop_down),
+              ],
+            ),
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.replay_rounded),

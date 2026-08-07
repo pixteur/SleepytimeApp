@@ -207,37 +207,34 @@ class CloudTtsProvider implements TtsProvider {
     await _states.close();
   }
 
-  /// Break [text] into sentence-aligned chunks. The first chunk is kept small
-  /// ([firstLen]) for a quick start; the rest are packed up to [maxLen] so each
-  /// chunk's playback comfortably outlasts the next chunk's synthesis latency.
-  static List<String> _chunkText(
-    String text, {
-    int firstLen = 320,
-    int maxLen = 900,
-  }) {
-    final sentences = text
-        // Treat paragraph breaks as sentence boundaries too.
+  /// Synthesize a whole chapter as ONE request when possible: a single request
+  /// gives a consistent voice (volume/prosody drift between separate Gemini TTS
+  /// calls is what made paragraphs sound like "a different reader"), removes
+  /// inter-paragraph seams entirely, and makes far fewer API calls (one per
+  /// chapter, not per paragraph) — so rate limits are hit far less often.
+  ///
+  /// Only a very long chapter is split, and then only on sentence boundaries
+  /// into large pieces, to stay within the provider's per-request limit.
+  static List<String> _chunkText(String text, {int maxLen = 6000}) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return const [];
+    if (trimmed.length <= maxLen) return [trimmed];
+
+    final sentences = trimmed
         .replaceAll(RegExp(r'\n\s*\n'), ' ')
         .split(RegExp(r'(?<=[.!?])\s+'))
         .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
-    if (sentences.isEmpty) {
-      final t = text.trim();
-      return t.isEmpty ? const [] : [t];
-    }
+        .where((s) => s.isNotEmpty);
     final out = <String>[];
     final buf = StringBuffer();
-    var target = firstLen;
     for (final s in sentences) {
-      if (buf.isNotEmpty && buf.length + s.length > target) {
+      if (buf.isNotEmpty && buf.length + s.length > maxLen) {
         out.add(buf.toString().trim());
         buf.clear();
-        target = maxLen; // only the first chunk uses the small target
       }
       buf.write('$s ');
     }
     if (buf.isNotEmpty) out.add(buf.toString().trim());
-    return out;
+    return out.isEmpty ? [trimmed] : out;
   }
 }
