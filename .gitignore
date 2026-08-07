@@ -53,3 +53,7 @@ local_data/
 
 # ── Internal build plan (kept local, not shared) ──────────────────
 build-plan/
+
+# ── Distribution output ───────────────────────────────────────────
+dist/
+*.msix

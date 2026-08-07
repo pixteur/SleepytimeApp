@@ -1,0 +1,27 @@
+# flutter_distributor config — one command to build installers per platform.
+#   dart pub global activate flutter_distributor
+#   flutter_distributor release --name prod
+#
+# Windows MSIX packaging on this machine needs the Windows SDK's makeappx (the
+# msix package's bundled one can fail); scripts/build_windows_installer.ps1 does
+# that. macOS .dmg requires building on a Mac + Developer ID signing/notarization
+# and the macos/ scaffolding (`flutter create --platforms=macos .`).
+# See docs/distribution.md.
+output: dist/
+
+releases:
+  - name: prod
+    jobs:
+      - name: windows-msix
+        package:
+          platform: windows
+          target: msix
+          build_args:
+            release: true
+
+      - name: macos-dmg
+        package:
+          platform: macos
+          target: dmg
+          build_args:
+            release: true

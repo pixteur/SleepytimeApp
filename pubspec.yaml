@@ -59,6 +59,17 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.34.0
   build_runner: ^2.15.0
+  msix: ^3.16.7
+
+# Windows installer (double-click .msix). Build: `dart run msix:create`.
+# See docs/distribution.md.
+msix_config:
+  display_name: Sleepytime
+  publisher_display_name: Pixteur
+  identity_name: com.pixteur.sleepytime
+  msix_version: 1.0.0.0
+  logo_path: app_icon.png
+  capabilities: internetClient
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
