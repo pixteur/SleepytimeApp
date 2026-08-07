@@ -196,6 +196,12 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
+  /// Back to this story's chapter list (the screen below the reader).
+  Future<void> _toChapters() async {
+    await _tts.stop();
+    if (mounted) Navigator.of(context).maybePop();
+  }
+
   /// Restart from chapter 1 (re-reads and re-narrates from the start).
   Future<void> _restart() => _goToSeq(0);
 
@@ -329,10 +335,17 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
         ),
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              child: const Text('📖', style: TextStyle(fontSize: 18)),
+            Tooltip(
+              message: 'Chapter list',
+              child: InkWell(
+                onTap: _busy ? null : _toChapters,
+                customBorder: const CircleBorder(),
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  child: const Icon(Icons.menu_book_rounded, size: 20),
+                ),
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
