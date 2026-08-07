@@ -517,20 +517,30 @@ class _ReadingTextState extends State<_ReadingText> {
   final ScrollController _scroll = ScrollController();
   late final List<RegExpMatch> _words;
   late final List<_Para> _paras;
+  late final List<GlobalKey> _paraKeys;
   StreamSubscription<double>? _sub;
   int _current = -1; // global word index being read (-1 = not started)
+  int _lastPara = -1;
+
+  // Auto-scroll follows the reader, but pauses when the user scrolls by hand and
+  // gently snaps back to the reading spot a few seconds later.
+  bool _autoScroll = true;
+  bool _programmatic = false; // true while WE are animating the scroll
+  Timer? _resumeTimer;
 
   @override
   void initState() {
     super.initState();
     _words = RegExp(r'\S+').allMatches(widget.text).toList();
     _paras = _splitParagraphs(widget.text);
+    _paraKeys = List.generate(_paras.length, (_) => GlobalKey());
     _sub = widget.progress.listen(_onProgress);
   }
 
   @override
   void dispose() {
     _sub?.cancel();
+    _resumeTimer?.cancel();
     _scroll.dispose();
     super.dispose();
   }
@@ -555,6 +565,7 @@ class _ReadingTextState extends State<_ReadingText> {
     if (!mounted || _words.isEmpty) return;
     if (fraction <= 0) {
       if (_current != -1) setState(() => _current = -1);
+      _lastPara = -1;
       return;
     }
     final chars = fraction * widget.text.length;
@@ -567,18 +578,45 @@ class _ReadingTextState extends State<_ReadingText> {
       }
     }
     if (idx != _current) setState(() => _current = idx);
-    // Keep the reading position in view by scrolling proportionally.
-    if (_scroll.hasClients) {
-      final max = _scroll.position.maxScrollExtent;
-      final target = (fraction * max).clamp(0.0, max);
-      if ((target - _scroll.offset).abs() > 24) {
-        _scroll.animateTo(
-          target,
-          duration: const Duration(milliseconds: 450),
-          curve: Curves.easeOut,
-        );
-      }
+    // Scroll by PARAGRAPH (keep the reading paragraph in view) rather than a
+    // blind proportional scroll — this keeps the highlight visible even when the
+    // per-word estimate drifts a little.
+    final para = _currentPara;
+    if (para != _lastPara) {
+      _lastPara = para;
+      if (_autoScroll) _scrollToPara(para);
     }
+  }
+
+  Future<void> _scrollToPara(int para) async {
+    if (para < 0 || para >= _paraKeys.length) return;
+    final ctx = _paraKeys[para].currentContext;
+    if (ctx == null) return;
+    _programmatic = true;
+    try {
+      await Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.28, // keep the reading paragraph near the top third
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
+    } catch (_) {
+      /* context may have gone away */
+    } finally {
+      _programmatic = false;
+    }
+  }
+
+  /// The user scrolled by hand: stop auto-following, then resume + snap back to
+  /// the reading spot after a few seconds of no manual scrolling.
+  void _onUserScroll() {
+    _autoScroll = false;
+    _resumeTimer?.cancel();
+    _resumeTimer = Timer(const Duration(seconds: 4), () {
+      if (!mounted) return;
+      _autoScroll = true;
+      _scrollToPara(_currentPara);
+    });
   }
 
   int get _currentPara {
@@ -626,28 +664,36 @@ class _ReadingTextState extends State<_ReadingText> {
     );
     final activePara = _currentPara;
 
-    return SingleChildScrollView(
-      controller: _scroll,
-      // side padding leaves room for the (auto-hiding) edge arrows
-      padding: const EdgeInsets.fromLTRB(40, 12, 40, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < _paras.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: (activePara == -1 || i == activePara)
-                  // Reading paragraph (or all, before playback): full brightness
-                  // with the current word highlighted.
-                  ? Text.rich(
-                      TextSpan(children: _paraSpans(_paras[i], highlight)),
-                      style: base,
-                    )
-                  // Other paragraphs are dimmed to keep focus on the reading one.
-                  : Text(_paras[i].text.trim(), style: dim),
-            ),
-          if (widget.footer != null) widget.footer!,
-        ],
+    return NotificationListener<ScrollNotification>(
+      // A scroll we didn't start (drag or mouse wheel) is the user taking over.
+      onNotification: (n) {
+        if (n is ScrollUpdateNotification && !_programmatic) _onUserScroll();
+        return false;
+      },
+      child: SingleChildScrollView(
+        controller: _scroll,
+        // side padding leaves room for the (auto-hiding) edge arrows
+        padding: const EdgeInsets.fromLTRB(40, 12, 40, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < _paras.length; i++)
+              Padding(
+                key: _paraKeys[i],
+                padding: const EdgeInsets.only(bottom: 16),
+                child: (activePara == -1 || i == activePara)
+                    // Reading paragraph (or all, before playback): full
+                    // brightness with the current word highlighted.
+                    ? Text.rich(
+                        TextSpan(children: _paraSpans(_paras[i], highlight)),
+                        style: base,
+                      )
+                    // Other paragraphs dim to keep focus on the reading one.
+                    : Text(_paras[i].text.trim(), style: dim),
+              ),
+            if (widget.footer != null) widget.footer!,
+          ],
+        ),
       ),
     );
   }
