@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-06-15 — `.sleepy` shareable story format
+
+A story can now be exported/imported as a single **`.sleepy`** file — the
+foundation for a downloadable/shareable story system.
+
+- **Format:** a zip containing `manifest.json` (world + characters + episode
+  metadata + every chapter's text) and one audio file per chapter. Text and
+  narration travel together. `lib/adapters/export/sleepy_codec.dart` (encode/
+  decode) + `lib/domain/sleepy_service.dart` (domain ↔ manifest, file I/O).
+- **Audio reuse:** export pulls each chapter's audio from the on-disk cache
+  (keyed by the current voice) and bundles it; import writes it back under that
+  same voice key, so a same-voice listener replays offline with **no API calls**.
+- **v1 transport:** export writes to `<Documents>/Sleepytime/stories/*.sleepy`;
+  import lists that folder (drop a received file there to share). A native
+  file picker / share sheet comes later.
+- Export action on the chapter list; Import action on the bookshelf.
+
+---
+
 ## 2026-06-14 — Bookshelf: Worlds → Episodes → Characters, + audio persistence
 
 **Bookshelf / universes.** New 3-level structure so a loved world (e.g. "Splat the

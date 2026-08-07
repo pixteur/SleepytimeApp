@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
+import '../../domain/models/series.dart';
 import '../common/error_banner.dart';
 import '../common/parent_gate.dart';
 import 'story_view_screen.dart';
@@ -113,6 +114,22 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
     }
   }
 
+  /// Bundle this story (text + cached audio + metadata) into a shareable
+  /// `.sleepy` file in the app's exports folder.
+  Future<void> _export(Series series) async {
+    final child = ref.read(activeChildProvider);
+    final lang = child?.language ?? 'en';
+    final voiceSig = ref.read(ttsProvider).voiceSignature;
+    try {
+      final path = await ref
+          .read(sleepyServiceProvider)
+          .exportToFile(series, language: lang, voiceSignature: voiceSig);
+      if (mounted) showErrorBanner(context, 'Saved story file: $path');
+    } catch (e) {
+      if (mounted) showErrorBanner(context, 'Export failed: $e');
+    }
+  }
+
   Future<void> _open(Beat beat) async {
     await Navigator.push(
       context,
@@ -187,7 +204,16 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
     final ended = beats.isNotEmpty && beats.last.isFinal;
 
     return Scaffold(
-      appBar: AppBar(title: Text(series.title)),
+      appBar: AppBar(
+        title: Text(series.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.ios_share_rounded),
+            tooltip: 'Export as .sleepy',
+            onPressed: beats.isEmpty ? null : () => _export(series),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(

@@ -39,6 +39,10 @@ abstract class TtsProvider {
   /// engines that don't report progress.
   Stream<double> get progressStream;
 
+  /// Engine + voice id, used to locate this voice's cached audio (for .sleepy
+  /// export) and to write imported audio back under the right key.
+  String get voiceSignature;
+
   /// Narrate [text] in the given [language] (BCP-47-ish tag) with [voice].
   Future<void> speak(
     String text, {

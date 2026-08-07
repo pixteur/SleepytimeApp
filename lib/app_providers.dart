@@ -27,6 +27,7 @@ import 'domain/models/world.dart';
 import 'domain/profile_service.dart';
 import 'domain/quiz_service.dart';
 import 'domain/series_service.dart';
+import 'domain/sleepy_service.dart';
 import 'domain/story_engine.dart';
 import 'domain/twist_deck.dart';
 import 'domain/world_service.dart';
@@ -238,6 +239,14 @@ final worldServiceProvider = Provider<WorldService>(
 
 final characterServiceProvider = Provider<CharacterService>(
   (ref) => CharacterService(ref.watch(storageRepoProvider)),
+);
+
+/// Export/import stories as `.sleepy` files (text + audio + metadata).
+final sleepyServiceProvider = Provider<SleepyService>(
+  (ref) => SleepyService(
+    ref.watch(storageRepoProvider),
+    ref.watch(audioCacheProvider),
+  ),
 );
 
 /// The child's worlds (the bookshelf). Invalidate after create/delete.

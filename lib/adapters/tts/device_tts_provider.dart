@@ -48,6 +48,9 @@ class DeviceTtsProvider implements TtsProvider {
   @override
   Stream<double> get progressStream => _progress.stream;
 
+  @override
+  String get voiceSignature => 'device';
+
   void _set(TtsState s) {
     _state = s;
     if (!_states.isClosed) _states.add(s);

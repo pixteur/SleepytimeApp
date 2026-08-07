@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,7 +27,16 @@ class BookshelfScreen extends ConsumerWidget {
     final seriesAsync = ref.watch(seriesForChildProvider(child.id));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Bookshelf')),
+      appBar: AppBar(
+        title: const Text('Bookshelf'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            tooltip: 'Import a .sleepy story',
+            onPressed: () => _import(context, ref, child.id),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _newStory(context, ref),
         icon: const Icon(Icons.auto_stories),
@@ -88,6 +99,63 @@ class BookshelfScreen extends ConsumerWidget {
       context,
       MaterialPageRoute(builder: (_) => const NewSeriesScreen()),
     );
+  }
+
+  /// Import a `.sleepy` story from the app's exports folder (drop received files
+  /// there to share). Lists what's available and imports the chosen one.
+  Future<void> _import(
+    BuildContext context,
+    WidgetRef ref,
+    String childId,
+  ) async {
+    final svc = ref.read(sleepyServiceProvider);
+    final files = await svc.listSleepyFiles();
+    if (!context.mounted) return;
+    if (files.isEmpty) {
+      final dir = await svc.exportsDir();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 8),
+          showCloseIcon: true,
+          content: Text('No .sleepy files found. Put them in:\n${dir.path}'),
+        ),
+      );
+      return;
+    }
+    final chosen = await showModalBottomSheet<File>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => ListView(
+        shrinkWrap: true,
+        children: [
+          const ListTile(title: Text('Import a story')),
+          for (final f in files)
+            ListTile(
+              leading: const Icon(Icons.menu_book_outlined),
+              title: Text(f.uri.pathSegments.last),
+              onTap: () => Navigator.pop(context, f),
+            ),
+        ],
+      ),
+    );
+    if (chosen == null || !context.mounted) return;
+    try {
+      await svc.importFile(chosen.path, childId);
+      ref.invalidate(worldsForChildProvider(childId));
+      ref.invalidate(seriesForChildProvider(childId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Story imported to your bookshelf.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Import failed: $e')));
+      }
+    }
   }
 }
 

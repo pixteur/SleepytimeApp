@@ -45,6 +45,7 @@ dependencies:
   ffi: ^2.2.0
   flutter_tts: ^4.2.5
   audioplayers: ^6.7.1
+  archive: ^4.0.7
 
 dev_dependencies:
   flutter_test:
