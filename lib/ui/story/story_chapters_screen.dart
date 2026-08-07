@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../adapters/ai/provider_exceptions.dart';
 import '../../adapters/tts/audio_cache.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
@@ -491,7 +492,7 @@ class _DownloadIconState extends State<_DownloadIcon> {
           ok
               ? '✓ Narration saved on this device.'
               : error != null
-              ? 'Download failed: $error'
+              ? friendlyProviderError(error)
               : 'No cloud voice active — set one in Voice setup to save '
                     'narration (the free device voice reads live, nothing to save).',
         ),

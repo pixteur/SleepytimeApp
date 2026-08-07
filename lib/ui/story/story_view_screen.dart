@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../adapters/ai/provider_exceptions.dart';
 import '../../adapters/tts/tts_provider.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
@@ -80,7 +81,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     try {
       await _tts.speak(widget.beat.text, language: _lang);
     } catch (e) {
-      if (mounted) showErrorBanner(context, 'Voice unavailable: $e');
+      if (mounted) showErrorBanner(context, friendlyProviderError(e));
     } finally {
       // Backstop in case audio never actually started (e.g. empty text).
       if (mounted && _buffering) setState(() => _buffering = false);
