@@ -396,15 +396,14 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
-                child: _ReadingText(
-                  text: widget.beat.text,
-                  progress: _tts.progressStream,
-                  style: theme.textTheme.titleMedium?.copyWith(height: 1.6),
-                  footer: footer,
-                ),
+            // Positioned.fill gives the scroll view a tight, bounded height so
+            // the text always lays out (a Center left it unbounded → blank).
+            Positioned.fill(
+              child: _ReadingText(
+                text: widget.beat.text,
+                progress: _tts.progressStream,
+                style: theme.textTheme.titleMedium?.copyWith(height: 1.6),
+                footer: footer,
               ),
             ),
             // Edge arrows fade out after inactivity and sit clear of the text.

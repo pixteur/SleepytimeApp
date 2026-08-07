@@ -198,20 +198,23 @@ class _StoryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final meta = metaFor(series.theme);
+    final parentMode = ref.watch(parentModeProvider);
     return Card(
       child: ListTile(
         leading: Text(meta.emoji, style: const TextStyle(fontSize: 28)),
         title: Text(series.title),
         subtitle: Text(meta.label),
-        trailing: PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert),
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'delete', child: Text('Delete story')),
-          ],
-          onSelected: (v) {
-            if (v == 'delete') _confirmDelete(context, ref);
-          },
-        ),
+        trailing: parentMode
+            ? PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'delete', child: Text('Delete story')),
+                ],
+                onSelected: (v) {
+                  if (v == 'delete') _confirmDelete(context, ref);
+                },
+              )
+            : null,
         onTap: () {
           ref.read(activeSeriesProvider.notifier).select(series);
           Navigator.push(

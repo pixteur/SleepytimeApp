@@ -224,6 +224,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+              Card(
+                child: SwitchListTile(
+                  secondary: const Icon(Icons.family_restroom),
+                  title: const Text('Parent mode'),
+                  subtitle: const Text(
+                    'Show delete & rename controls. Turn off (child mode) so a '
+                    'child can\'t accidentally change or delete stories.',
+                  ),
+                  value: ref.watch(parentModeProvider),
+                  onChanged: (v) =>
+                      ref.read(parentModeProvider.notifier).set(v),
+                ),
+              ),
+              const SizedBox(height: 16),
               Text('Provider', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               SegmentedButton<ProviderId>(

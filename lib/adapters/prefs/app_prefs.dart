@@ -41,4 +41,14 @@ class AppPrefs {
 
   Future<void> setVoiceName(String engine, String name) =>
       _prefs.setString('voicename_$engine', name);
+
+  // ── Parent mode ─────────────────────────────────────────────────
+  static const _parentModeKey = 'parent_mode';
+
+  /// When true, grown-up controls (delete, rename) are visible. Default false
+  /// ("child mode") so a child can't accidentally delete or edit stories.
+  bool get parentMode => _prefs.getBool(_parentModeKey) ?? false;
+
+  Future<void> setParentMode(bool value) =>
+      _prefs.setBool(_parentModeKey, value);
 }

@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../adapters/tts/audio_cache.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../../domain/models/series.dart';
@@ -137,6 +139,39 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
     );
   }
 
+  /// Rename the story (parent mode only).
+  Future<void> _rename(Series series) async {
+    final controller = TextEditingController(text: series.title);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Rename story'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(labelText: 'Story name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty || name == series.title) return;
+    final updated = series.copyWith(title: name);
+    await ref.read(storageRepoProvider).saveSeries(updated);
+    if (!mounted) return;
+    ref.read(activeSeriesProvider.notifier).select(updated);
+    ref.invalidate(seriesForChildProvider(series.childId));
+  }
+
   /// Delete a chapter (parent-gated) and renumber the rest so numbering stays
   /// clean (1, 2, 3…). Handy for trimming early placeholder chapters.
   Future<void> _deleteChapter(Beat beat) async {
@@ -202,11 +237,21 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
         ref.watch(beatsForSeriesProvider(series.id)).asData?.value ??
         const <Beat>[];
     final ended = beats.isNotEmpty && beats.last.isFinal;
+    final parentMode = ref.watch(parentModeProvider);
+    final lang = ref.watch(activeChildProvider)?.language ?? 'en';
+    final voiceSig = ref.watch(ttsProvider).voiceSignature;
+    final cache = ref.watch(audioCacheProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(series.title),
         actions: [
+          if (parentMode)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Rename story',
+              onPressed: () => _rename(series),
+            ),
           IconButton(
             icon: const Icon(Icons.ios_share_rounded),
             tooltip: 'Export as .sleepy',
@@ -245,18 +290,24 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.volume_up_rounded),
-                              PopupMenuButton<String>(
-                                itemBuilder: (_) => const [
-                                  PopupMenuItem(
-                                    value: 'delete',
-                                    child: Text('Delete chapter'),
-                                  ),
-                                ],
-                                onSelected: (v) {
-                                  if (v == 'delete') _deleteChapter(b);
-                                },
+                              _DownloadIcon(
+                                cache: cache,
+                                cacheKey: audioCacheKey(
+                                  '$voiceSig|$lang|${b.text}',
+                                ),
                               ),
+                              if (parentMode)
+                                PopupMenuButton<String>(
+                                  itemBuilder: (_) => const [
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text('Delete chapter'),
+                                    ),
+                                  ],
+                                  onSelected: (v) {
+                                    if (v == 'delete') _deleteChapter(b);
+                                  },
+                                ),
                             ],
                           ),
                           onTap: () => _open(b),
@@ -290,4 +341,30 @@ class _Writing extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Shows whether a chapter's narration audio is saved on the device: a filled
+/// "downloaded" badge when cached, or a faint cloud while it's still being
+/// prepared. Replaces the old speaker icon.
+class _DownloadIcon extends StatelessWidget {
+  const _DownloadIcon({required this.cache, required this.cacheKey});
+
+  final AudioCache cache;
+  final String cacheKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return FutureBuilder<Uint8List?>(
+      future: cache.get(cacheKey),
+      builder: (context, snap) {
+        final has = snap.data != null && snap.data!.isNotEmpty;
+        return Icon(
+          has ? Icons.download_done_rounded : Icons.cloud_outlined,
+          size: 22,
+          color: has ? theme.colorScheme.primary : theme.disabledColor,
+        );
+      },
+    );
+  }
 }

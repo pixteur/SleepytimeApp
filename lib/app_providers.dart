@@ -105,6 +105,27 @@ final storyEngineProvider = Provider<StoryEngine>(
 /// The twist deck (six option cards + dice).
 final twistDeckProvider = Provider<TwistDeck>((ref) => const TwistDeck());
 
+/// Parent mode: when true, grown-up controls (delete/rename) are shown. Default
+/// false ("child mode"). Toggled in Settings (behind the parental gate).
+final parentModeProvider = NotifierProvider<ParentModeController, bool>(
+  ParentModeController.new,
+);
+
+class ParentModeController extends Notifier<bool> {
+  @override
+  bool build() {
+    _hydrate();
+    return false;
+  }
+
+  Future<void> _hydrate() async => state = (await AppPrefs.open()).parentMode;
+
+  Future<void> set(bool value) async {
+    state = value;
+    await (await AppPrefs.open()).setParentMode(value);
+  }
+}
+
 // ─── Voice engine ─────────────────────────────────────────────────────
 
 enum VoiceEngine { device, openai, elevenlabs, gemini }

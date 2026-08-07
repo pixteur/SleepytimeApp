@@ -26,16 +26,18 @@ class WorldDetailScreen extends ConsumerWidget {
             .where((s) => s.worldId == world.id)
             .toList();
     final theme = Theme.of(context);
+    final parentMode = ref.watch(parentModeProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(world.name),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: 'Delete world',
-            onPressed: () => _deleteWorld(context, ref),
-          ),
+          if (parentMode)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Delete world',
+              onPressed: () => _deleteWorld(context, ref),
+            ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -87,30 +89,37 @@ class WorldDetailScreen extends ConsumerWidget {
                             subtitle: c.description.trim().isEmpty
                                 ? null
                                 : Text(c.description),
-                            trailing: PopupMenuButton<String>(
-                              itemBuilder: (_) => const [
-                                PopupMenuItem(
-                                  value: 'edit',
-                                  child: Text('Edit'),
-                                ),
-                                PopupMenuItem(
-                                  value: 'delete',
-                                  child: Text('Delete'),
-                                ),
-                              ],
-                              onSelected: (v) async {
-                                if (v == 'edit') {
-                                  _editCharacter(context, ref, world.id, c);
-                                } else if (v == 'delete') {
-                                  await ref
-                                      .read(characterServiceProvider)
-                                      .delete(c.id);
-                                  ref.invalidate(
-                                    charactersForWorldProvider(world.id),
-                                  );
-                                }
-                              },
-                            ),
+                            trailing: parentMode
+                                ? PopupMenuButton<String>(
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(
+                                        value: 'edit',
+                                        child: Text('Edit'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Text('Delete'),
+                                      ),
+                                    ],
+                                    onSelected: (v) async {
+                                      if (v == 'edit') {
+                                        _editCharacter(
+                                          context,
+                                          ref,
+                                          world.id,
+                                          c,
+                                        );
+                                      } else if (v == 'delete') {
+                                        await ref
+                                            .read(characterServiceProvider)
+                                            .delete(c.id);
+                                        ref.invalidate(
+                                          charactersForWorldProvider(world.id),
+                                        );
+                                      }
+                                    },
+                                  )
+                                : null,
                           ),
                         ),
                     ],
