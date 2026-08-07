@@ -40,14 +40,22 @@ String audioCacheKey(String input) {
 class FileAudioCache implements AudioCache {
   Directory? _dir;
 
-  Future<Directory?> _ensureDir() async {
-    if (_dir != null) return _dir;
+  Future<Directory?>? _setup;
+
+  // Single-flight setup: all concurrent callers (e.g. every chapter's download
+  // badge) await the same one-time dir-create + legacy migration.
+  Future<Directory?> _ensureDir() {
+    if (_dir != null) return Future.value(_dir);
+    return _setup ??= _doSetup();
+  }
+
+  Future<Directory?> _doSetup() async {
     try {
       final dir = await LibraryPaths.audio();
-      _dir = dir;
-      unawaited(_migrateLegacy(dir)); // one-time, best-effort
-      return dir;
+      await _migrateLegacy(dir); // await so the first reads see migrated files
+      return _dir = dir;
     } catch (_) {
+      _setup = null; // let a later call retry
       return null;
     }
   }
