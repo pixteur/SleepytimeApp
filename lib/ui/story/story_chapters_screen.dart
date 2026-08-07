@@ -473,11 +473,11 @@ class _DownloadIconState extends State<_DownloadIcon> {
         ),
       ),
     );
-    var error = false;
+    Object? error;
     try {
       await widget.onDownload();
-    } catch (_) {
-      error = true;
+    } catch (e) {
+      error = e;
     }
     await _check();
     if (mounted) setState(() => _busy = false);
@@ -485,11 +485,13 @@ class _DownloadIconState extends State<_DownloadIcon> {
     messenger.clearSnackBars();
     messenger.showSnackBar(
       SnackBar(
+        showCloseIcon: error != null,
+        duration: Duration(seconds: error != null ? 10 : 4),
         content: Text(
           ok
               ? '✓ Narration saved on this device.'
-              : error
-              ? 'Download failed — check the story-AI/voice setup.'
+              : error != null
+              ? 'Download failed: $error'
               : 'No cloud voice active — set one in Voice setup to save '
                     'narration (the free device voice reads live, nothing to save).',
         ),

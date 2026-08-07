@@ -127,12 +127,10 @@ class CloudTtsProvider implements TtsProvider {
     TtsVoicePref voice = const TtsVoicePref(),
   }) async {
     if (_cache == null) return;
+    // Let errors propagate — callers that want best-effort warming already catch
+    // them; an explicit "download this chapter" needs to know if it failed.
     for (final chunk in _chunkText(text)) {
-      try {
-        await _cachedSynthesize(chunk, language, voice);
-      } catch (_) {
-        return;
-      }
+      await _cachedSynthesize(chunk, language, voice);
     }
   }
 
