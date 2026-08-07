@@ -63,20 +63,18 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
 
   Future<void> _speak() async {
     if (_buffering) return; // ignore double taps while a synth is in flight
-    // Stay put until narration actually starts; only then allow auto-advance.
+    // Stay put until narration actually starts (the "speaking" state), so a
+    // failed synth (which lands on "idle") can't be mistaken for "finished".
     _autoAdvance = false;
     setState(() => _buffering = true);
     unawaited(_preloadNext());
     try {
       await _tts.speak(widget.beat.text, language: _lang);
-      // speak() returns once playback has begun (it streams). If it didn't
-      // throw, narration is really playing — safe to auto-advance at the end.
-      _autoAdvance = true;
     } catch (e) {
-      _autoAdvance = false;
       if (mounted) showErrorBanner(context, 'Voice unavailable: $e');
     } finally {
-      if (mounted) setState(() => _buffering = false);
+      // Backstop in case audio never actually started (e.g. empty text).
+      if (mounted && _buffering) setState(() => _buffering = false);
     }
   }
 
@@ -105,7 +103,12 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   }
 
   void _onTtsState(TtsState s) {
-    if (s == TtsState.idle && _autoAdvance) {
+    if (s == TtsState.speaking) {
+      // Real audio is now playing: hide the buffering popup and arm auto-advance
+      // so the chapter advances only when it genuinely finishes.
+      if (mounted && _buffering) setState(() => _buffering = false);
+      _autoAdvance = true;
+    } else if (s == TtsState.idle && _autoAdvance) {
       _autoAdvance = false;
       _autoNext();
     }
@@ -136,6 +139,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   }
 
   Future<void> _open(Beat beat) async {
+    _autoAdvance = false; // manual navigation must not chain another advance
     await _tts.stop();
     if (!mounted) return;
     Navigator.pushReplacement(
@@ -156,6 +160,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   }
 
   Future<void> _back() async {
+    _autoAdvance = false;
     if (widget.beat.seq > 0) {
       await _goToSeq(widget.beat.seq - 1);
     } else {
@@ -173,6 +178,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   Future<void> _restart() => _goToSeq(0);
 
   Future<void> _next() async {
+    _autoAdvance = false;
     final id = _seriesId;
     if (id == null) return;
     final beats = await ref.read(storageRepoProvider).loadBeats(id);

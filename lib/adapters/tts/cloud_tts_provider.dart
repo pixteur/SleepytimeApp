@@ -128,8 +128,9 @@ class CloudTtsProvider implements TtsProvider {
       _set(TtsState.idle);
       return;
     }
-    _set(TtsState.speaking);
-    await _play(0); // awaits only the FIRST chunk's synthesis
+    // NB: we do NOT emit "speaking" here — only once audio actually starts (see
+    // _play), so the UI's buffering indicator stays up during synthesis.
+    await _play(0); // awaits the FIRST chunk's synthesis, then starts playback
   }
 
   Future<void> _play(int i) async {
@@ -157,6 +158,7 @@ class CloudTtsProvider implements TtsProvider {
       return;
     }
     try {
+      _set(TtsState.speaking); // audio is starting for real now
       await _player.play(BytesSource(bytes, mimeType: _synth.mimeType));
     } catch (_) {
       // This one chunk wouldn't play — skip it and continue with the next.
