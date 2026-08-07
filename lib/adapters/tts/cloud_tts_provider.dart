@@ -78,6 +78,9 @@ class CloudTtsProvider implements TtsProvider {
   @override
   String get voiceSignature => _synth.voiceSignature;
 
+  @override
+  String get audioMimeType => _synth.mimeType;
+
   void _set(TtsState s) {
     _state = s;
     if (!_states.isClosed) _states.add(s);

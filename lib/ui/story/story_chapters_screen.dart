@@ -132,6 +132,54 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
     }
   }
 
+  /// Text-only .sleepy for sending by message/email; the recipient's app
+  /// rebuilds narration with their own preferred voice on import.
+  Future<void> _exportText(Series series) async {
+    final child = ref.read(activeChildProvider);
+    final lang = child?.language ?? 'en';
+    final voiceSig = ref.read(ttsProvider).voiceSignature;
+    try {
+      final path = await ref
+          .read(sleepyServiceProvider)
+          .exportToFile(
+            series,
+            language: lang,
+            voiceSignature: voiceSig,
+            includeAudio: false,
+          );
+      if (mounted) {
+        showErrorBanner(
+          context,
+          'Text-only story saved — attach it to a message/email: $path',
+        );
+      }
+    } catch (e) {
+      if (mounted) showErrorBanner(context, 'Export failed: $e');
+    }
+  }
+
+  /// Whole story joined into one audiobook file + metadata, saved in the library
+  /// (upload to Dropbox / iCloud / Drive from there).
+  Future<void> _exportAudiobook(Series series) async {
+    final child = ref.read(activeChildProvider);
+    final lang = child?.language ?? 'en';
+    final tts = ref.read(ttsProvider);
+    try {
+      final path = await ref
+          .read(sleepyServiceProvider)
+          .exportAudiobook(
+            series,
+            language: lang,
+            voiceSignature: tts.voiceSignature,
+            mimeType: tts.audioMimeType,
+            author: child?.displayName ?? 'SleepytimeApp',
+          );
+      if (mounted) showErrorBanner(context, 'Audiobook saved: $path');
+    } catch (e) {
+      if (mounted) showErrorBanner(context, 'Audiobook export failed: $e');
+    }
+  }
+
   Future<void> _open(Beat beat) async {
     await Navigator.push(
       context,
@@ -252,10 +300,30 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
               tooltip: 'Rename story',
               onPressed: () => _rename(series),
             ),
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.ios_share_rounded),
-            tooltip: 'Export as .sleepy',
-            onPressed: beats.isEmpty ? null : () => _export(series),
+            tooltip: 'Export / share',
+            enabled: beats.isNotEmpty,
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'sleepy',
+                child: Text('Story file (.sleepy, with audio)'),
+              ),
+              const PopupMenuItem(
+                value: 'text',
+                child: Text('Text to share (friend rebuilds voice)'),
+              ),
+              if (parentMode)
+                const PopupMenuItem(
+                  value: 'audiobook',
+                  child: Text('Audiobook — single file (parents)'),
+                ),
+            ],
+            onSelected: (v) {
+              if (v == 'sleepy') _export(series);
+              if (v == 'text') _exportText(series);
+              if (v == 'audiobook') _exportAudiobook(series);
+            },
           ),
         ],
       ),

@@ -58,6 +58,9 @@ class DeviceTtsProvider implements TtsProvider {
   @override
   String get voiceSignature => 'device';
 
+  @override
+  String get audioMimeType => 'audio/wav';
+
   void _set(TtsState s) {
     _state = s;
     if (!_states.isClosed) _states.add(s);

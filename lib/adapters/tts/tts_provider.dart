@@ -47,6 +47,10 @@ abstract class TtsProvider {
   /// export) and to write imported audio back under the right key.
   String get voiceSignature;
 
+  /// Container of the cached audio (`audio/wav` or `audio/mpeg`), so an
+  /// audiobook export can join chapters correctly.
+  String get audioMimeType;
+
   /// Narrate [text] in the given [language] (BCP-47-ish tag) with [voice].
   Future<void> speak(
     String text, {

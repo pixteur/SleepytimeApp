@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -8,6 +9,7 @@ import '../adapters/export/sleepy_codec.dart';
 import '../adapters/storage/library_paths.dart';
 import '../adapters/storage/storage_repo.dart';
 import '../adapters/tts/audio_cache.dart';
+import '../adapters/tts/tts_synthesizer.dart';
 import 'models/beat.dart';
 import 'models/series.dart';
 import 'models/story_character.dart';
@@ -31,10 +33,14 @@ class SleepyService {
       audioCacheKey('$voiceSig|$lang|$text');
 
   // ── Export ──────────────────────────────────────────────────────
+  /// Bundle a story as `.sleepy` bytes. With [includeAudio] false it's a small
+  /// text-only bundle (for sending by message/email) — the recipient's app
+  /// re-synthesizes narration with their own preferred voice on import.
   Future<Uint8List> exportBytes(
     Series series, {
     required String language,
     required String voiceSignature,
+    bool includeAudio = true,
   }) async {
     final beats = await _repo.loadBeats(series.id);
     final world = series.worldId == null
@@ -48,7 +54,9 @@ class SleepyService {
     final chapters = <Map<String, dynamic>>[];
     for (final b in beats) {
       String? audioName;
-      final bytes = await _cache.get(_key(voiceSignature, language, b.text));
+      final bytes = includeAudio
+          ? await _cache.get(_key(voiceSignature, language, b.text))
+          : null;
       if (bytes != null && bytes.isNotEmpty) {
         audioName = 'audio/ch${b.seq}.bin';
         audio[audioName] = bytes;
@@ -99,16 +107,89 @@ class SleepyService {
     Series series, {
     required String language,
     required String voiceSignature,
+    bool includeAudio = true,
   }) async {
     final bytes = await exportBytes(
       series,
       language: language,
       voiceSignature: voiceSignature,
+      includeAudio: includeAudio,
     );
     final dir = await exportsDir();
-    final file = File(p.join(dir.path, '${_safeName(series.title)}.sleepy'));
+    final suffix = includeAudio ? '' : '-text';
+    final file = File(
+      p.join(dir.path, '${_safeName(series.title)}$suffix.sleepy'),
+    );
     await file.writeAsBytes(bytes);
     return file.path;
+  }
+
+  /// Export the whole story as a single-file **audiobook** (all chapters joined)
+  /// with a metadata sidecar (title, author, source). Saved in the library so it
+  /// can be copied to Dropbox / iCloud / Drive. Requires the audio to be cached
+  /// (play or pre-warm the story first). Returns the audiobook file path.
+  Future<String> exportAudiobook(
+    Series series, {
+    required String language,
+    required String voiceSignature,
+    required String mimeType,
+    required String author,
+  }) async {
+    final beats = await _repo.loadBeats(series.id);
+    final parts = <Uint8List>[];
+    for (final b in beats) {
+      final bytes = await _cache.get(_key(voiceSignature, language, b.text));
+      if (bytes != null && bytes.isNotEmpty) parts.add(bytes);
+    }
+    if (parts.isEmpty) {
+      throw StateError(
+        'No narration saved yet — play or pre-warm the story first.',
+      );
+    }
+    final isWav = mimeType.toLowerCase().contains('wav');
+    final joined = isWav ? _concatWav(parts) : _concatBytes(parts);
+    final ext = isWav ? 'wav' : 'mp3';
+    final dir = await LibraryPaths.audiobooks();
+    final base = _safeName(series.title);
+    final file = File(p.join(dir.path, '$base.$ext'));
+    await file.writeAsBytes(joined);
+
+    final meta = {
+      'title': series.title,
+      'author': author,
+      'source': 'Generated with SleepytimeApp',
+      'language': language,
+      'voice': voiceSignature,
+      'chapters': parts.length,
+      'format': ext,
+    };
+    await File(
+      p.join(dir.path, '$base.audiobook.json'),
+    ).writeAsString(const JsonEncoder.withIndent('  ').convert(meta));
+    return file.path;
+  }
+
+  /// Join WAV chapters into one: strip each 44-byte header, concatenate PCM, and
+  /// re-wrap with a single header (sample rate read from the first chapter).
+  Uint8List _concatWav(List<Uint8List> wavs) {
+    final pcm = BytesBuilder();
+    var rate = 24000;
+    for (var i = 0; i < wavs.length; i++) {
+      final w = wavs[i];
+      if (i == 0 && w.length >= 28) {
+        rate = w[24] | (w[25] << 8) | (w[26] << 16) | (w[27] << 24);
+      }
+      if (w.length > 44) pcm.add(w.sublist(44));
+    }
+    return pcmToWav(pcm.toBytes(), sampleRate: rate == 0 ? 24000 : rate);
+  }
+
+  Uint8List _concatBytes(List<Uint8List> parts) {
+    final b = BytesBuilder();
+    for (final part in parts) {
+      b.add(part);
+    }
+    return b.toBytes();
   }
 
   Future<Directory> exportsDir() => LibraryPaths.stories();

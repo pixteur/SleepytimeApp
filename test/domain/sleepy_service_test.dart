@@ -120,4 +120,56 @@ void main() {
       expect(restored, audio);
     },
   );
+
+  test('text-only export omits audio (recipient rebuilds voice)', () async {
+    final repo = InMemoryStorageRepo();
+    final cache = _MemCache();
+    const series = Series(
+      id: 's1',
+      childId: 'kid',
+      title: 'Quiet Night',
+      theme: StoryTheme.cozy,
+    );
+    await repo.saveSeries(series);
+    await repo.saveBeat(
+      const Beat(
+        id: 'b0',
+        seriesId: 's1',
+        childId: 'kid',
+        seq: 0,
+        intent: StoryIntent.dice,
+        text: 'The moon was bright.',
+        summary: 'ch0',
+        isFinal: true,
+      ),
+    );
+    await cache.put(
+      audioCacheKey('gemini/Aoede|en|The moon was bright.'),
+      Uint8List.fromList(List.filled(100, 1)),
+    );
+
+    final svc = SleepyService(repo, cache);
+    final bytes = await svc.exportBytes(
+      series,
+      language: 'en',
+      voiceSignature: 'gemini/Aoede',
+      includeAudio: false,
+    );
+
+    // Import into a fresh repo/cache: chapter text arrives, but NO audio.
+    final dest = InMemoryStorageRepo();
+    final destCache = _MemCache();
+    final imported = await SleepyService(
+      dest,
+      destCache,
+    ).importBytes(bytes, 'kid2');
+    final beats = await dest.loadBeats(imported.id);
+    expect(beats.single.text, 'The moon was bright.');
+    expect(
+      await destCache.get(
+        audioCacheKey('gemini/Aoede|en|The moon was bright.'),
+      ),
+      isNull,
+    );
+  });
 }

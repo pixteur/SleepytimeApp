@@ -32,6 +32,9 @@ class LibraryPaths {
   /// Exported `.sleepy` story bundles.
   static Future<Directory> stories() => _sub('stories');
 
+  /// Exported single-file audiobooks (whole story joined into one audio file).
+  static Future<Directory> audiobooks() => _sub('audiobooks');
+
   /// Story cover / character art (reserved for future use).
   static Future<Directory> images() => _sub('images');
 }
