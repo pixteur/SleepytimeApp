@@ -13,6 +13,7 @@ import '../story/story_chapters_screen.dart';
 import 'new_series_screen.dart';
 import 'theme_catalog.dart';
 import 'world_detail_screen.dart';
+import 'world_edit_screen.dart';
 
 const _demoAsset = 'assets/seeds/obsidian_stone.sleepy';
 
@@ -295,10 +296,15 @@ class _StoryCard extends ConsumerWidget {
             ? PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),
                 itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'world',
+                    child: Text('Make this a world'),
+                  ),
                   PopupMenuItem(value: 'delete', child: Text('Delete story')),
                 ],
                 onSelected: (v) {
                   if (v == 'delete') _confirmDelete(context, ref);
+                  if (v == 'world') _convertToWorld(context, ref);
                 },
               )
             : null,
@@ -310,6 +316,61 @@ class _StoryCard extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  /// Turn a one-off story into a world, so it can keep going as a series of
+  /// episodes. The story becomes episode one; its cast and recap seed the
+  /// world, which then opens for polishing.
+  Future<void> _convertToWorld(BuildContext context, WidgetRef ref) async {
+    final nameC = TextEditingController(text: series.title);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Make this a world'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '"${series.title}" becomes the first episode of a world, and its '
+              'characters are saved so every new episode keeps them. You can '
+              'tidy the name, premise, and cast next.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameC,
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'World name'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Create world'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+
+    final world = await ref
+        .read(worldServiceProvider)
+        .fromSeries(series, name: nameC.text);
+    ref.invalidate(worldsForChildProvider(series.childId));
+    ref.invalidate(seriesForChildProvider(series.childId));
+    ref.invalidate(charactersForWorldProvider(world.id));
+    if (!context.mounted) return;
+    ref.read(activeWorldProvider.notifier).select(world);
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => WorldEditScreen(world: world)),
     );
   }
 

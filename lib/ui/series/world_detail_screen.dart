@@ -5,7 +5,6 @@ import '../../app_providers.dart';
 import '../../domain/models/series.dart';
 import '../story/story_chapters_screen.dart';
 import 'new_series_screen.dart';
-import 'theme_catalog.dart';
 import 'world_edit_screen.dart';
 
 /// A single world (universe): what it's about and the episodes told in it, plus
@@ -59,19 +58,7 @@ class WorldDetailScreen extends ConsumerWidget {
         children: [
           if (world.premise.trim().isNotEmpty) ...[
             Text(world.premise, style: theme.textTheme.bodyMedium),
-            const SizedBox(height: 12),
           ],
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final t in world.allThemes)
-                Chip(
-                  label: Text('${metaFor(t).emoji} ${metaFor(t).label}'),
-                  visualDensity: VisualDensity.compact,
-                ),
-            ],
-          ),
           const SizedBox(height: 24),
           Text('Episodes', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),

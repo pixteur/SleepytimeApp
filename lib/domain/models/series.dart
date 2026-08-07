@@ -68,6 +68,7 @@ class Series {
   Series copyWith({
     String? title,
     bool? autoTitle,
+    String? worldId,
     String? seedSummary,
     String? storyBible,
     SeriesStatus? status,
@@ -79,7 +80,7 @@ class Series {
       theme: theme,
       extraThemes: extraThemes,
       autoTitle: autoTitle ?? this.autoTitle,
-      worldId: worldId,
+      worldId: worldId ?? this.worldId,
       customTheme: customTheme,
       heroMode: heroMode,
       heroName: heroName,
