@@ -49,6 +49,17 @@ class _BookshelfScreenState extends ConsumerState<BookshelfScreen> {
 
   Future<void> _importDemo(String childId) async {
     try {
+      final existing = await ref.read(seriesServiceProvider).forChild(childId);
+      if (existing.any((s) => s.title == 'Obsidian Stone')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('“Obsidian Stone” is already on the bookshelf.'),
+            ),
+          );
+        }
+        return;
+      }
       final data = await rootBundle.load(_demoAsset);
       await ref
           .read(sleepyServiceProvider)
@@ -79,10 +90,23 @@ class _BookshelfScreenState extends ConsumerState<BookshelfScreen> {
       appBar: AppBar(
         title: const Text('Bookshelf'),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.file_download_outlined),
-            tooltip: 'Import a .sleepy story',
-            onPressed: () => _import(context, ref, child.id),
+            tooltip: 'Add a story',
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'demo',
+                child: Text('✨ Load the demo story'),
+              ),
+              PopupMenuItem(
+                value: 'import',
+                child: Text('Import a .sleepy file…'),
+              ),
+            ],
+            onSelected: (v) {
+              if (v == 'demo') _importDemo(child.id);
+              if (v == 'import') _import(context, ref, child.id);
+            },
           ),
         ],
       ),
