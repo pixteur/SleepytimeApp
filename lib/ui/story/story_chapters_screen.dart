@@ -194,6 +194,15 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
   String _reason(Object error) =>
       error is StateError ? error.message : friendlyProviderError(error);
 
+  /// The chapter at [seq], or null if it isn't there (e.g. it was deleted after
+  /// the reading position was saved).
+  Beat? _find(List<Beat> beats, int seq) {
+    for (final b in beats) {
+      if (b.seq == seq) return b;
+    }
+    return null;
+  }
+
   Future<void> _open(Beat beat) async {
     await Navigator.push(
       context,
@@ -303,47 +312,68 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
               tooltip: 'Rename story',
               onPressed: () => _rename(series),
             ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.ios_share_rounded),
-            tooltip: 'Export / share',
-            enabled: beats.isNotEmpty,
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'sleepy',
-                child: Text('Story file (.sleepy, with audio)'),
-              ),
-              const PopupMenuItem(
-                value: 'text',
-                child: Text('Text to share (friend rebuilds voice)'),
-              ),
-              if (parentMode) ...[
-                const PopupMenuItem(
+          // Every export sends a story out of the app — as a file to pass on,
+          // or onto another device — so the whole menu is grown-ups only.
+          if (parentMode)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.ios_share_rounded),
+              tooltip: 'Export / share',
+              enabled: beats.isNotEmpty,
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'sleepy',
+                  child: Text('Story file (.sleepy, with audio)'),
+                ),
+                PopupMenuItem(
+                  value: 'text',
+                  child: Text('Text to share (friend rebuilds voice)'),
+                ),
+                PopupMenuItem(
                   value: 'audiobook',
-                  child: Text('Audiobook — single file (parents)'),
+                  child: Text('Audiobook — single file'),
                 ),
-                const PopupMenuItem(
-                  value: 'lunii',
-                  child: Text('Lunii story pack (parents)'),
-                ),
+                PopupMenuItem(value: 'lunii', child: Text('Lunii story pack')),
               ],
-            ],
-            onSelected: (v) {
-              if (v == 'sleepy') _export(series);
-              if (v == 'text') _exportText(series);
-              if (v == 'audiobook') _exportAudiobook(series);
-              if (v == 'lunii') _exportLunii(series);
-            },
-          ),
+              onSelected: (v) {
+                if (v == 'sleepy') _export(series);
+                if (v == 'text') _exportText(series);
+                if (v == 'audiobook') _exportAudiobook(series);
+                if (v == 'lunii') _exportLunii(series);
+              },
+            ),
         ],
       ),
       body: Column(
         children: [
+          // Pick the story back up where it was left, if it was left part-way.
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: FilledButton.icon(
-              onPressed: beats.isEmpty ? null : () => _open(beats.first),
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: const Text('Start of story'),
+            child: Builder(
+              builder: (_) {
+                final resumeAt = series.isInProgress
+                    ? _find(beats, series.lastReadSeq!)
+                    : null;
+                return Column(
+                  children: [
+                    FilledButton.icon(
+                      onPressed: beats.isEmpty
+                          ? null
+                          : () => _open(resumeAt ?? beats.first),
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      label: Text(
+                        resumeAt == null
+                            ? 'Start of story'
+                            : 'Continue — chapter ${resumeAt.seq + 1}',
+                      ),
+                    ),
+                    if (resumeAt != null)
+                      TextButton(
+                        onPressed: () => _open(beats.first),
+                        child: const Text('Start from the beginning'),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
           if (_building) const LinearProgressIndicator(),

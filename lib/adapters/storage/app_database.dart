@@ -141,6 +141,11 @@ class SeriesTable extends Table {
   TextColumn get storyBible => text().withDefault(const Constant(''))();
   TextColumn get branchedFromBeatId => text().nullable()();
   IntColumn get status => intEnum<SeriesStatus>()();
+
+  /// Reading position: the chapter last opened and when, so the bookshelf can
+  /// offer "Continue — Chapter 4".
+  IntColumn get lastReadSeq => integer().nullable()();
+  DateTimeColumn get lastReadAt => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 
@@ -218,7 +223,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.memory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   /// Opens the on-device database file (app documents dir). Foreign keys on.
   static AppDatabase open() {
@@ -255,6 +260,12 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(seriesTable, seriesTable.autoTitle);
         await m.addColumn(worlds, worlds.extraThemes);
         await m.addColumn(worlds, worlds.castChanges);
+      }
+      // v5 → v6: reading position, so a part-heard story can be resumed.
+      // Existing stories start with no position (null = never opened).
+      if (from < 6) {
+        await m.addColumn(seriesTable, seriesTable.lastReadSeq);
+        await m.addColumn(seriesTable, seriesTable.lastReadAt);
       }
     },
     beforeOpen: (details) async {
