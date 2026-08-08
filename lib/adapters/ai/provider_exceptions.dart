@@ -38,13 +38,22 @@ String friendlyProviderError(Object error) {
   if (error is ProviderRequestException) {
     if (error.statusCode == 429) {
       final m = error.message.toLowerCase();
-      if (m.contains('per_day') ||
-          m.contains('quota') ||
-          m.contains('billing')) {
-        return 'You\'ve used today\'s free voice quota (your key is fine). It '
-            'resets in a few hours — or raise the limit in your provider\'s plan.';
+      // Only a body that actually names a daily window means a daily limit.
+      // Providers return "quota" and RESOURCE_EXHAUSTED for per-minute limits
+      // too, which paid plans have as well — treating those as a free tier
+      // running out sent paying customers off to check their billing when all
+      // they needed to do was wait a moment.
+      final daily =
+          m.contains('per_day') ||
+          m.contains('perday') ||
+          m.contains('per day') ||
+          m.contains('daily');
+      if (daily) {
+        return 'This voice has reached its limit for today. It resets on the '
+            'provider\'s daily cycle, or you can raise it in your plan.';
       }
-      return 'The voice is busy right now. Please try again in a moment.';
+      return 'The voice provider asked us to slow down for a moment — this '
+          'happens on paid plans too. It should pick up again shortly.';
     }
     if (error.statusCode == 401 || error.statusCode == 403) {
       return 'That voice key was turned away — please check it in Voice setup.';
