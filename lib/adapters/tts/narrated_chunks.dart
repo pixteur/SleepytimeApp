@@ -59,9 +59,16 @@ List<NarratedChunk> narratedChunks(
   final out = <NarratedChunk>[];
   var runStart = 0;
   for (var i = 1; i <= paragraphs.length; i++) {
+    // Split on a change of FEELING only, not on any difference at all.
+    //
+    // Every boundary is a separate request, and a voice model re-derives its
+    // delivery per request — so chunks carrying different instructions come
+    // back at different timbres and levels, and a chapter split five ways is
+    // audibly read by five slightly different narrators. Pace and phrasing
+    // notes still travel with their group; they just stop cutting the audio.
     final endOfRun =
         i == paragraphs.length ||
-        notes.cueAt(i).encode() != notes.cueAt(runStart).encode();
+        notes.cueAt(i).emotion != notes.cueAt(runStart).emotion;
     if (!endOfRun) continue;
     final run = paragraphs.sublist(runStart, i).join('\n\n');
     for (final chunk in sizeChunker(run)) {

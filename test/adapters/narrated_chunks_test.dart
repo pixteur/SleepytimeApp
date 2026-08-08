@@ -38,30 +38,30 @@ void main() {
     expect(chunks.single.cue.pace, 'slow');
   });
 
-  test('a boundary appears exactly where the direction changes', () {
+  test('a boundary appears where the feeling changes', () {
     const notes = NarrationNotes(
       cues: [
-        NarrationCue(pace: 'slow'),
-        NarrationCue(pace: 'slow'),
-        NarrationCue(pace: 'brisk'),
-        NarrationCue(pace: 'brisk'),
+        NarrationCue(emotion: 'calm'),
+        NarrationCue(emotion: 'calm'),
+        NarrationCue(emotion: 'excited'),
+        NarrationCue(emotion: 'excited'),
       ],
     );
     final chunks = narratedChunks(text, notes, _whole);
     expect(chunks.length, 2);
     expect(chunks[0].text, 'One.\n\nTwo.');
-    expect(chunks[0].cue.pace, 'slow');
+    expect(chunks[0].cue.emotion, 'calm');
     expect(chunks[1].text, 'Three.\n\nFour.');
-    expect(chunks[1].cue.pace, 'brisk');
+    expect(chunks[1].cue.emotion, 'excited');
   });
 
-  test('a blank cue between two directed runs is its own chunk', () {
+  test('an undirected paragraph between two feelings is its own chunk', () {
     const notes = NarrationNotes(
       cues: [
-        NarrationCue(pace: 'slow'),
+        NarrationCue(emotion: 'calm'),
         NarrationCue(),
-        NarrationCue(pace: 'brisk'),
-        NarrationCue(pace: 'brisk'),
+        NarrationCue(emotion: 'excited'),
+        NarrationCue(emotion: 'excited'),
       ],
     );
     final chunks = narratedChunks(text, notes, _whole);
@@ -76,17 +76,31 @@ void main() {
   test('size chunking still runs inside a same-direction run', () {
     const notes = NarrationNotes(
       cues: [
+        NarrationCue(emotion: 'calm'),
+        NarrationCue(emotion: 'calm'),
+        NarrationCue(emotion: 'excited'),
+        NarrationCue(emotion: 'excited'),
+      ],
+    );
+    final chunks = narratedChunks(text, notes, _halve);
+    expect(chunks.length, 4, reason: '2 runs x 2 halves');
+    expect(chunks[0].cue.emotion, 'calm');
+    expect(chunks[1].cue.emotion, 'calm');
+    expect(chunks[2].cue.emotion, 'excited');
+  });
+
+  test('a change of pace alone does not split the audio', () {
+    // Splitting here would hand the listener two separately synthesized
+    // narrators for the sake of one adverb.
+    const notes = NarrationNotes(
+      cues: [
         NarrationCue(pace: 'slow'),
         NarrationCue(pace: 'slow'),
         NarrationCue(pace: 'brisk'),
         NarrationCue(pace: 'brisk'),
       ],
     );
-    final chunks = narratedChunks(text, notes, _halve);
-    expect(chunks.length, 4, reason: '2 runs x 2 halves');
-    expect(chunks[0].cue.pace, 'slow');
-    expect(chunks[1].cue.pace, 'slow');
-    expect(chunks[2].cue.pace, 'brisk');
+    expect(narratedChunks(text, notes, _whole).length, 1);
   });
 
   test('the cue rides into the cache key so a re-cue re-synthesizes', () {
@@ -99,10 +113,10 @@ void main() {
   });
 
   test('fewer cues than paragraphs leaves the tail undirected', () {
-    const notes = NarrationNotes(cues: [NarrationCue(pace: 'slow')]);
+    const notes = NarrationNotes(cues: [NarrationCue(emotion: 'calm')]);
     final chunks = narratedChunks(text, notes, _whole);
     expect(chunks.first.text, 'One.');
-    expect(chunks.first.cue.pace, 'slow');
+    expect(chunks.first.cue.emotion, 'calm');
     expect(chunks.last.cue.isEmpty, isTrue);
   });
 
