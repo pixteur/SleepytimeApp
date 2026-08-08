@@ -26,6 +26,22 @@ class AppPrefs {
   Future<void> setSelectedProvider(String name) =>
       _prefs.setString(_providerKey, name);
 
+  // ── API key hints ───────────────────────────────────────────────
+
+  /// A non-sensitive reminder of which key is stored for a provider, e.g.
+  /// `AIza••••7f2c`, so a parent can tell at a glance *which* key is saved
+  /// without the app ever reading the secret back out of the OS key store.
+  /// Empty when no key is saved. Written alongside the key; cleared with it.
+  String keyHint(String keyName) => _prefs.getString(_hintKey(keyName)) ?? '';
+
+  Future<void> setKeyHint(String keyName, String hint) =>
+      _prefs.setString(_hintKey(keyName), hint);
+
+  Future<void> clearKeyHint(String keyName) =>
+      _prefs.remove(_hintKey(keyName));
+
+  static String _hintKey(String keyName) => 'key_hint_$keyName';
+
   // ── Voice ───────────────────────────────────────────────────────
   static const _voiceEngineKey = 'voice_engine';
 

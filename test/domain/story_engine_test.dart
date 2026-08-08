@@ -102,6 +102,34 @@ class _CapturingProvider implements AiProvider {
   }
 }
 
+/// Answers the draft call and the editorial call differently, so the second
+/// pass can be told apart from the first. Optionally throws on the edit.
+class _TwoPassProvider implements AiProvider {
+  _TwoPassProvider({
+    required this.draft,
+    this.polish,
+    this.throwOnPolish = false,
+  });
+
+  final StorySegment draft;
+  final StorySegment? polish;
+  final bool throwOnPolish;
+  int calls = 0;
+  final prompts = <StoryPrompt>[];
+
+  @override
+  ProviderId get id => ProviderId.fake;
+  @override
+  Future<bool> isReady() async => true;
+  @override
+  Future<StorySegment> generate(StoryPrompt prompt) async {
+    prompts.add(prompt);
+    if (calls++ == 0) return draft;
+    if (throwOnPolish) throw StateError('polish failed');
+    return polish ?? draft;
+  }
+}
+
 void main() {
   const child = ChildProfile(id: 'c1', displayName: 'Aiden', age: 3);
   const series = Series(
@@ -309,6 +337,147 @@ void main() {
     });
   });
 
+  group('paragraph repair', () {
+    const draft = 'One one one.\n\nTwo two two.\n\nThree three three.';
+
+    test('single newlines are promoted back to real breaks', () {
+      final fixed = StoryEngine.restoreParagraphs(
+        'One one.\nTwo two.\nThree three.',
+        draft,
+      );
+      expect(fixed, 'One one.\n\nTwo two.\n\nThree three.');
+    });
+
+    test('a chapter flattened to one block is rejected', () {
+      expect(
+        StoryEngine.restoreParagraphs('All of it as one long block.', draft),
+        isNull,
+      );
+    });
+
+    test('text that already has its breaks is left alone', () {
+      const good = 'A.\n\nB.\n\nC.\n\nD.';
+      expect(StoryEngine.restoreParagraphs(good, draft), good);
+    });
+
+    test('merging two short paragraphs is allowed', () {
+      final fixed = StoryEngine.restoreParagraphs('A and B.\n\nC.', draft);
+      expect(fixed, 'A and B.\n\nC.');
+    });
+
+    test('a single-paragraph draft imposes nothing', () {
+      expect(StoryEngine.restoreParagraphs('anything', 'one para'), 'anything');
+    });
+  });
+
+  group('editorial second pass', () {
+    // 12 words, so the guard bands land at 7 and 18.
+    const draft = StorySegment(
+      storyText: 'The cat sat. It was very very nice and it sat there.',
+      summary: 'A cat sat.',
+      rating: AgeRating.tiny,
+      chapterTitle: '"The Sitting Cat."',
+    );
+
+    test('the polished chapter is what gets saved', () async {
+      final ai = _TwoPassProvider(
+        draft: draft,
+        polish: const StorySegment(
+          storyText:
+              'The cat sat on the warm step and watched the sleepy garden.',
+          summary: 'A cat watches the garden.',
+          rating: AgeRating.tiny,
+          chapterTitle: 'The Sitting Cat',
+        ),
+      );
+      final beat = await StoryEngine(
+        ai: ai,
+        repo: repo,
+      ).takeTurn(child: child, series: series, intent: StoryIntent.dice);
+      expect(ai.calls, 2, reason: 'draft, then edit');
+      expect(beat.text, contains('sleepy garden'));
+      expect(beat.summary, 'A cat watches the garden.');
+    });
+
+    test('the editor is shown the draft it has to work on', () async {
+      final ai = _TwoPassProvider(draft: draft);
+      await StoryEngine(
+        ai: ai,
+        repo: repo,
+      ).takeTurn(child: child, series: series, intent: StoryIntent.dice);
+      final edit = ai.prompts.last;
+      expect(edit.user, contains('The cat sat.'));
+      // Written for the ear, and for the band the child is actually in.
+      expect(edit.system, contains('audiobook'));
+      expect(edit.system, contains('ages 2–4'));
+      expect(edit.system, contains('no semicolons'));
+      // The length band comes from the draft's own word count.
+      expect(edit.system, contains('the draft is 12 words'));
+    });
+
+    test('a polish that comes back as a summary is thrown away', () async {
+      final ai = _TwoPassProvider(
+        draft: draft,
+        polish: const StorySegment(
+          storyText: 'A cat.',
+          summary: 'A cat.',
+          rating: AgeRating.tiny,
+        ),
+      );
+      final beat = await StoryEngine(
+        ai: ai,
+        repo: repo,
+      ).takeTurn(child: child, series: series, intent: StoryIntent.dice);
+      expect(beat.text, contains('very very nice'), reason: 'draft kept');
+    });
+
+    test('a polish that errors still leaves a chapter', () async {
+      final ai = _TwoPassProvider(draft: draft, throwOnPolish: true);
+      final beat = await StoryEngine(
+        ai: ai,
+        repo: repo,
+      ).takeTurn(child: child, series: series, intent: StoryIntent.dice);
+      expect(beat.text, contains('very very nice'));
+    });
+
+    test('the edit cannot decide the story is over', () async {
+      final ai = _TwoPassProvider(
+        draft: draft,
+        polish: const StorySegment(
+          storyText:
+              'The cat sat on the warm step and watched the sleepy garden.',
+          summary: 'A cat watches the garden.',
+          rating: AgeRating.tiny,
+          isFinal: true, // the draft said otherwise
+        ),
+      );
+      final beat = await StoryEngine(
+        ai: ai,
+        repo: repo,
+      ).takeTurn(child: child, series: series, intent: StoryIntent.dice);
+      expect(beat.isFinal, isFalse);
+    });
+
+    test('the chapter title is tidied before it is saved', () async {
+      final ai = _TwoPassProvider(draft: draft);
+      final beat = await StoryEngine(
+        ai: ai,
+        repo: repo,
+        refinePass: false,
+      ).takeTurn(child: child, series: series, intent: StoryIntent.dice);
+      expect(beat.title, 'The Sitting Cat');
+    });
+
+    test('a fallback chapter is never sent for polishing', () async {
+      final ai = _TwoPassProvider(draft: draft);
+      await StoryEngine(
+        ai: _ThrowingProvider(),
+        repo: repo,
+      ).takeTurn(child: child, series: series, intent: StoryIntent.dice);
+      expect(ai.calls, 0);
+    });
+  });
+
   group('cast changes', () {
     const world = World(
       id: 'w1',
@@ -331,9 +500,12 @@ void main() {
 
     test('the first chapter is told to write the character out', () async {
       final ai = _CapturingProvider();
+      // No editorial pass: these assert on the *generation* prompt, and the
+      // refinement call would otherwise be the last one captured.
       await StoryEngine(
         ai: ai,
         repo: repo,
+        refinePass: false,
       ).takeTurn(child: child, series: episode, intent: StoryIntent.dice);
       expect(ai.lastPrompt!.user, contains('Leaving the story'));
       expect(ai.lastPrompt!.user, contains('Splat'));
@@ -344,7 +516,7 @@ void main() {
 
     test('a later chapter does not repeat the goodbye', () async {
       final ai = _CapturingProvider();
-      final engine = StoryEngine(ai: ai, repo: repo);
+      final engine = StoryEngine(ai: ai, repo: repo, refinePass: false);
       await engine.takeTurn(
         child: child,
         series: episode,

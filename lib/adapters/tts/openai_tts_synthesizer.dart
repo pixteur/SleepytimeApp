@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import '../../domain/models/narration.dart';
 import '../ai/provider_exceptions.dart';
 import '../ai/story_segment_codec.dart';
 import '../secrets/secret_store.dart';
@@ -50,6 +51,8 @@ class OpenAiTtsSynthesizer implements TtsSynthesizer {
     String text, {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
+    NarrationCue cue = const NarrationCue(),
+    String standingDirection = '',
   }) async {
     final key = await _secrets.readKey(keyName);
     if (key == null || key.isEmpty) {
@@ -66,9 +69,14 @@ class OpenAiTtsSynthesizer implements TtsSynthesizer {
         'voice': voiceName,
         'input': text,
         'response_format': 'mp3',
-        'instructions':
-            'Read in a warm, gentle, soothing bedtime-storyteller voice for a '
-            'young child. Unhurried and calming.',
+        // The bedtime baseline always applies; the story's own direction is
+        // added after it, so a cue colours the reading rather than replacing
+        // the register a child is being settled with.
+        'instructions': [
+          'Read in a warm, gentle, soothing bedtime-storyteller voice for a '
+              'young child. Unhurried and calming.',
+          narrationDirection(standingDirection, cue),
+        ].where((s) => s.isNotEmpty).join(' '),
       }),
     );
     if (response.statusCode != 200) {

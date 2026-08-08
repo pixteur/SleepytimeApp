@@ -40,6 +40,7 @@ class GeminiProvider implements AiProvider {
     'properties': {
       'story_text': {'type': 'STRING'},
       'story_title': {'type': 'STRING'},
+      'chapter_title': {'type': 'STRING'},
       'summary': {'type': 'STRING'},
       'rating': {
         'type': 'STRING',
@@ -59,6 +60,15 @@ class GeminiProvider implements AiProvider {
         'items': {'type': 'STRING'},
       },
       'is_final': {'type': 'BOOLEAN'},
+      'narration_style': {'type': 'STRING'},
+      'character_voices': {
+        'type': 'ARRAY',
+        'items': {'type': 'STRING'},
+      },
+      'narration_cues': {
+        'type': 'ARRAY',
+        'items': {'type': 'STRING'},
+      },
     },
     'required': storySegmentFields,
   };

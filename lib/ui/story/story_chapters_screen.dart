@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../adapters/ai/provider_exceptions.dart';
-import '../../adapters/tts/audio_cache.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../../domain/models/series.dart';
@@ -82,7 +81,10 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
         _warn(engine.lastFallbackReason);
         beats = await repo.loadBeats(series.id);
       }
-    } catch (e) {
+    } catch (e, stack) {
+      // The banner can only carry a sentence; without the stack a failure here
+      // is guesswork, and this is the path a broken bedtime actually takes.
+      debugPrintStack(stackTrace: stack, label: 'story build failed: $e');
       if (mounted) {
         showErrorBanner(context, 'Could not finish building the story: $e');
       }
@@ -161,6 +163,31 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
       if (mounted) showErrorBanner(context, 'Audiobook saved: $path');
     } catch (e) {
       if (mounted) showErrorBanner(context, 'Audiobook export: ${_reason(e)}');
+    }
+  }
+
+  /// Re-edit a finished story into a second, polished copy. The original is
+  /// left exactly as it was, so the two can be read side by side.
+  Future<void> _refineStory(Series series) async {
+    final child = ref.read(activeChildProvider);
+    if (child == null) return;
+    setState(() => _building = true);
+    try {
+      final copy = await ref
+          .read(seriesServiceProvider)
+          .refineIntoNewVersion(
+            engine: ref.read(storyEngineProvider),
+            child: child,
+            source: series,
+          );
+      ref.invalidate(seriesForChildProvider(child.id));
+      if (mounted) {
+        showErrorBanner(context, 'Saved a refined copy: "${copy.title}".');
+      }
+    } catch (e) {
+      if (mounted) showErrorBanner(context, 'Refine: ${_reason(e)}');
+    } finally {
+      if (mounted) setState(() => _building = false);
     }
   }
 
@@ -291,7 +318,6 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
     final parentMode = ref.watch(parentModeProvider);
     final lang = ref.watch(activeChildProvider)?.language ?? 'en';
     final voiceSig = ref.watch(ttsProvider).voiceSignature;
-    final cache = ref.watch(audioCacheProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -325,6 +351,10 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                   value: 'lunii',
                   child: Text('Lunii story pack (parents)'),
                 ),
+                const PopupMenuItem(
+                  value: 'refine',
+                  child: Text('Refine into a new version (parents)'),
+                ),
               ],
             ],
             onSelected: (v) {
@@ -332,6 +362,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
               if (v == 'text') _exportText(series);
               if (v == 'audiobook') _exportAudiobook(series);
               if (v == 'lunii') _exportLunii(series);
+              if (v == 'refine') _refineStory(series);
             },
           ),
         ],
@@ -358,7 +389,15 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                       return Card(
                         child: ListTile(
                           leading: CircleAvatar(child: Text('${b.seq + 1}')),
-                          title: Text('Chapter ${b.seq + 1}'),
+                          // The number alone for chapters written before
+                          // titles existed, and for fallback chapters.
+                          title: Text(
+                            b.title.trim().isEmpty
+                                ? 'Chapter ${b.seq + 1}'
+                                : 'Chapter ${b.seq + 1} · ${b.title.trim()}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           subtitle: Text(
                             b.summary,
                             maxLines: 2,
@@ -368,16 +407,21 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _DownloadIcon(
-                                cache: cache,
-                                // Trim to match how playback keys its audio (it
-                                // synthesizes the trimmed chapter text); otherwise
-                                // a trailing newline makes the badge never match.
-                                cacheKey: audioCacheKey(
-                                  '$voiceSig|$lang|${b.text.trim()}',
-                                ),
+                                signature: '$voiceSig|$lang|${b.id}',
+                                isCached: () => ref
+                                    .read(ttsProvider)
+                                    .isCached(
+                                      b.text,
+                                      language: lang,
+                                      notes: b.narration,
+                                    ),
                                 onDownload: () => ref
                                     .read(ttsProvider)
-                                    .preload(b.text, language: lang),
+                                    .preload(
+                                      b.text,
+                                      language: lang,
+                                      notes: b.narration,
+                                    ),
                               ),
                               if (parentMode)
                                 PopupMenuButton<String>(
@@ -431,13 +475,17 @@ class _Writing extends StatelessWidget {
 /// synthesizes (with the current cloud voice), downloads, and saves it.
 class _DownloadIcon extends StatefulWidget {
   const _DownloadIcon({
-    required this.cache,
-    required this.cacheKey,
+    required this.isCached,
+    required this.signature,
     required this.onDownload,
   });
 
-  final AudioCache cache;
-  final String cacheKey;
+  /// Asks the voice provider — the only thing that knows how a chapter is
+  /// chunked and keyed — rather than rebuilding a cache key here.
+  final Future<bool> Function() isCached;
+
+  /// Changes whenever the voice, language or text does, so the badge rechecks.
+  final String signature;
   final Future<void> Function() onDownload;
 
   @override
@@ -457,12 +505,12 @@ class _DownloadIconState extends State<_DownloadIcon> {
   @override
   void didUpdateWidget(_DownloadIcon old) {
     super.didUpdateWidget(old);
-    if (old.cacheKey != widget.cacheKey) _check();
+    if (old.signature != widget.signature) _check();
   }
 
   Future<void> _check() async {
-    final bytes = await widget.cache.get(widget.cacheKey);
-    if (mounted) setState(() => _has = bytes != null && bytes.isNotEmpty);
+    final has = await widget.isCached();
+    if (mounted) setState(() => _has = has);
   }
 
   Future<void> _download() async {

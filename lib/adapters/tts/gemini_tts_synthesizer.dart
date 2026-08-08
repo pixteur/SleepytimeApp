@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import '../../domain/models/narration.dart';
 import '../ai/provider_exceptions.dart';
 import '../ai/story_segment_codec.dart';
 import '../secrets/secret_store.dart';
@@ -49,8 +50,15 @@ class GeminiTtsSynthesizer implements TtsSynthesizer {
     String text, {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
+    NarrationCue cue = const NarrationCue(),
+    String standingDirection = '',
   }) async {
     final key = await _secrets.readKey(keyName);
+    // Gemini's TTS takes its style as plain language ahead of the text. The
+    // direction is a separate sentence before a colon, never mixed into the
+    // story, so none of it can be spoken as part of the chapter.
+    final direction = narrationDirection(standingDirection, cue);
+    final prompt = direction.isEmpty ? text : '$direction\n\n$text';
     if (key == null || key.isEmpty) {
       throw const ProviderNotConfigured('No Gemini API key configured.');
     }
@@ -61,7 +69,7 @@ class GeminiTtsSynthesizer implements TtsSynthesizer {
         'contents': [
           {
             'parts': [
-              {'text': text},
+              {'text': prompt},
             ],
           },
         ],

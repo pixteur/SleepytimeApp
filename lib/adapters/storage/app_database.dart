@@ -159,6 +159,11 @@ class Beats extends Table {
   TextColumn get chosenTwist => text().nullable()();
   TextColumn get storyText => text()();
   TextColumn get summary => text()();
+  TextColumn get chapterTitle => text().withDefault(const Constant(''))();
+
+  /// Narration direction as JSON — see `NarrationNotes`. One blob rather than
+  /// three columns: it is never queried, only handed to the voice.
+  TextColumn get narrationJson => text().withDefault(const Constant('{}'))();
   IntColumn get rating => intEnum<AgeRating>()();
   TextColumn get setting => text().withDefault(const Constant(''))();
   TextColumn get characters => text().map(const _StringListConverter())();
@@ -218,7 +223,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.memory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 8;
 
   /// Opens the on-device database file (app documents dir). Foreign keys on.
   static AppDatabase open() {
@@ -256,9 +261,49 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(worlds, worlds.extraThemes);
         await m.addColumn(worlds, worlds.castChanges);
       }
+      // v6 → v7: per-chapter titles. Chapters written before this keep the
+      // empty default and simply show their number, as they always did.
+      //
+      // This is 7 rather than 6 because `main` already spent 6 on reading
+      // position, and every branch on a dev machine shares the one database
+      // in the documents folder. A branch that reuses a version number the
+      // database has already passed gets no upgrade callback at all: the
+      // column is silently never added, and the failure surfaces far away as
+      // a null-check crash when drift maps a row.
+      if (from < 7) {
+        await _addColumnIfMissing(
+          'beats',
+          'chapter_title',
+          () => m.addColumn(beats, beats.chapterTitle),
+        );
+      }
+      // v7 → v8: narration direction for the voice.
+      if (from < 8) {
+        await _addColumnIfMissing(
+          'beats',
+          'narration_json',
+          () => m.addColumn(beats, beats.narrationJson),
+        );
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+
+  /// Add a column only when it isn't there already.
+  ///
+  /// A database created fresh on this branch got the column from `onCreate`
+  /// and still reports the older version, so a plain `addColumn` would fail
+  /// with "duplicate column name". Checking first makes the step safe to run
+  /// against a database in either state.
+  Future<void> _addColumnIfMissing(
+    String table,
+    String column,
+    Future<void> Function() add,
+  ) async {
+    final info = await customSelect('PRAGMA table_info($table)').get();
+    final present = info.any((row) => row.read<String>('name') == column);
+    if (!present) await add();
+  }
 }

@@ -3,6 +3,7 @@ import 'models/beat.dart';
 import 'models/child_profile.dart';
 import 'models/series.dart';
 import 'models/story_request.dart';
+import 'models/story_segment.dart';
 
 /// The assembled prompt handed to an `AiProvider`. The provider only translates
 /// this into its wire format (and asks for the structured fields).
@@ -67,6 +68,21 @@ class PromptBuilder {
         '(2–6 words, no quotes, no subtitle) drawn from what actually happens '
         'in it — the kind of title a child would recognise on a book spine. '
         'Keep it the same in later chapters of the same story.',
+      )
+      ..writeln(
+        'And return "chapter_title": a title for THIS chapter only (2–5 words, '
+        'no quotes, no "Chapter N" prefix, no ending punctuation) naming the '
+        'one thing that happens in it. It is shown beside the chapter number, '
+        'so make it concrete and inviting rather than abstract — "The Lost '
+        'Mitten", not "A New Beginning". Never give away the ending, and never '
+        'reuse an earlier chapter\'s title.',
+      )
+      ..writeln(
+        'Finally, "narration_style": one line describing the voice this whole '
+        'chapter should be read aloud in; and "character_voices": one entry '
+        'per speaking character, like "Leo — precise and warm, with a soft '
+        'metallic edge". Return "narration_cues" as an empty array; the '
+        'editing pass writes those against the finished prose.',
       );
 
     final user = StringBuffer();
@@ -117,19 +133,328 @@ class PromptBuilder {
 
     user.writeln(_intentLine(req));
 
-    if (req.series.bilingualEnabled && req.series.secondaryLanguage != null) {
-      final blend = req.series.bilingualBlend?.name ?? 'phrases';
-      user.writeln(
-        'Bilingual mode: naturally weave in '
-        '${_languageName(req.series.secondaryLanguage!)} at a "$blend" level, '
-        'keeping meaning recoverable from context, and tag which spans are in '
-        'which language.',
-      );
-    }
+    _writeLanguageMode(user, req);
 
     return StoryPrompt(
       system: system.toString().trim(),
       user: user.toString().trim(),
+    );
+  }
+
+  /// The second pass: hand a freshly drafted chapter back to the model as an
+  /// editor rather than an author.
+  ///
+  /// The draft is never shown to the child, so this is not a "would you like
+  /// to improve it?" request — it is a copy-edit with a fixed brief. Two
+  /// failure modes drive the wording: a model asked to *improve* prose will
+  /// rewrite it wholesale and drift off the plot the summary and open threads
+  /// already describe, and a model editing for the page will produce sentences
+  /// that read well silently but trip a synthetic voice. So the prompt pins
+  /// the plot and the length, and treats read-aloud quality as a first-class
+  /// goal. See `docs/story-quality.md`.
+  StoryPrompt buildRefinement(
+    StoryRequest req,
+    StorySegment draft, {
+    List<String> bannedThemes = BannedThemes.defaults,
+  }) {
+    final band = req.child.ageBand;
+    final words = _wordCount(draft.storyText);
+    final low = (words * 0.9).round();
+    final high = (words * 1.1).round();
+    final language = _languageName(req.child.language);
+
+    final system =
+        StringBuffer()
+          ..writeln(
+            'You are an experienced children\'s audiobook writer and story '
+            'editor, making a second pass over one chapter of a bedtime story '
+            'that has already been drafted. You are not writing a new chapter. '
+            'You are turning THIS chapter into a polished narration script.',
+          )
+          ..writeln()
+          ..writeln(
+            'Write for this audience, and judge every edit against it:',
+          )
+          ..writeln(AgePolicy.policyFor(band))
+          ..writeln('Universal rules:')
+          ..writeAll(AgePolicy.universalRules.map((r) => '- $r'), '\n')
+          ..writeln()
+          ..writeln('Work in this order of priority:')
+          ..writeln()
+          ..writeln(
+            '1. ERRORS. Grammar, spelling, punctuation, tense, agreement, '
+            'broken or half-finished sentences.',
+          )
+          ..writeln(
+            '2. CONTINUITY. Names and their exact spellings, pronouns, ages, '
+            'relationships, places, objects, time of day, weather, and '
+            'anything established earlier in the story. Where the draft '
+            'contradicts the established facts below, the established facts '
+            'win. Check the chapter against itself too: a character cannot put '
+            'down something they never picked up. Keep every character\'s '
+            'species, role and pronouns exactly as the cast list gives them — '
+            'a robot is never described as an animal. Keep cause and effect '
+            'clear from scene to scene. Cut details introduced and then never '
+            'used. Do not re-explain what a listener who has heard the earlier '
+            'chapters already knows.',
+          )
+          ..writeln(
+            '3. READ-ALOUD QUALITY. This text will be SPOKEN by a synthetic '
+            'voice, never read silently, and that changes what "good" means:',
+          )
+          ..writeln(
+            '   - Every sentence must be speakable in one comfortable breath, '
+            'or carry punctuation where the voice should breathe. Break up '
+            'sentences past about 25 words.',
+          )
+          ..writeln(
+            '   - Remove tongue-twisters, accidental rhyme, unintended '
+            'alliteration pile-ups, and clusters of hissing s-sounds.',
+          )
+          ..writeln(
+            '   - Prefer words a speech engine pronounces reliably. Avoid '
+            'invented spellings, unusual proper nouns, and words whose stress '
+            'is ambiguous in $language.',
+          )
+          ..writeln(
+            '   - Strip anything that only works on the page: parentheses, '
+            'asterisks, emoji, ALL-CAPS, bullet points, headings, stage '
+            'directions, footnotes, tables. Write numbers, dates, symbols and '
+            'abbreviations out as words.',
+          )
+          ..writeln(
+            '   - Use no em dashes and no semicolons. A speech engine reads '
+            'them as an abrupt stop or ignores them entirely, so recast those '
+            'sentences with a comma, a full stop, or two sentences.',
+          )
+          ..writeln(
+            '   - Make it obvious who is speaking from the words themselves, '
+            'so the narration works without seeing the punctuation, and never '
+            'lean on italics or formatting to carry emphasis.',
+          )
+          ..writeln(
+            '4. PROSE. Trade abstraction for concrete, child-scale sensory '
+            'detail — what a thing looked, sounded, smelled and felt like. Cut '
+            'throat-clearing openings, redundant adverbs, doubled adjectives, '
+            'and the reflexes "suddenly", "very", "really", "began to", '
+            '"started to". Prefer a strong verb to an adverb propping up a '
+            'weak one. Vary sentence length on purpose: a short sentence after '
+            'two long ones lands. Show a feeling in behaviour first, then name '
+            'it once, plainly. Keep at most one or two stretch words a child '
+            'might not know, each recoverable from context. In dialogue, let '
+            'the line carry the tone and trim the tags back to "said" and '
+            '"asked".',
+          )
+          ..writeln(
+            '5. REPETITION IS OFTEN THE POINT. A returning phrase, a refrain, '
+            'a rule of three — these are craft in children\'s writing. Keep '
+            'them and sharpen them. Only remove repetition that looks '
+            'accidental: the same word or image reused within a few sentences '
+            'to no effect.',
+          )
+          ..writeln(
+            '6. BEDTIME FUNCTION. The chapter has to settle a child, not wind '
+            'one up. Open with a line that invites a listener in and makes '
+            'them curious. Let the characters get through their problem by '
+            'noticing things, being kind, working together and being '
+            'inventive. Keep any suspense mild, brief and reassuring, and keep '
+            'the whole chapter emotionally safe. Then let the energy fall '
+            'toward the end: slow the pace, and close on a calm, comforting '
+            'image rather than an abrupt cliffhanger. Ease the closing lines '
+            'down without changing what actually happens.',
+          )
+          ..writeln()
+          ..writeln('HARD CONSTRAINTS. Breaking any of these makes the result '
+              'unusable:')
+          ..writeln(
+            '- LENGTH: the draft is $words words. Return between $low and '
+            '$high words. Do not compress it into a summary and do not pad it.',
+          )
+          ..writeln(
+            '- DO NOT CHANGE WHAT HAPPENS. No new named characters, no new '
+            'places, no new or removed events. Same opening situation, same '
+            'closing situation. Another chapter has already been planned '
+            'around this one\'s ending.',
+          )
+          ..writeln(
+            '- "is_final" stays ${draft.isFinal}. Do not resolve a story that '
+            'was left open, and do not reopen one that was closed.',
+          )
+          ..writeln('- Stay in $language. Do not translate any part of it.')
+          ..writeln(
+            '- Keep the audience band "${band.name}" and return "rating" as '
+            '"${band.name}".',
+          )
+          ..writeln(
+            '- These themes must remain entirely absent: '
+            '${bannedThemes.join(', ')}.',
+          )
+          ..writeln(
+            '- Never bolt a moral onto the end. If the draft states its lesson '
+            'outright, cut the statement and let the story carry it.',
+          )
+          ..writeln()
+          ..writeln(
+            'A LIGHT PASS IS A SUCCESS. If the draft is already good, change '
+            'only what genuinely warrants changing and return the rest '
+            'untouched. Do not rewrite to show effort, and do not flatten a '
+            'voice that is already working.',
+          )
+          ..writeln()
+          ..writeln(
+            'KEEP THE PARAGRAPHS. Separate every paragraph in "story_text" '
+            'with a blank line, and return about as many paragraphs as the '
+            'draft has. The reader speaks one paragraph at a time and matches '
+            'the narration cues to them in order, so a chapter returned as one '
+            'unbroken block cannot be read aloud at all.',
+          )
+          ..writeln()
+          ..writeln(
+            'Return the complete refined chapter in "story_text" — the whole '
+            'thing, not a diff or a note. Return "summary", "characters" and '
+            '"open_threads" unchanged unless your edits made them inaccurate. '
+            'Keep "story_title" and "chapter_title" as they are unless they '
+            'misname what actually happens.',
+          )
+          ..writeln()
+          ..writeln('DIRECTION FOR THE NARRATOR.')
+          ..writeln(
+            'A voice model reads this chapter aloud, so also write its '
+            'direction. None of it goes in "story_text" — that text is printed '
+            'on screen and exported, and a voice engine handed markup it does '
+            'not recognise reads the markup out loud.',
+          )
+          ..writeln(
+            '- "narration_style": one line for the whole chapter, e.g. '
+            '"unhurried and close, like a parent at the bedside".',
+          )
+          ..writeln(
+            '- "character_voices": one line per speaking character saying how '
+            'the SAME narrator should colour their voice, e.g. "Leo — precise '
+            'and warm, with a soft metallic edge". One reader plays everyone; '
+            'never ask for a different actor, and keep the shifts small enough '
+            'not to jolt a child who is settling.',
+          )
+          ..writeln(
+            '- "narration_cues": exactly one entry per paragraph of your '
+            'refined chapter, in order. Count your paragraphs and return that '
+            'many entries. Each entry is plain "key=value" pairs separated by '
+            'semicolons, using only these keys: pace, emotion, volume, note. '
+            'For example: "pace=slow; emotion=wistful; volume=hushed; '
+            'note=linger on the last line". Leave a paragraph\'s entry as an '
+            'empty string when it should simply be read plainly — most of a '
+            'story should be.',
+          )
+          ..writeln(
+            'Describe the SOUND in ordinary words. Never emit SSML, audio '
+            'tags, square brackets, angle brackets, timings, or any engine\'s '
+            'markup — different engines take different formats and this '
+            'direction is translated for each of them.',
+          )
+          ..writeln(
+            'This is a bedtime story: even the liveliest cue stays gentle, and '
+            'the cues should quieten and slow as the chapter ends.',
+          );
+
+    final user = StringBuffer()
+      ..writeln('Established facts this chapter must respect:');
+    if (req.series.title.trim().isNotEmpty && !req.series.autoTitle) {
+      user.writeln('- Story title: "${req.series.title}"');
+    }
+    if (req.worldPremise.trim().isNotEmpty) {
+      user.writeln('- World: ${req.worldPremise.trim()}');
+    }
+    for (final c in req.cast) {
+      user.writeln('- Cast: $c');
+    }
+    if (req.series.storyBible.trim().isNotEmpty) {
+      user.writeln('- Story so far: ${req.series.storyBible.trim()}');
+    }
+    for (final b in req.recentBeats) {
+      user.writeln('- Earlier chapter: ${b.summary}');
+    }
+    user
+      ..writeln()
+      ..writeln(
+        'This is chapter ${req.chapterNumber}'
+        '${draft.isFinal ? ', the final chapter' : ''}.',
+      )
+      ..writeln()
+      ..writeln('--- DRAFT CHAPTER TO REFINE ---')
+      ..writeln(draft.storyText.trim())
+      ..writeln('--- END OF DRAFT ---');
+
+    return StoryPrompt(
+      system: system.toString().trim(),
+      user: user.toString().trim(),
+    );
+  }
+
+  static int _wordCount(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return 0;
+    return trimmed.split(RegExp(r'\s+')).length;
+  }
+
+  /// How much of a second language to weave in, and how.
+  ///
+  /// Each level is a different teaching contract, not the same instruction at
+  /// three volumes, so they get genuinely different briefs. Two rules run
+  /// through all of them: the meaning must be carried by the story rather than
+  /// by a translation, and nothing may appear that only works on the page.
+  /// This text is read aloud, so a bracketed gloss or a language tag is not
+  /// skipped — it is spoken.
+  void _writeLanguageMode(StringBuffer user, StoryRequest req) {
+    final second = req.series.secondaryLanguage;
+    if (!req.series.bilingualEnabled || second == null) return;
+    final main = _languageName(req.child.language);
+    final other = _languageName(second);
+
+    switch (req.series.bilingualBlend ?? BilingualBlend.sprinkle) {
+      case BilingualBlend.sprinkle:
+        user.writeln(
+          'Bilingual mode — a few words. Tell the story in $main and fold in '
+          'about five to eight $other words in total, no more. Choose concrete '
+          'things a child can picture — animals, food, colours, family, '
+          'greetings — and make each meaning obvious from the sentence around '
+          'it, either by naming the thing in $main immediately afterwards or '
+          'by letting the action show it. Reuse that same handful of words '
+          'several times through the chapter instead of introducing new ones; '
+          'the repetition is what makes them stick.',
+        );
+      case BilingualBlend.phrases:
+        user.writeln(
+          'Bilingual mode — phrases. Tell the story in $main and let whole '
+          'short $other phrases land where they naturally belong: a greeting, '
+          'an exclamation, a line of dialogue from someone who speaks it. Keep '
+          'each phrase short, and let what happens next make its meaning plain '
+          'so nothing needs translating.',
+        );
+      case BilingualBlend.alternating:
+        user.writeln(
+          'Bilingual mode — half and half. About half of this chapter is in '
+          '$main and about half in $other. Switch only where the story gives '
+          'you a reason to: moving to a new place, crossing into somewhere '
+          '$other is spoken, a character who speaks it joining the scene, or '
+          'a change of who is telling it. Never switch in the middle of a '
+          'sentence, and never simply alternate paragraph by paragraph — that '
+          'reads as a drill rather than a story. Every switch should feel like '
+          'part of the chapter\'s movement, and each language should carry a '
+          'real stretch of the action rather than a decorative line.',
+        );
+        user.writeln(
+          'A child who understands only $main must still be able to follow '
+          'every event. Around each $other passage, let the action itself, a '
+          'phrase already established, or another character\'s reply carry the '
+          'meaning forward.',
+        );
+    }
+
+    user.writeln(
+      'Write both languages as ordinary prose in "story_text". Never add a '
+      'translation in brackets, a glossary, a language label, or any other '
+      'note to the reader — this chapter is read aloud, so anything like that '
+      'is spoken to the child word for word.',
     );
   }
 

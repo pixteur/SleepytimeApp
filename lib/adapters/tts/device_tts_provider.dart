@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_tts/flutter_tts.dart';
 
+import '../../domain/models/narration.dart';
 import 'tts_provider.dart';
 
 /// On-device TTS via `flutter_tts` (Windows SAPI/WinRT, macOS/iOS AVSpeech).
@@ -71,6 +72,7 @@ class DeviceTtsProvider implements TtsProvider {
     String text, {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
+    NarrationNotes notes = const NarrationNotes(),
   }) async {
     _lastText = text;
     _lastLang = language;
@@ -89,8 +91,20 @@ class DeviceTtsProvider implements TtsProvider {
     String text, {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
+    NarrationNotes notes = const NarrationNotes(),
   }) async {
     // Device TTS synthesizes instantly on speak; nothing to warm.
+  }
+
+  /// The device voice reads live and saves nothing, so a chapter is never
+  /// "downloaded" — this is what the badge reports to the grown-up.
+  @override
+  Future<bool> isCached(
+    String text, {
+    String language = 'en',
+    NarrationNotes notes = const NarrationNotes(),
+  }) async {
+    return false;
   }
 
   @override

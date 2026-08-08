@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../domain/models/beat.dart';
+import '../../domain/models/narration.dart';
 import '../../domain/models/story_segment.dart';
 
 /// The provider-agnostic JSON shape every provider's structured output fills.
@@ -9,6 +10,7 @@ import '../../domain/models/story_segment.dart';
 const List<String> storySegmentFields = [
   'story_text',
   'story_title',
+  'chapter_title',
   'summary',
   'rating',
   'setting',
@@ -16,6 +18,9 @@ const List<String> storySegmentFields = [
   'characters',
   'open_threads',
   'is_final',
+  'narration_style',
+  'character_voices',
+  'narration_cues',
 ];
 
 /// Standard JSON Schema for the story segment — used by Claude (`output_config`)
@@ -25,6 +30,7 @@ const Map<String, dynamic> jsonStorySchema = {
   'properties': {
     'story_text': {'type': 'string'},
     'story_title': {'type': 'string'},
+    'chapter_title': {'type': 'string'},
     'summary': {'type': 'string'},
     'rating': {
       'type': 'string',
@@ -44,6 +50,15 @@ const Map<String, dynamic> jsonStorySchema = {
       'items': {'type': 'string'},
     },
     'is_final': {'type': 'boolean'},
+    'narration_style': {'type': 'string'},
+    'character_voices': {
+      'type': 'array',
+      'items': {'type': 'string'},
+    },
+    'narration_cues': {
+      'type': 'array',
+      'items': {'type': 'string'},
+    },
   },
   'required': storySegmentFields,
   'additionalProperties': false,
@@ -54,6 +69,7 @@ const Map<String, dynamic> jsonStorySchema = {
 StorySegment storySegmentFromJson(Map<String, dynamic> d) => StorySegment(
   storyText: (d['story_text'] as String?) ?? '',
   suggestedTitle: (d['story_title'] as String?)?.trim() ?? '',
+  chapterTitle: (d['chapter_title'] as String?)?.trim() ?? '',
   summary: (d['summary'] as String?) ?? '',
   rating: _rating(d['rating'] as String?),
   setting: (d['setting'] as String?) ?? '',
@@ -61,6 +77,11 @@ StorySegment storySegmentFromJson(Map<String, dynamic> d) => StorySegment(
   characters: _strList(d['characters']),
   openThreads: _strList(d['open_threads']),
   isFinal: d['is_final'] as bool? ?? false,
+  narration: NarrationNotes(
+    style: (d['narration_style'] as String?)?.trim() ?? '',
+    characterVoices: _strList(d['character_voices']),
+    cues: _strList(d['narration_cues']).map(NarrationCue.parse).toList(),
+  ),
 );
 
 AgeRating _rating(String? value) => switch (value) {

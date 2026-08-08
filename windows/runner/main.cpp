@@ -77,11 +77,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
-  // Portrait, phone-shaped by default so the desktop build mirrors the iPhone
-  // layout. The Flutter app also renders a phone frame if the window is resized
-  // larger. See lib/app.dart (PhoneFrame).
+  // Opens at exactly an iPhone's logical canvas — 393 x 852, an iPhone 15 /
+  // 16 Pro — so the desktop build is a true preview of the phone layout rather
+  // than an approximation of it. Win32Window::Create treats this as the
+  // Flutter view's size and adds the title bar and borders on top. The Flutter
+  // app still renders a phone frame if the window is dragged larger. See
+  // lib/app.dart (PhoneFrame).
   Win32Window::Point origin(10, 10);
-  Win32Window::Size size(440, 940);
+  Win32Window::Size size(393, 852);
   if (!window.Create(kWindowTitle, origin, size)) {
     return EXIT_FAILURE;
   }

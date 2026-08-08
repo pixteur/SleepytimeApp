@@ -10,6 +10,21 @@ import '../../domain/twist_deck.dart';
 import '../story/story_chapters_screen.dart';
 import 'theme_picker.dart';
 
+/// How a story handles language, as offered when it is created. Stored on the
+/// series as `bilingualEnabled` + `bilingualBlend`; [_LanguageMode.sprinkle]
+/// and [_LanguageMode.halfAndHalf] are the two levels worth offering a child
+/// at bedtime, and the model's `phrases` level stays reachable for stories
+/// already saved with it.
+enum _LanguageMode { one, sprinkle, halfAndHalf }
+
+/// Languages a story can be woven with, keyed by the code the prompt uses.
+const Map<String, String> _secondLanguageChoices = {
+  'es': 'Spanish',
+  'fr': 'French',
+  'en': 'English',
+  'ja': 'Japanese',
+};
+
 /// The story creator. Reached two ways:
 ///  * from the bookshelf / home → a fresh story, which can be standalone, start
 ///    a new world, or join an existing world;
@@ -49,6 +64,14 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
 
   /// Where to save it: null = standalone, 'new' = a new world, else a world id.
   String? _worldChoice;
+
+  /// How the story handles language. Maps onto the series' bilingual fields;
+  /// the middle option is deliberately a *few words* rather than whole
+  /// phrases, because that is the level a child picks up at bedtime.
+  _LanguageMode _language = _LanguageMode.one;
+
+  /// The language woven in when [_language] isn't [_LanguageMode.one].
+  String _secondLanguage = 'es';
 
   bool _creating = false;
 
@@ -129,6 +152,15 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
               ? _heroName.text.trim()
               : null,
           seedSummary: quiz?.seedSummary ?? '',
+          bilingualEnabled: _language != _LanguageMode.one,
+          secondaryLanguage: _language == _LanguageMode.one
+              ? null
+              : _secondLanguage,
+          bilingualBlend: switch (_language) {
+            _LanguageMode.one => null,
+            _LanguageMode.sprinkle => BilingualBlend.sprinkle,
+            _LanguageMode.halfAndHalf => BilingualBlend.alternating,
+          },
         );
 
     // Resolve how chapter 1 begins.
@@ -292,6 +324,66 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
             onSelectionChanged: _creating ? null : (s) => _setLength(s.first),
           ),
 
+          const SizedBox(height: 24),
+          Text('Languages', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          SegmentedButton<_LanguageMode>(
+            segments: const [
+              ButtonSegment(value: _LanguageMode.one, label: Text('One')),
+              ButtonSegment(
+                value: _LanguageMode.sprinkle,
+                label: Text('A few words'),
+              ),
+              ButtonSegment(
+                value: _LanguageMode.halfAndHalf,
+                label: Text('Half & half'),
+              ),
+            ],
+            selected: {_language},
+            showSelectedIcon: false,
+            onSelectionChanged: (s) => setState(() {
+              _language = s.first;
+              // Never offer the language the story is already told in.
+              final main = ref.read(activeChildProvider)?.language ?? 'en';
+              if (_secondLanguage == main) {
+                _secondLanguage = main == 'es' ? 'fr' : 'es';
+              }
+            }),
+          ),
+          if (_language != _LanguageMode.one) ...[
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _secondLanguage,
+              decoration: const InputDecoration(
+                labelText: 'Second language',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                for (final entry in _secondLanguageChoices.entries)
+                  if (entry.key !=
+                      (ref.watch(activeChildProvider)?.language ?? 'en'))
+                    DropdownMenuItem(
+                      value: entry.key,
+                      child: Text(entry.value),
+                    ),
+              ],
+              onChanged: (v) =>
+                  setState(() => _secondLanguage = v ?? _secondLanguage),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              switch (_language) {
+                _LanguageMode.sprinkle =>
+                  'A handful of words, repeated through the story so their '
+                      'meaning comes from what happens around them.',
+                _LanguageMode.halfAndHalf =>
+                  'Roughly half in each, switching where the story gives a '
+                      'reason to. Still followable knowing only the first.',
+                _LanguageMode.one => '',
+              },
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
           const SizedBox(height: 24),
           Text('How does it begin?', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),

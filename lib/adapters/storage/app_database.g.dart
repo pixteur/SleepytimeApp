@@ -3850,6 +3850,30 @@ class $BeatsTable extends Beats with TableInfo<$BeatsTable, BeatRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _chapterTitleMeta = const VerificationMeta(
+    'chapterTitle',
+  );
+  @override
+  late final GeneratedColumn<String> chapterTitle = GeneratedColumn<String>(
+    'chapter_title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _narrationJsonMeta = const VerificationMeta(
+    'narrationJson',
+  );
+  @override
+  late final GeneratedColumn<String> narrationJson = GeneratedColumn<String>(
+    'narration_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
   @override
   late final GeneratedColumnWithTypeConverter<AgeRating, int> rating =
       GeneratedColumn<int>(
@@ -3938,6 +3962,8 @@ class $BeatsTable extends Beats with TableInfo<$BeatsTable, BeatRow> {
     chosenTwist,
     storyText,
     summary,
+    chapterTitle,
+    narrationJson,
     rating,
     setting,
     characters,
@@ -4012,6 +4038,24 @@ class $BeatsTable extends Beats with TableInfo<$BeatsTable, BeatRow> {
     } else if (isInserting) {
       context.missing(_summaryMeta);
     }
+    if (data.containsKey('chapter_title')) {
+      context.handle(
+        _chapterTitleMeta,
+        chapterTitle.isAcceptableOrUnknown(
+          data['chapter_title']!,
+          _chapterTitleMeta,
+        ),
+      );
+    }
+    if (data.containsKey('narration_json')) {
+      context.handle(
+        _narrationJsonMeta,
+        narrationJson.isAcceptableOrUnknown(
+          data['narration_json']!,
+          _narrationJsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('setting')) {
       context.handle(
         _settingMeta,
@@ -4079,6 +4123,14 @@ class $BeatsTable extends Beats with TableInfo<$BeatsTable, BeatRow> {
         DriftSqlType.string,
         data['${effectivePrefix}summary'],
       )!,
+      chapterTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}chapter_title'],
+      )!,
+      narrationJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}narration_json'],
+      )!,
       rating: $BeatsTable.$converterrating.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.int,
@@ -4140,6 +4192,11 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
   final String? chosenTwist;
   final String storyText;
   final String summary;
+  final String chapterTitle;
+
+  /// Narration direction as JSON — see `NarrationNotes`. One blob rather than
+  /// three columns: it is never queried, only handed to the voice.
+  final String narrationJson;
   final AgeRating rating;
   final String setting;
   final List<String> characters;
@@ -4156,6 +4213,8 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
     this.chosenTwist,
     required this.storyText,
     required this.summary,
+    required this.chapterTitle,
+    required this.narrationJson,
     required this.rating,
     required this.setting,
     required this.characters,
@@ -4179,6 +4238,8 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
     }
     map['story_text'] = Variable<String>(storyText);
     map['summary'] = Variable<String>(summary);
+    map['chapter_title'] = Variable<String>(chapterTitle);
+    map['narration_json'] = Variable<String>(narrationJson);
     {
       map['rating'] = Variable<int>($BeatsTable.$converterrating.toSql(rating));
     }
@@ -4211,6 +4272,8 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
           : Value(chosenTwist),
       storyText: Value(storyText),
       summary: Value(summary),
+      chapterTitle: Value(chapterTitle),
+      narrationJson: Value(narrationJson),
       rating: Value(rating),
       setting: Value(setting),
       characters: Value(characters),
@@ -4237,6 +4300,8 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
       chosenTwist: serializer.fromJson<String?>(json['chosenTwist']),
       storyText: serializer.fromJson<String>(json['storyText']),
       summary: serializer.fromJson<String>(json['summary']),
+      chapterTitle: serializer.fromJson<String>(json['chapterTitle']),
+      narrationJson: serializer.fromJson<String>(json['narrationJson']),
       rating: $BeatsTable.$converterrating.fromJson(
         serializer.fromJson<int>(json['rating']),
       ),
@@ -4262,6 +4327,8 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
       'chosenTwist': serializer.toJson<String?>(chosenTwist),
       'storyText': serializer.toJson<String>(storyText),
       'summary': serializer.toJson<String>(summary),
+      'chapterTitle': serializer.toJson<String>(chapterTitle),
+      'narrationJson': serializer.toJson<String>(narrationJson),
       'rating': serializer.toJson<int>(
         $BeatsTable.$converterrating.toJson(rating),
       ),
@@ -4283,6 +4350,8 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
     Value<String?> chosenTwist = const Value.absent(),
     String? storyText,
     String? summary,
+    String? chapterTitle,
+    String? narrationJson,
     AgeRating? rating,
     String? setting,
     List<String>? characters,
@@ -4299,6 +4368,8 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
     chosenTwist: chosenTwist.present ? chosenTwist.value : this.chosenTwist,
     storyText: storyText ?? this.storyText,
     summary: summary ?? this.summary,
+    chapterTitle: chapterTitle ?? this.chapterTitle,
+    narrationJson: narrationJson ?? this.narrationJson,
     rating: rating ?? this.rating,
     setting: setting ?? this.setting,
     characters: characters ?? this.characters,
@@ -4319,6 +4390,12 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
           : this.chosenTwist,
       storyText: data.storyText.present ? data.storyText.value : this.storyText,
       summary: data.summary.present ? data.summary.value : this.summary,
+      chapterTitle: data.chapterTitle.present
+          ? data.chapterTitle.value
+          : this.chapterTitle,
+      narrationJson: data.narrationJson.present
+          ? data.narrationJson.value
+          : this.narrationJson,
       rating: data.rating.present ? data.rating.value : this.rating,
       setting: data.setting.present ? data.setting.value : this.setting,
       characters: data.characters.present
@@ -4344,6 +4421,8 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
           ..write('chosenTwist: $chosenTwist, ')
           ..write('storyText: $storyText, ')
           ..write('summary: $summary, ')
+          ..write('chapterTitle: $chapterTitle, ')
+          ..write('narrationJson: $narrationJson, ')
           ..write('rating: $rating, ')
           ..write('setting: $setting, ')
           ..write('characters: $characters, ')
@@ -4365,6 +4444,8 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
     chosenTwist,
     storyText,
     summary,
+    chapterTitle,
+    narrationJson,
     rating,
     setting,
     characters,
@@ -4385,6 +4466,8 @@ class BeatRow extends DataClass implements Insertable<BeatRow> {
           other.chosenTwist == this.chosenTwist &&
           other.storyText == this.storyText &&
           other.summary == this.summary &&
+          other.chapterTitle == this.chapterTitle &&
+          other.narrationJson == this.narrationJson &&
           other.rating == this.rating &&
           other.setting == this.setting &&
           other.characters == this.characters &&
@@ -4403,6 +4486,8 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
   final Value<String?> chosenTwist;
   final Value<String> storyText;
   final Value<String> summary;
+  final Value<String> chapterTitle;
+  final Value<String> narrationJson;
   final Value<AgeRating> rating;
   final Value<String> setting;
   final Value<List<String>> characters;
@@ -4420,6 +4505,8 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
     this.chosenTwist = const Value.absent(),
     this.storyText = const Value.absent(),
     this.summary = const Value.absent(),
+    this.chapterTitle = const Value.absent(),
+    this.narrationJson = const Value.absent(),
     this.rating = const Value.absent(),
     this.setting = const Value.absent(),
     this.characters = const Value.absent(),
@@ -4438,6 +4525,8 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
     this.chosenTwist = const Value.absent(),
     required String storyText,
     required String summary,
+    this.chapterTitle = const Value.absent(),
+    this.narrationJson = const Value.absent(),
     required AgeRating rating,
     this.setting = const Value.absent(),
     required List<String> characters,
@@ -4465,6 +4554,8 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
     Expression<String>? chosenTwist,
     Expression<String>? storyText,
     Expression<String>? summary,
+    Expression<String>? chapterTitle,
+    Expression<String>? narrationJson,
     Expression<int>? rating,
     Expression<String>? setting,
     Expression<String>? characters,
@@ -4483,6 +4574,8 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
       if (chosenTwist != null) 'chosen_twist': chosenTwist,
       if (storyText != null) 'story_text': storyText,
       if (summary != null) 'summary': summary,
+      if (chapterTitle != null) 'chapter_title': chapterTitle,
+      if (narrationJson != null) 'narration_json': narrationJson,
       if (rating != null) 'rating': rating,
       if (setting != null) 'setting': setting,
       if (characters != null) 'characters': characters,
@@ -4503,6 +4596,8 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
     Value<String?>? chosenTwist,
     Value<String>? storyText,
     Value<String>? summary,
+    Value<String>? chapterTitle,
+    Value<String>? narrationJson,
     Value<AgeRating>? rating,
     Value<String>? setting,
     Value<List<String>>? characters,
@@ -4521,6 +4616,8 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
       chosenTwist: chosenTwist ?? this.chosenTwist,
       storyText: storyText ?? this.storyText,
       summary: summary ?? this.summary,
+      chapterTitle: chapterTitle ?? this.chapterTitle,
+      narrationJson: narrationJson ?? this.narrationJson,
       rating: rating ?? this.rating,
       setting: setting ?? this.setting,
       characters: characters ?? this.characters,
@@ -4560,6 +4657,12 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
     }
     if (summary.present) {
       map['summary'] = Variable<String>(summary.value);
+    }
+    if (chapterTitle.present) {
+      map['chapter_title'] = Variable<String>(chapterTitle.value);
+    }
+    if (narrationJson.present) {
+      map['narration_json'] = Variable<String>(narrationJson.value);
     }
     if (rating.present) {
       map['rating'] = Variable<int>(
@@ -4605,6 +4708,8 @@ class BeatsCompanion extends UpdateCompanion<BeatRow> {
           ..write('chosenTwist: $chosenTwist, ')
           ..write('storyText: $storyText, ')
           ..write('summary: $summary, ')
+          ..write('chapterTitle: $chapterTitle, ')
+          ..write('narrationJson: $narrationJson, ')
           ..write('rating: $rating, ')
           ..write('setting: $setting, ')
           ..write('characters: $characters, ')
@@ -8194,6 +8299,8 @@ typedef $$BeatsTableCreateCompanionBuilder =
       Value<String?> chosenTwist,
       required String storyText,
       required String summary,
+      Value<String> chapterTitle,
+      Value<String> narrationJson,
       required AgeRating rating,
       Value<String> setting,
       required List<String> characters,
@@ -8213,6 +8320,8 @@ typedef $$BeatsTableUpdateCompanionBuilder =
       Value<String?> chosenTwist,
       Value<String> storyText,
       Value<String> summary,
+      Value<String> chapterTitle,
+      Value<String> narrationJson,
       Value<AgeRating> rating,
       Value<String> setting,
       Value<List<String>> characters,
@@ -8286,6 +8395,16 @@ class $$BeatsTableFilterComposer extends Composer<_$AppDatabase, $BeatsTable> {
 
   ColumnFilters<String> get summary => $composableBuilder(
     column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get chapterTitle => $composableBuilder(
+    column: $table.chapterTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get narrationJson => $composableBuilder(
+    column: $table.narrationJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8395,6 +8514,16 @@ class $$BeatsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get chapterTitle => $composableBuilder(
+    column: $table.chapterTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get narrationJson => $composableBuilder(
+    column: $table.narrationJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get rating => $composableBuilder(
     column: $table.rating,
     builder: (column) => ColumnOrderings(column),
@@ -8486,6 +8615,16 @@ class $$BeatsTableAnnotationComposer
   GeneratedColumn<String> get summary =>
       $composableBuilder(column: $table.summary, builder: (column) => column);
 
+  GeneratedColumn<String> get chapterTitle => $composableBuilder(
+    column: $table.chapterTitle,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get narrationJson => $composableBuilder(
+    column: $table.narrationJson,
+    builder: (column) => column,
+  );
+
   GeneratedColumnWithTypeConverter<AgeRating, int> get rating =>
       $composableBuilder(column: $table.rating, builder: (column) => column);
 
@@ -8573,6 +8712,8 @@ class $$BeatsTableTableManager
                 Value<String?> chosenTwist = const Value.absent(),
                 Value<String> storyText = const Value.absent(),
                 Value<String> summary = const Value.absent(),
+                Value<String> chapterTitle = const Value.absent(),
+                Value<String> narrationJson = const Value.absent(),
                 Value<AgeRating> rating = const Value.absent(),
                 Value<String> setting = const Value.absent(),
                 Value<List<String>> characters = const Value.absent(),
@@ -8590,6 +8731,8 @@ class $$BeatsTableTableManager
                 chosenTwist: chosenTwist,
                 storyText: storyText,
                 summary: summary,
+                chapterTitle: chapterTitle,
+                narrationJson: narrationJson,
                 rating: rating,
                 setting: setting,
                 characters: characters,
@@ -8609,6 +8752,8 @@ class $$BeatsTableTableManager
                 Value<String?> chosenTwist = const Value.absent(),
                 required String storyText,
                 required String summary,
+                Value<String> chapterTitle = const Value.absent(),
+                Value<String> narrationJson = const Value.absent(),
                 required AgeRating rating,
                 Value<String> setting = const Value.absent(),
                 required List<String> characters,
@@ -8626,6 +8771,8 @@ class $$BeatsTableTableManager
                 chosenTwist: chosenTwist,
                 storyText: storyText,
                 summary: summary,
+                chapterTitle: chapterTitle,
+                narrationJson: narrationJson,
                 rating: rating,
                 setting: setting,
                 characters: characters,

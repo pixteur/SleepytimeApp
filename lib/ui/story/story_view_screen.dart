@@ -8,6 +8,7 @@ import '../../adapters/tts/tts_provider.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../common/error_banner.dart';
+import '../common/marquee_text.dart';
 
 /// Displays one chapter, reads it aloud (auto-plays, streamed paragraph-by-
 /// paragraph), and pages through the story: Back = previous chapter, Next =
@@ -79,7 +80,11 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     setState(() => _buffering = true);
     unawaited(_preloadNext());
     try {
-      await _tts.speak(widget.beat.text, language: _lang);
+      await _tts.speak(
+        widget.beat.text,
+        language: _lang,
+        notes: widget.beat.narration,
+      );
     } catch (e) {
       if (mounted) showErrorBanner(context, friendlyProviderError(e));
     } finally {
@@ -88,14 +93,45 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     }
   }
 
-  /// Single Listen/Stop toggle used by the sticky bar.
-  void _toggleListen(TtsState state) {
+  /// Play, pause, or pick up where the reading stopped — never start again
+  /// from the top. Starting over is a separate, confirmed action, because
+  /// losing your place ten minutes into a chapter at bedtime is miserable.
+  void _togglePlay(TtsState state) {
     if (_buffering) return;
-    if (state == TtsState.speaking || state == TtsState.paused) {
-      _stop();
-    } else {
-      _speak();
+    switch (state) {
+      case TtsState.speaking:
+        _tts.pause();
+      case TtsState.paused:
+        _tts.resume();
+      case TtsState.idle:
+        _speak();
     }
+  }
+
+  /// Back to the first word of this chapter, on purpose.
+  Future<void> _startOver() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Start this chapter again?'),
+        content: const Text(
+          'The reading will go back to the beginning of the chapter.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Keep listening'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Start over'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await _stop();
+    if (mounted) await _speak();
   }
 
   /// Warm the next chapter's audio while this one plays, so paging/auto-advancing
@@ -106,7 +142,15 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     try {
       final beats = await ref.read(storageRepoProvider).loadBeats(id);
       final next = _find(beats, widget.beat.seq + 1);
-      if (next != null) await _tts.preload(next.text, language: _lang);
+      // Warm with the next chapter's own direction, or the cache fills with
+      // undirected audio that playback then misses.
+      if (next != null) {
+        await _tts.preload(
+          next.text,
+          language: _lang,
+          notes: next.narration,
+        );
+      }
     } catch (_) {
       /* preload is an optimization only */
     }
@@ -338,10 +382,9 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  MarqueeText(
                     worldName == null ? storyTitle : '$worldName · $storyTitle',
                     style: theme.textTheme.titleMedium,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   InkWell(
                     onTap: _busy ? null : () => _pickChapter(beats),
@@ -349,9 +392,17 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'Chapter ${widget.beat.seq + 1}',
-                          style: theme.textTheme.bodySmall,
+                        Flexible(
+                          // The title is blank on fallback chapters and on
+                          // anything written before chapter titles existed, so
+                          // the number always stands on its own.
+                          child: MarqueeText(
+                            widget.beat.title.trim().isEmpty
+                                ? 'Chapter ${widget.beat.seq + 1}'
+                                : 'Chapter ${widget.beat.seq + 1} · '
+                                      '${widget.beat.title.trim()}',
+                            style: theme.textTheme.bodySmall,
+                          ),
                         ),
                         const Icon(Icons.arrow_drop_down, size: 18),
                       ],
@@ -383,7 +434,8 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
           builder: (context, snap) => _ListenBar(
             state: snap.data ?? TtsState.idle,
             buffering: _buffering,
-            onToggle: _toggleListen,
+            onToggle: _togglePlay,
+            onStartOver: _startOver,
           ),
         ),
       ),
@@ -504,6 +556,15 @@ class _ReadingTextState extends State<_ReadingText> {
   int _current = -1; // current sentence index (-1 = not started)
   int _lastPara = -1;
 
+  /// How far through the chapter the reading has actually got, 0–1. Only ever
+  /// increases, so a stale or out-of-order position report can't rewind the
+  /// highlight.
+  double _read = 0;
+
+  /// A single tick can't credibly advance more than this much of a chapter —
+  /// anything larger is a chunk boundary reporting against the wrong clip.
+  static const double _maxJump = 0.2;
+
   // Auto-scroll follows the reader, but pauses when the user scrolls by hand and
   // gently snaps back to the reading spot a few seconds later.
   bool _autoScroll = true;
@@ -565,9 +626,18 @@ class _ReadingTextState extends State<_ReadingText> {
     if (fraction <= 0) {
       if (_current != -1) setState(() => _current = -1);
       _lastPara = -1;
+      _read = 0;
       return;
     }
-    final chars = fraction * widget.text.length;
+    // Playback is chunked, and at a chunk boundary the position can briefly
+    // report against the chunk that just finished — a fraction far ahead of
+    // where the reading actually is. Read literally that highlights the last
+    // sentence and yanks the view to the bottom of the chapter before the next
+    // tick drags it back. Reading only ever moves forward, and only ever a
+    // little between ticks, so a leap is noise and a step backwards is stale.
+    if (fraction - _read > _maxJump) return;
+    if (fraction > _read) _read = fraction;
+    final chars = _read * widget.text.length;
     var idx = 0;
     for (var i = 0; i < _sentences.length; i++) {
       if (_sentences[i][0] <= chars) {
@@ -621,8 +691,14 @@ class _ReadingTextState extends State<_ReadingText> {
   int get _currentPara {
     if (_current < 0) return -1;
     final c = _sentences[_current][0];
+    // The first paragraph that ENDS after this offset — not the one that
+    // strictly contains it. A sentence can begin inside the blank line between
+    // two paragraphs, which belongs to no paragraph's range; that offset is the
+    // start of the paragraph coming next. Matching only on containment left
+    // those sentences unmatched and fell through to the last paragraph, which
+    // yanked the view to the bottom of the chapter and back on every one.
     for (var i = 0; i < _paras.length; i++) {
-      if (c >= _paras[i].start && c < _paras[i].end) return i;
+      if (c < _paras[i].end) return i;
     }
     return _paras.length - 1;
   }
@@ -702,16 +778,21 @@ class _ListenBar extends StatelessWidget {
     required this.state,
     required this.buffering,
     required this.onToggle,
+    required this.onStartOver,
   });
 
   final TtsState state;
   final bool buffering;
   final void Function(TtsState) onToggle;
+  final Future<void> Function() onStartOver;
 
   @override
   Widget build(BuildContext context) {
-    final playing = state == TtsState.speaking || state == TtsState.paused;
-    final showStop = playing && !buffering;
+    final speaking = state == TtsState.speaking && !buffering;
+    final paused = state == TtsState.paused && !buffering;
+    // Start over only exists once there is a place to lose — it would do
+    // nothing from idle, where the main button already starts at the top.
+    final started = (speaking || paused) && !buffering;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       // Row (not Center) so this bar hugs the button's height — a Center here
@@ -719,6 +800,14 @@ class _ListenBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          if (started) ...[
+            IconButton.filledTonal(
+              onPressed: onStartOver,
+              icon: const Icon(Icons.replay_rounded),
+              tooltip: 'Start this chapter again',
+            ),
+            const SizedBox(width: 12),
+          ],
           ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 200, maxWidth: 260),
             child: FilledButton.icon(
@@ -730,10 +819,18 @@ class _ListenBar extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : Icon(
-                      showStop ? Icons.stop_rounded : Icons.volume_up_rounded,
+                      speaking
+                          ? Icons.pause_rounded
+                          : paused
+                          ? Icons.play_arrow_rounded
+                          : Icons.volume_up_rounded,
                     ),
               label: Text(
-                showStop ? 'STOP' : 'LISTEN',
+                speaking
+                    ? 'PAUSE'
+                    : paused
+                    ? 'RESUME'
+                    : 'LISTEN',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1,

@@ -134,10 +134,18 @@ bool Win32Window::Create(const std::wstring& title,
   UINT dpi = FlutterDesktopGetDpiForMonitor(monitor);
   double scale_factor = dpi / 96.0;
 
+  // |size| is the size we want the Flutter view to be, so grow the rectangle
+  // by whatever the title bar and borders take. Without this a request for an
+  // iPhone-sized canvas yields an iPhone-sized *window* with a canvas smaller
+  // than any real phone.
+  RECT frame = {0, 0, Scale(size.width, scale_factor),
+                Scale(size.height, scale_factor)};
+  AdjustWindowRect(&frame, WS_OVERLAPPEDWINDOW, FALSE);
+
   HWND window = CreateWindow(
       window_class, title.c_str(), WS_OVERLAPPEDWINDOW,
       Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
-      Scale(size.width, scale_factor), Scale(size.height, scale_factor),
+      frame.right - frame.left, frame.bottom - frame.top,
       nullptr, nullptr, GetModuleHandle(nullptr), this);
 
   if (!window) {

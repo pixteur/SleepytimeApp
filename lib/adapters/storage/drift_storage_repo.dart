@@ -7,12 +7,27 @@ import '../../domain/models/cast_changes.dart';
 import '../../domain/models/child_profile.dart';
 import '../../domain/models/interest.dart';
 import '../../domain/models/learned_profile.dart';
+import '../../domain/models/narration.dart';
 import '../../domain/models/quiz_result.dart';
 import '../../domain/models/series.dart';
 import '../../domain/models/story_character.dart';
 import '../../domain/models/world.dart';
 import 'app_database.dart';
 import 'storage_repo.dart';
+
+/// Narration direction off a beat row. Anything unreadable degrades to "no
+/// direction" — a chapter should still be readable aloud if this blob is from
+/// an older build or was written badly.
+NarrationNotes _narrationFrom(String json) {
+  if (json.trim().isEmpty) return const NarrationNotes();
+  try {
+    final decoded = jsonDecode(json);
+    if (decoded is! Map<String, dynamic>) return const NarrationNotes();
+    return NarrationNotes.fromJson(decoded);
+  } catch (_) {
+    return const NarrationNotes();
+  }
+}
 
 /// Drift-backed implementation of [StorageRepo]. All row↔domain mapping lives
 /// here so the rest of the app stays free of Drift types. See `docs/data-model.md`.
@@ -387,6 +402,8 @@ class DriftStorageRepo implements StorageRepo {
             intent: b.intent,
             storyText: b.text,
             summary: b.summary,
+            chapterTitle: Value(b.title),
+            narrationJson: Value(jsonEncode(b.narration.toJson())),
             rating: b.rating,
             characters: b.characters,
             openThreads: b.openThreads,
@@ -411,6 +428,8 @@ class DriftStorageRepo implements StorageRepo {
     intent: r.intent,
     text: r.storyText,
     summary: r.summary,
+    title: r.chapterTitle,
+    narration: _narrationFrom(r.narrationJson),
     rating: r.rating,
     setting: r.setting,
     chosenTwist: r.chosenTwist,

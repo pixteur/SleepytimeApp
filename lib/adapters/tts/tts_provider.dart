@@ -1,3 +1,5 @@
+import '../../domain/models/narration.dart';
+
 /// Playback state of the voice reader.
 enum TtsState { idle, speaking, paused }
 
@@ -52,10 +54,14 @@ abstract class TtsProvider {
   String get audioMimeType;
 
   /// Narrate [text] in the given [language] (BCP-47-ish tag) with [voice].
+  /// [notes] is how the chapter should be read — the standing voice plus a cue
+  /// per paragraph. Engines that can't act on it ignore it; it never reaches
+  /// the spoken text. See `docs/narration-cues.md`.
   Future<void> speak(
     String text, {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
+    NarrationNotes notes = const NarrationNotes(),
   });
 
   /// Warm the cache for [text] (e.g. the next chapter) WITHOUT playing it, so a
@@ -64,7 +70,20 @@ abstract class TtsProvider {
     String text, {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
+    NarrationNotes notes = const NarrationNotes(),
   }) async {}
+
+  /// Whether [text] is already saved and would play without a network call.
+  ///
+  /// Only the provider can answer this: it alone knows how the chapter is split
+  /// into chunks and how each one is keyed. Callers that rebuilt the key
+  /// themselves got it wrong whenever a chapter spanned more than one chunk.
+  /// Defaults to false — a live-only engine saves nothing.
+  Future<bool> isCached(
+    String text, {
+    String language = 'en',
+    NarrationNotes notes = const NarrationNotes(),
+  }) async => false;
 
   Future<void> pause();
   Future<void> resume();

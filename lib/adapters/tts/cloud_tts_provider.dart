@@ -3,8 +3,10 @@ import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart' hide AudioCache;
 
+import '../../domain/models/narration.dart';
 import '../ai/rate_limit_retry.dart';
 import 'audio_cache.dart';
+import 'narrated_chunks.dart';
 import 'tts_provider.dart';
 import 'tts_synthesizer.dart';
 
@@ -32,7 +34,7 @@ class CloudTtsProvider implements TtsProvider {
     _posSub = _player.onPositionChanged.listen((p) {
       final ms = _duration.inMilliseconds;
       if (ms > 0 && !_progress.isClosed) {
-        _progress.add((p.inMilliseconds / ms).clamp(0.0, 1.0));
+        _progress.add(_chapterProgress(p.inMilliseconds / ms));
       }
     });
   }
@@ -53,7 +55,11 @@ class CloudTtsProvider implements TtsProvider {
   TtsState _state = TtsState.idle;
 
   // Chunk queue + a cache of in-flight/finished synthesis jobs, keyed by index.
-  List<String> _chunks = const [];
+  List<NarratedChunk> _chunks = const [];
+
+  /// The chapter's standing direction, applied to every chunk on top of that
+  /// chunk's own cue.
+  NarrationNotes _notes = const NarrationNotes();
   final Map<int, Future<Uint8List>> _jobs = {};
   int _i = 0;
   bool _active = false;
@@ -96,11 +102,37 @@ class CloudTtsProvider implements TtsProvider {
     cancelled: () => !_active,
   );
 
-  String _keyFor(String chunk, String language) =>
-      audioCacheKey('${_synth.voiceSignature}|$language|$chunk');
+  /// Where the reading has got to in the **chapter**, 0–1, given how far it has
+  /// got through the clip currently playing.
+  ///
+  /// The player only knows about one clip at a time, so its own position runs
+  /// 0→1 for every chunk. Reported raw, a read-along highlight races through
+  /// the whole chapter during the first chunk and then does it again for each
+  /// one after. Chunks are scaled by character count, which tracks spoken
+  /// duration closely enough for a highlight — the alternative needs every
+  /// clip synthesized and measured before playback starts.
+  double _chapterProgress(double clipFraction) {
+    if (_chunks.isEmpty) return 0;
+    var total = 0;
+    var before = 0;
+    for (var j = 0; j < _chunks.length; j++) {
+      final len = _chunks[j].text.length;
+      total += len;
+      if (j < _i) before += len;
+    }
+    if (total == 0) return 0;
+    final current = _i < _chunks.length ? _chunks[_i].text.length : 0;
+    return ((before + current * clipFraction) / total).clamp(0.0, 1.0);
+  }
+
+  /// The cue is part of the key: it changes the audio without changing a word
+  /// of the text, so a key built from text alone would replay the old reading.
+  String _keyFor(NarratedChunk chunk, String language) => audioCacheKey(
+    '${_synth.voiceSignature}|$language|${chunk.text}${chunk.cacheSuffix}',
+  );
 
   Future<Uint8List> _cachedSynthesize(
-    String chunk,
+    NarratedChunk chunk,
     String language,
     TtsVoicePref voice, {
     bool Function()? cancelled,
@@ -109,7 +141,13 @@ class CloudTtsProvider implements TtsProvider {
     final hit = await _cache?.get(key);
     if (hit != null && hit.isNotEmpty) return hit;
     final bytes = await retryOnRateLimit(
-      () => _synth.synthesize(chunk, language: language, voice: voice),
+      () => _synth.synthesize(
+        chunk.text,
+        language: language,
+        voice: voice,
+        cue: chunk.cue,
+        standingDirection: _notes.asStandingDirection(),
+      ),
       cancelled: cancelled ?? () => false,
     );
     await _cache?.put(key, bytes);
@@ -121,15 +159,38 @@ class CloudTtsProvider implements TtsProvider {
   /// swallows errors — it's an optimization, not a hard requirement. Does not
   /// touch playback state, so it's safe to call while the current chapter plays.
   @override
+  Future<bool> isCached(
+    String text, {
+    String language = 'en',
+    NarrationNotes notes = const NarrationNotes(),
+  }) async {
+    final cache = _cache;
+    if (cache == null) return false;
+    final chunks = narratedChunks(text, notes, _chunkText);
+    if (chunks.isEmpty) return false;
+    // A chapter counts as saved only when every chunk is — a half-cached
+    // chapter still needs the network to finish playing.
+    for (final chunk in chunks) {
+      final bytes = await cache.get(_keyFor(chunk, language));
+      if (bytes == null || bytes.isEmpty) return false;
+    }
+    return true;
+  }
+
+  @override
   Future<void> preload(
     String text, {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
+    NarrationNotes notes = const NarrationNotes(),
   }) async {
     if (_cache == null) return;
+    // Warm exactly what playback will ask for, cue and all — otherwise the
+    // cache fills with undirected audio that `speak` then misses.
+    _notes = notes;
     // Let errors propagate — callers that want best-effort warming already catch
     // them; an explicit "download this chapter" needs to know if it failed.
-    for (final chunk in _chunkText(text)) {
+    for (final chunk in narratedChunks(text, notes, _chunkText)) {
       await _cachedSynthesize(chunk, language, voice);
     }
   }
@@ -139,11 +200,13 @@ class CloudTtsProvider implements TtsProvider {
     String text, {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
+    NarrationNotes notes = const NarrationNotes(),
   }) async {
     await _player.stop();
     _lang = language;
     _voice = voice;
-    _chunks = _chunkText(text);
+    _notes = notes;
+    _chunks = narratedChunks(text, notes, _chunkText);
     _jobs.clear();
     _i = 0;
     _active = true;

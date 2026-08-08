@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import '../../domain/models/narration.dart';
 import '../ai/provider_exceptions.dart';
 import '../secrets/secret_store.dart';
 import 'tts_provider.dart';
@@ -47,6 +48,8 @@ class ElevenLabsTtsSynthesizer implements TtsSynthesizer {
     String text, {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
+    NarrationCue cue = const NarrationCue(),
+    String standingDirection = '',
   }) async {
     final key = await _secrets.readKey(keyName);
     if (key == null || key.isEmpty) {
@@ -59,7 +62,20 @@ class ElevenLabsTtsSynthesizer implements TtsSynthesizer {
         'accept': 'audio/mpeg',
         'content-type': 'application/json',
       },
-      body: jsonEncode({'text': text, 'model_id': model}),
+      // v2 takes no free-text direction, so the cue is expressed through the
+      // voice settings it does have: lower stability lets the reading move
+      // more, which is what a cue with any feeling in it is asking for.
+      body: jsonEncode({
+        'text': text,
+        'model_id': model,
+        if (!cue.isEmpty)
+          'voice_settings': {
+            'stability': cue.emotion.isEmpty ? 0.5 : 0.35,
+            'similarity_boost': 0.75,
+            'style': cue.emotion.isEmpty ? 0.0 : 0.35,
+            'use_speaker_boost': true,
+          },
+      }),
     );
     if (response.statusCode != 200) {
       throw ProviderRequestException(response.statusCode, response.body);

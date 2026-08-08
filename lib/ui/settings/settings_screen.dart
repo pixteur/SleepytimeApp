@@ -77,8 +77,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _provider = provider;
       _consent = prefs.aiConsentGiven;
       _hasStoredKey = hasKey;
+      _keyHint = prefs.keyHint(keyNameFor(provider) ?? '');
     });
   }
+
+  /// The masked reminder of the saved key, e.g. `AIza••••7f2c`. Empty when no
+  /// key is saved, or when it was saved before hints existed.
+  String _keyHint = '';
 
   Future<bool> _keyPresent(ProviderId id) async {
     final name = keyNameFor(id);
@@ -87,12 +92,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _onProviderChanged(ProviderId id) async {
-    await (await AppPrefs.open()).setSelectedProvider(id.name);
+    final prefs = await AppPrefs.open();
+    await prefs.setSelectedProvider(id.name);
     final hasKey = await _keyPresent(id);
     if (!mounted) return;
     setState(() {
       _provider = id;
       _hasStoredKey = hasKey;
+      _keyHint = prefs.keyHint(keyNameFor(id) ?? '');
       _status = null;
       _keyController.clear();
     });
@@ -128,8 +135,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     final secrets = ref.read(secretStoreProvider);
     final keyName = keyNameFor(_provider)!;
-    if (key.isNotEmpty) await secrets.writeKey(keyName, key);
     final prefs = await AppPrefs.open();
+    if (key.isNotEmpty) {
+      await secrets.writeKey(keyName, key);
+      // Recorded here, while the key is in hand — the secret itself is never
+      // read back out of the OS store just to show which one is saved.
+      await prefs.setKeyHint(keyName, SecretStore.hintFor(key));
+    }
     await prefs.setAiConsent(true);
     await prefs.setSelectedProvider(_provider.name);
 
@@ -151,6 +163,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _busy = false;
       _hasStoredKey = true;
       _consent = true;
+      if (key.isNotEmpty) _keyHint = SecretStore.hintFor(key);
       _keyController.clear();
       _statusOk = error == null;
       _status = error == null
@@ -161,12 +174,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _clearKey() async {
     setState(() => _busy = true);
-    await ref.read(secretStoreProvider).deleteKey(keyNameFor(_provider)!);
+    final keyName = keyNameFor(_provider)!;
+    await ref.read(secretStoreProvider).deleteKey(keyName);
+    // The hint goes with the key it describes.
+    await (await AppPrefs.open()).clearKeyHint(keyName);
     await ref.read(aiConfigProvider.notifier).refresh();
     if (!mounted) return;
     setState(() {
       _busy = false;
       _hasStoredKey = false;
+      _keyHint = '';
       _statusOk = false;
       _status = '${_meta.label} key removed.';
     });
@@ -263,9 +280,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     decoration: InputDecoration(
                       labelText: '${_meta.label} API key',
                       helperText: 'Get one at ${_meta.helpUrl}',
-                      hintText: _hasStoredKey
+                      // Naming the saved key lets a parent tell which one is
+                      // in there without the app reading the secret back.
+                      hintText: !_hasStoredKey
+                          ? _meta.hint
+                          : _keyHint.isEmpty
                           ? 'A key is saved — type to replace it'
-                          : _meta.hint,
+                          : '$_keyHint — type to replace it',
                       border: const OutlineInputBorder(),
                     ),
                   ),
@@ -280,7 +301,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'A ${_meta.label} key is saved on this device.',
+                          _keyHint.isEmpty
+                              ? 'A ${_meta.label} key is saved on this device.'
+                              : '${_meta.label} key $_keyHint is saved on this '
+                                    'device.',
                           style: TextStyle(color: theme.colorScheme.primary),
                         ),
                       ],

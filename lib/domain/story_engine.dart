@@ -32,6 +32,7 @@ class StoryEngine {
     List<String> bannedThemes = BannedThemes.defaults,
     int maxRetries = 2,
     int maxChapters = 6,
+    bool refinePass = true,
     Uuid? uuid,
   }) : _ai = ai, // ignore: prefer_initializing_formals
        _repo = repo,
@@ -41,6 +42,7 @@ class StoryEngine {
        _banned = bannedThemes,
        _maxRetries = maxRetries, // ignore: prefer_initializing_formals
        _maxChapters = maxChapters, // ignore: prefer_initializing_formals
+       _refinePass = refinePass, // ignore: prefer_initializing_formals
        _uuid = uuid ?? const Uuid();
 
   final AiProvider _ai;
@@ -51,6 +53,10 @@ class StoryEngine {
   final List<String> _banned;
   final int _maxRetries;
   final int _maxChapters;
+
+  /// Whether a generated chapter gets a second, editorial pass before it is
+  /// saved. Costs one extra call per chapter, so tests turn it off.
+  final bool _refinePass;
   final Uuid _uuid;
 
   /// Per-series generation lock so concurrent turns (e.g. background
@@ -91,6 +97,45 @@ class StoryEngine {
       gate.complete();
       if (identical(_locks[series.id], gate.future)) _locks.remove(series.id);
     }
+  }
+
+  /// Run the editorial second pass over a chapter that is already written.
+  ///
+  /// Same pass a fresh chapter gets, applied to saved text — used to produce a
+  /// refined copy of a finished story without touching the original. Returns
+  /// null when the polish fails its checks, and the caller keeps the chapter
+  /// as it stands.
+  Future<StorySegment?> refineExisting({
+    required ChildProfile child,
+    required Series series,
+    required Beat beat,
+    List<Beat> earlier = const [],
+    int totalChapters = 0,
+  }) {
+    final request = StoryRequest(
+      child: child,
+      series: series,
+      intent: beat.intent,
+      recentBeats: earlier,
+      chapterNumber: beat.seq + 1,
+      // The real chapter count, so a long story's later chapters aren't
+      // treated as if they had run past the cap.
+      maxChapters: totalChapters > 0 ? totalChapters : beat.seq + 1,
+      chosenTwist: beat.chosenTwist,
+    );
+    return _refine(
+      request,
+      StorySegment(
+        storyText: beat.text,
+        summary: beat.summary,
+        rating: beat.rating,
+        chapterTitle: beat.title,
+        setting: beat.setting,
+        characters: beat.characters,
+        openThreads: beat.openThreads,
+        isFinal: beat.isFinal,
+      ),
+    );
   }
 
   Future<Beat> _runTurn({
@@ -157,6 +202,9 @@ class StoryEngine {
       safe = _fallback();
     } else {
       lastFallbackReason = null;
+      // Second pass, before the chapter is saved or shown: the model edits its
+      // own draft. A refusal here is not a failure — we simply keep the draft.
+      if (_refinePass) safe = await _refine(request, safe) ?? safe;
     }
 
     // Enforce the cap: even if the model won't end the story, the last allowed
@@ -172,12 +220,14 @@ class StoryEngine {
       chosenTwist: chosenTwist,
       text: safe.storyText,
       summary: safe.summary,
+      title: _cleanTitle(safe.chapterTitle) ?? '',
       rating: safe.rating,
       setting: safe.setting,
       characters: safe.characters,
       openThreads: isFinal ? const [] : safe.openThreads,
       language: child.language,
       isFinal: isFinal,
+      narration: safe.narration,
     );
     await _beats.append(beat);
     await _recordLearning(child.id, intent, chosenTwist);
@@ -194,6 +244,104 @@ class StoryEngine {
       );
     }
     return beat;
+  }
+
+  /// Hand the draft back to the model as an editor and take the result only if
+  /// it is demonstrably still the same chapter. Returns null to keep the draft.
+  ///
+  /// Nothing here is trusted on the model's word. A model asked to polish can
+  /// answer with a summary, a critique, or an empty string, and any of those
+  /// would silently replace a good chapter with rubbish that a child then
+  /// hears read aloud — so the length is measured, the safety guard runs
+  /// again, and the plot-critical fields are carried over from the draft
+  /// rather than accepted from the edit.
+  Future<StorySegment?> _refine(StoryRequest request, StorySegment draft) async {
+    final before = _wordCount(draft.storyText);
+    if (before == 0) return null;
+    try {
+      final polished = await _ai.generate(
+        _prompt.buildRefinement(request, draft, bannedThemes: _banned),
+      );
+      final after = _wordCount(polished.storyText);
+      // Deliberately wider than the ±10% the prompt asks for: this is here to
+      // catch a summary or a truncation, not to police the brief.
+      if (after < before * 0.6 || after > before * 1.5) return null;
+
+      // A polish that comes back as one unbroken block is unusable however
+      // good the prose is: the reader synthesizes a chunk per paragraph and
+      // matches narration cues to them by index.
+      final text = restoreParagraphs(polished.storyText, draft.storyText);
+      if (text == null) return null;
+      final verdict = _safety.review(
+        polished,
+        band: request.child.ageBand,
+        bannedThemes: _banned,
+      );
+      if (!verdict.ok) return null;
+
+      return StorySegment(
+        storyText: text,
+        summary: _preferring(polished.summary, draft.summary),
+        rating: draft.rating,
+        suggestedTitle: _preferring(
+          polished.suggestedTitle,
+          draft.suggestedTitle,
+        ),
+        chapterTitle: _preferring(polished.chapterTitle, draft.chapterTitle),
+        setting: _preferring(polished.setting, draft.setting),
+        sensitiveFlags: polished.sensitiveFlags,
+        characters: polished.characters.isEmpty
+            ? draft.characters
+            : polished.characters,
+        openThreads: polished.openThreads.isEmpty
+            ? draft.openThreads
+            : polished.openThreads,
+        // Never the edit's call: the chapter cap and the next chapter's
+        // existence were both decided against the draft.
+        isFinal: draft.isFinal,
+        // The editor saw the finished prose, so its direction wins — but a
+        // silent editor leaves the draft's standing voice in place.
+        narration: polished.narration.isEmpty
+            ? draft.narration
+            : polished.narration,
+      );
+    } catch (_) {
+      // A polish that errors must not cost the child their bedtime story.
+      return null;
+    }
+  }
+
+  /// Put a refined chapter's paragraph breaks back, or reject it.
+  ///
+  /// Asked for prose inside a JSON string, a model very often separates
+  /// paragraphs with a single newline instead of a blank line. That reads
+  /// identically on screen but collapses the chapter into one chunk for the
+  /// reader, so single newlines are promoted back to real breaks. A chapter
+  /// that came back with no line breaks at all cannot be repaired and is
+  /// rejected in favour of the draft.
+  ///
+  /// Returns the usable text, or null to keep the draft.
+  static String? restoreParagraphs(String polished, String draft) {
+    final wanted = _paragraphCount(draft);
+    if (wanted < 2 || _paragraphCount(polished) >= wanted) return polished;
+    final repaired = polished.replaceAll(RegExp(r'\n[ \t]*\n?'), '\n\n');
+    // Half the draft's paragraphs is a generous floor: an editor is allowed to
+    // merge two short ones, but not to flatten the chapter.
+    return _paragraphCount(repaired) >= (wanted / 2).ceil() ? repaired : null;
+  }
+
+  static int _paragraphCount(String text) => text
+      .split(RegExp(r'\n\s*\n'))
+      .where((p) => p.trim().isNotEmpty)
+      .length;
+
+  static String _preferring(String edited, String original) =>
+      edited.trim().isEmpty ? original : edited;
+
+  static int _wordCount(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return 0;
+    return trimmed.split(RegExp(r'\s+')).length;
   }
 
   /// A safe pre-written beat so the night never breaks.

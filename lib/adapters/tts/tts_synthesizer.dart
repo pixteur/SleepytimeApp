@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../../domain/models/narration.dart';
 import 'tts_provider.dart';
 
 /// Turns text into playable audio bytes (mp3 or wav). Pure I/O — no audio
@@ -15,11 +16,28 @@ abstract class TtsSynthesizer {
   /// the wrong audio.
   String get voiceSignature;
 
+  /// [cue] is how this passage should be read — pace, feeling, volume. Each
+  /// engine renders it in its own dialect, or ignores it. It never reaches the
+  /// spoken text: an engine handed direction it doesn't understand would read
+  /// it out loud.
   Future<Uint8List> synthesize(
     String text, {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
+    NarrationCue cue = const NarrationCue(),
+    String standingDirection = '',
   });
+}
+
+/// The direction for one passage as a single sentence: the chapter's standing
+/// voice plus this passage's own cue. Empty when there is nothing to say, so
+/// callers can fall back to their own default.
+String narrationDirection(String standing, NarrationCue cue) {
+  final parts = [
+    if (standing.trim().isNotEmpty) standing.trim(),
+    if (!cue.isEmpty) 'For this passage: ${cue.asDirection()}.',
+  ];
+  return parts.join(' ');
 }
 
 /// Wrap raw little-endian PCM (e.g. Gemini's 16-bit mono output) in a minimal
