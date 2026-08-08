@@ -66,6 +66,22 @@ class SeriesService {
   Future<void> archive(Series series) =>
       _repo.saveSeries(series.copyWith(status: SeriesStatus.archived));
 
+  /// Remember where the child got to. Called when a chapter is opened, so the
+  /// bookshelf can offer to pick the story back up. Reading an earlier chapter
+  /// again doesn't rewind the mark — the furthest point reached is the useful
+  /// one to resume from.
+  Future<Series> markRead(Series series, int seq) async {
+    final furthest = seq > (series.lastReadSeq ?? -1)
+        ? seq
+        : series.lastReadSeq!;
+    final updated = series.copyWith(
+      lastReadSeq: furthest,
+      lastReadAt: DateTime.now(),
+    );
+    await _repo.saveSeries(updated);
+    return updated;
+  }
+
   /// Permanently delete a series and its chapters (FK cascade).
   Future<void> delete(String id) => _repo.deleteSeries(id);
 

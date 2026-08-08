@@ -68,6 +68,17 @@ class AppPrefs {
   Future<void> setParentMode(bool value) =>
       _prefs.setBool(_parentModeKey, value);
 
+  // ── Listening mode ──────────────────────────────────────────────
+  static const _listeningModeKey = 'listening_mode';
+
+  /// When true the reader hides the text and darkens the screen, so the story
+  /// can be listened to with eyes closed. Off by default — read-along is the
+  /// point of the reader for most of the day.
+  bool get listeningMode => _prefs.getBool(_listeningModeKey) ?? false;
+
+  Future<void> setListeningMode(bool value) =>
+      _prefs.setBool(_listeningModeKey, value);
+
   // ── Demo seed ───────────────────────────────────────────────────
   /// Whether the bundled demo story has already been offered to this child (so
   /// we only auto-seed an empty bookshelf once).

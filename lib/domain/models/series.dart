@@ -19,6 +19,8 @@ class Series {
     this.storyBible = '',
     this.branchedFromBeatId,
     this.status = SeriesStatus.active,
+    this.lastReadSeq,
+    this.lastReadAt,
   });
 
   final String id;
@@ -65,6 +67,14 @@ class Series {
 
   final SeriesStatus status;
 
+  /// Where the child got to: the chapter last opened, and when. Drives
+  /// "Continue — Chapter 4" on the bookshelf. Null until a chapter is read.
+  final int? lastReadSeq;
+  final DateTime? lastReadAt;
+
+  /// True once the story has been picked up and left part-way through.
+  bool get isInProgress => lastReadSeq != null && lastReadSeq! > 0;
+
   Series copyWith({
     String? title,
     bool? autoTitle,
@@ -72,6 +82,8 @@ class Series {
     String? seedSummary,
     String? storyBible,
     SeriesStatus? status,
+    int? lastReadSeq,
+    DateTime? lastReadAt,
   }) {
     return Series(
       id: id,
@@ -91,6 +103,8 @@ class Series {
       storyBible: storyBible ?? this.storyBible,
       branchedFromBeatId: branchedFromBeatId,
       status: status ?? this.status,
+      lastReadSeq: lastReadSeq ?? this.lastReadSeq,
+      lastReadAt: lastReadAt ?? this.lastReadAt,
     );
   }
 }

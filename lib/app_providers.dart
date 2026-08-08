@@ -126,6 +126,28 @@ class ParentModeController extends Notifier<bool> {
   }
 }
 
+/// Listening mode: the reader hides its text and darkens the screen so a story
+/// can be heard with eyes closed. Remembered between sessions.
+final listeningModeProvider = NotifierProvider<ListeningModeController, bool>(
+  ListeningModeController.new,
+);
+
+class ListeningModeController extends Notifier<bool> {
+  @override
+  bool build() {
+    _hydrate();
+    return false;
+  }
+
+  Future<void> _hydrate() async =>
+      state = (await AppPrefs.open()).listeningMode;
+
+  Future<void> toggle() async {
+    state = !state;
+    await (await AppPrefs.open()).setListeningMode(state);
+  }
+}
+
 // ─── Voice engine ─────────────────────────────────────────────────────
 
 enum VoiceEngine { device, openai, elevenlabs, gemini }

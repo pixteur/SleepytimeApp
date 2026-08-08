@@ -291,7 +291,11 @@ class _StoryCard extends ConsumerWidget {
       child: ListTile(
         leading: Text(meta.emoji, style: const TextStyle(fontSize: 28)),
         title: Text(series.title),
-        subtitle: Text(meta.label),
+        subtitle: Text(
+          series.isInProgress
+              ? 'Continue — chapter ${series.lastReadSeq! + 1}'
+              : meta.label,
+        ),
         trailing: parentMode
             ? PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),

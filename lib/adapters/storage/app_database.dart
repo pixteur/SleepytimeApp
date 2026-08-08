@@ -141,6 +141,11 @@ class SeriesTable extends Table {
   TextColumn get storyBible => text().withDefault(const Constant(''))();
   TextColumn get branchedFromBeatId => text().nullable()();
   IntColumn get status => intEnum<SeriesStatus>()();
+
+  /// Reading position: the chapter last opened and when, so the bookshelf can
+  /// offer "Continue — Chapter 4".
+  IntColumn get lastReadSeq => integer().nullable()();
+  DateTimeColumn get lastReadAt => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 
@@ -261,15 +266,24 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(worlds, worlds.extraThemes);
         await m.addColumn(worlds, worlds.castChanges);
       }
+      // v5 → v6: reading position, so a part-heard story can be resumed.
+      // Existing stories start with no position (null = never opened).
+      if (from < 6) {
+        await _addColumnIfMissing(
+          // The SQL table is `series`; `seriesTable` is only the Dart name.
+        'series',
+          'last_read_seq',
+          () => m.addColumn(seriesTable, seriesTable.lastReadSeq),
+        );
+        await _addColumnIfMissing(
+          // The SQL table is `series`; `seriesTable` is only the Dart name.
+        'series',
+          'last_read_at',
+          () => m.addColumn(seriesTable, seriesTable.lastReadAt),
+        );
+      }
       // v6 → v7: per-chapter titles. Chapters written before this keep the
       // empty default and simply show their number, as they always did.
-      //
-      // This is 7 rather than 6 because `main` already spent 6 on reading
-      // position, and every branch on a dev machine shares the one database
-      // in the documents folder. A branch that reuses a version number the
-      // database has already passed gets no upgrade callback at all: the
-      // column is silently never added, and the failure surfaces far away as
-      // a null-check crash when drift maps a row.
       if (from < 7) {
         await _addColumnIfMissing(
           'beats',
@@ -278,6 +292,12 @@ class AppDatabase extends _$AppDatabase {
         );
       }
       // v7 → v8: narration direction for the voice.
+      //
+      // Every step from 6 on is guarded, because branches share the one
+      // database in the documents folder and a branch that reuses a version
+      // the database has already passed gets no upgrade callback at all — the
+      // column is silently never added and the failure surfaces far away, as
+      // a null-check crash when drift maps a row.
       if (from < 8) {
         await _addColumnIfMissing(
           'beats',
@@ -288,8 +308,37 @@ class AppDatabase extends _$AppDatabase {
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
+      // Branches share the one database file in the documents folder, so a
+      // database can reach a version number without having taken every step
+      // that number implies — one branch stamps v8, another branch's v6 step
+      // then never runs, because onUpgrade is skipped entirely once
+      // `from == to`. The missing column surfaces far away and much later, as
+      // a null-check crash on read or "no such column" on save.
+      //
+      // Reconciling on open costs a few pragma reads and is a no-op once
+      // everything is present, which is cheaper than the debugging it saves.
+      await _ensureColumn(// The SQL table is `series`; `seriesTable` is only the Dart name.
+        'series', 'last_read_seq', 'INTEGER');
+      await _ensureColumn(// The SQL table is `series`; `seriesTable` is only the Dart name.
+        'series', 'last_read_at', 'INTEGER');
+      await _ensureColumn('beats', 'chapter_title', "TEXT NOT NULL DEFAULT ''");
+      await _ensureColumn(
+        'beats',
+        'narration_json',
+        "TEXT NOT NULL DEFAULT '{}'",
+      );
     },
   );
+
+  /// Add a column straight to the table if it is missing, whatever the
+  /// database's version number claims. Used by `beforeOpen` to heal a database
+  /// that skipped a step by arriving at a version another branch had stamped.
+  Future<void> _ensureColumn(String table, String column, String type) async {
+    final info = await customSelect('PRAGMA table_info($table)').get();
+    final present = info.any((row) => row.read<String>('name') == column);
+    if (present) return;
+    await customStatement('ALTER TABLE $table ADD COLUMN $column $type');
+  }
 
   /// Add a column only when it isn't there already.
   ///

@@ -2846,6 +2846,28 @@ class $SeriesTableTable extends SeriesTable
         type: DriftSqlType.int,
         requiredDuringInsert: true,
       ).withConverter<SeriesStatus>($SeriesTableTable.$converterstatus);
+  static const VerificationMeta _lastReadSeqMeta = const VerificationMeta(
+    'lastReadSeq',
+  );
+  @override
+  late final GeneratedColumn<int> lastReadSeq = GeneratedColumn<int>(
+    'last_read_seq',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastReadAtMeta = const VerificationMeta(
+    'lastReadAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastReadAt = GeneratedColumn<DateTime>(
+    'last_read_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2889,6 +2911,8 @@ class $SeriesTableTable extends SeriesTable
     storyBible,
     branchedFromBeatId,
     status,
+    lastReadSeq,
+    lastReadAt,
     createdAt,
     updatedAt,
   ];
@@ -3003,6 +3027,24 @@ class $SeriesTableTable extends SeriesTable
         ),
       );
     }
+    if (data.containsKey('last_read_seq')) {
+      context.handle(
+        _lastReadSeqMeta,
+        lastReadSeq.isAcceptableOrUnknown(
+          data['last_read_seq']!,
+          _lastReadSeqMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_read_at')) {
+      context.handle(
+        _lastReadAtMeta,
+        lastReadAt.isAcceptableOrUnknown(
+          data['last_read_at']!,
+          _lastReadAtMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3100,6 +3142,14 @@ class $SeriesTableTable extends SeriesTable
           data['${effectivePrefix}status'],
         )!,
       ),
+      lastReadSeq: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_read_seq'],
+      ),
+      lastReadAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_read_at'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -3152,6 +3202,11 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
   final String storyBible;
   final String? branchedFromBeatId;
   final SeriesStatus status;
+
+  /// Reading position: the chapter last opened and when, so the bookshelf can
+  /// offer "Continue — Chapter 4".
+  final int? lastReadSeq;
+  final DateTime? lastReadAt;
   final DateTime createdAt;
   final DateTime updatedAt;
   const SeriesRow({
@@ -3172,6 +3227,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     required this.storyBible,
     this.branchedFromBeatId,
     required this.status,
+    this.lastReadSeq,
+    this.lastReadAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -3221,6 +3278,12 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
         $SeriesTableTable.$converterstatus.toSql(status),
       );
     }
+    if (!nullToAbsent || lastReadSeq != null) {
+      map['last_read_seq'] = Variable<int>(lastReadSeq);
+    }
+    if (!nullToAbsent || lastReadAt != null) {
+      map['last_read_at'] = Variable<DateTime>(lastReadAt);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -3257,6 +3320,12 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           ? const Value.absent()
           : Value(branchedFromBeatId),
       status: Value(status),
+      lastReadSeq: lastReadSeq == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastReadSeq),
+      lastReadAt: lastReadAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastReadAt),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -3297,6 +3366,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
       status: $SeriesTableTable.$converterstatus.fromJson(
         serializer.fromJson<int>(json['status']),
       ),
+      lastReadSeq: serializer.fromJson<int?>(json['lastReadSeq']),
+      lastReadAt: serializer.fromJson<DateTime?>(json['lastReadAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -3330,6 +3401,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
       'status': serializer.toJson<int>(
         $SeriesTableTable.$converterstatus.toJson(status),
       ),
+      'lastReadSeq': serializer.toJson<int?>(lastReadSeq),
+      'lastReadAt': serializer.toJson<DateTime?>(lastReadAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -3353,6 +3426,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     String? storyBible,
     Value<String?> branchedFromBeatId = const Value.absent(),
     SeriesStatus? status,
+    Value<int?> lastReadSeq = const Value.absent(),
+    Value<DateTime?> lastReadAt = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => SeriesRow(
@@ -3379,6 +3454,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
         ? branchedFromBeatId.value
         : this.branchedFromBeatId,
     status: status ?? this.status,
+    lastReadSeq: lastReadSeq.present ? lastReadSeq.value : this.lastReadSeq,
+    lastReadAt: lastReadAt.present ? lastReadAt.value : this.lastReadAt,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -3417,6 +3494,12 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           ? data.branchedFromBeatId.value
           : this.branchedFromBeatId,
       status: data.status.present ? data.status.value : this.status,
+      lastReadSeq: data.lastReadSeq.present
+          ? data.lastReadSeq.value
+          : this.lastReadSeq,
+      lastReadAt: data.lastReadAt.present
+          ? data.lastReadAt.value
+          : this.lastReadAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -3442,6 +3525,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           ..write('storyBible: $storyBible, ')
           ..write('branchedFromBeatId: $branchedFromBeatId, ')
           ..write('status: $status, ')
+          ..write('lastReadSeq: $lastReadSeq, ')
+          ..write('lastReadAt: $lastReadAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -3449,7 +3534,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     childId,
     worldId,
@@ -3467,9 +3552,11 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     storyBible,
     branchedFromBeatId,
     status,
+    lastReadSeq,
+    lastReadAt,
     createdAt,
     updatedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3491,6 +3578,8 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           other.storyBible == this.storyBible &&
           other.branchedFromBeatId == this.branchedFromBeatId &&
           other.status == this.status &&
+          other.lastReadSeq == this.lastReadSeq &&
+          other.lastReadAt == this.lastReadAt &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -3513,6 +3602,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
   final Value<String> storyBible;
   final Value<String?> branchedFromBeatId;
   final Value<SeriesStatus> status;
+  final Value<int?> lastReadSeq;
+  final Value<DateTime?> lastReadAt;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -3534,6 +3625,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     this.storyBible = const Value.absent(),
     this.branchedFromBeatId = const Value.absent(),
     this.status = const Value.absent(),
+    this.lastReadSeq = const Value.absent(),
+    this.lastReadAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3556,6 +3649,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     this.storyBible = const Value.absent(),
     this.branchedFromBeatId = const Value.absent(),
     required SeriesStatus status,
+    this.lastReadSeq = const Value.absent(),
+    this.lastReadAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3583,6 +3678,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     Expression<String>? storyBible,
     Expression<String>? branchedFromBeatId,
     Expression<int>? status,
+    Expression<int>? lastReadSeq,
+    Expression<DateTime>? lastReadAt,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -3606,6 +3703,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
       if (branchedFromBeatId != null)
         'branched_from_beat_id': branchedFromBeatId,
       if (status != null) 'status': status,
+      if (lastReadSeq != null) 'last_read_seq': lastReadSeq,
+      if (lastReadAt != null) 'last_read_at': lastReadAt,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -3630,6 +3729,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     Value<String>? storyBible,
     Value<String?>? branchedFromBeatId,
     Value<SeriesStatus>? status,
+    Value<int?>? lastReadSeq,
+    Value<DateTime?>? lastReadAt,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -3652,6 +3753,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
       storyBible: storyBible ?? this.storyBible,
       branchedFromBeatId: branchedFromBeatId ?? this.branchedFromBeatId,
       status: status ?? this.status,
+      lastReadSeq: lastReadSeq ?? this.lastReadSeq,
+      lastReadAt: lastReadAt ?? this.lastReadAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -3720,6 +3823,12 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
         $SeriesTableTable.$converterstatus.toSql(status.value),
       );
     }
+    if (lastReadSeq.present) {
+      map['last_read_seq'] = Variable<int>(lastReadSeq.value);
+    }
+    if (lastReadAt.present) {
+      map['last_read_at'] = Variable<DateTime>(lastReadAt.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3752,6 +3861,8 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
           ..write('storyBible: $storyBible, ')
           ..write('branchedFromBeatId: $branchedFromBeatId, ')
           ..write('status: $status, ')
+          ..write('lastReadSeq: $lastReadSeq, ')
+          ..write('lastReadAt: $lastReadAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -7522,6 +7633,8 @@ typedef $$SeriesTableTableCreateCompanionBuilder =
       Value<String> storyBible,
       Value<String?> branchedFromBeatId,
       required SeriesStatus status,
+      Value<int?> lastReadSeq,
+      Value<DateTime?> lastReadAt,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -7545,6 +7658,8 @@ typedef $$SeriesTableTableUpdateCompanionBuilder =
       Value<String> storyBible,
       Value<String?> branchedFromBeatId,
       Value<SeriesStatus> status,
+      Value<int?> lastReadSeq,
+      Value<DateTime?> lastReadAt,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -7695,6 +7810,16 @@ class $$SeriesTableTableFilterComposer
         column: $table.status,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
+
+  ColumnFilters<int> get lastReadSeq => $composableBuilder(
+    column: $table.lastReadSeq,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastReadAt => $composableBuilder(
+    column: $table.lastReadAt,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
@@ -7862,6 +7987,16 @@ class $$SeriesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get lastReadSeq => $composableBuilder(
+    column: $table.lastReadSeq,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastReadAt => $composableBuilder(
+    column: $table.lastReadAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -7990,6 +8125,16 @@ class $$SeriesTableTableAnnotationComposer
   GeneratedColumnWithTypeConverter<SeriesStatus, int> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
+  GeneratedColumn<int> get lastReadSeq => $composableBuilder(
+    column: $table.lastReadSeq,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastReadAt => $composableBuilder(
+    column: $table.lastReadAt,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -8113,6 +8258,8 @@ class $$SeriesTableTableTableManager
                 Value<String> storyBible = const Value.absent(),
                 Value<String?> branchedFromBeatId = const Value.absent(),
                 Value<SeriesStatus> status = const Value.absent(),
+                Value<int?> lastReadSeq = const Value.absent(),
+                Value<DateTime?> lastReadAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -8134,6 +8281,8 @@ class $$SeriesTableTableTableManager
                 storyBible: storyBible,
                 branchedFromBeatId: branchedFromBeatId,
                 status: status,
+                lastReadSeq: lastReadSeq,
+                lastReadAt: lastReadAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -8157,6 +8306,8 @@ class $$SeriesTableTableTableManager
                 Value<String> storyBible = const Value.absent(),
                 Value<String?> branchedFromBeatId = const Value.absent(),
                 required SeriesStatus status,
+                Value<int?> lastReadSeq = const Value.absent(),
+                Value<DateTime?> lastReadAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -8178,6 +8329,8 @@ class $$SeriesTableTableTableManager
                 storyBible: storyBible,
                 branchedFromBeatId: branchedFromBeatId,
                 status: status,
+                lastReadSeq: lastReadSeq,
+                lastReadAt: lastReadAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

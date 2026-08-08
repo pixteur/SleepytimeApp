@@ -9,6 +9,7 @@ import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../common/error_banner.dart';
 import '../common/marquee_text.dart';
+import 'sleep_timer.dart';
 
 /// Displays one chapter, reads it aloud (auto-plays, streamed paragraph-by-
 /// paragraph), and pages through the story: Back = previous chapter, Next =
@@ -58,7 +59,23 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
         _autoNext();
       }
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _speak());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _markRead();
+      _speak();
+    });
+  }
+
+  /// Remember this chapter as where the story got to, so the bookshelf can
+  /// offer to pick it back up.
+  Future<void> _markRead() async {
+    final series = ref.read(activeSeriesProvider);
+    if (series == null) return;
+    final updated = await ref
+        .read(seriesServiceProvider)
+        .markRead(series, widget.beat.seq);
+    if (!mounted) return;
+    ref.read(activeSeriesProvider.notifier).select(updated);
+    ref.invalidate(seriesForChildProvider(series.childId));
   }
 
   @override
@@ -168,6 +185,13 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   /// Auto-advance to the next chapter when this one finishes reading.
   Future<void> _autoNext() async {
     if (!mounted || _busy) return;
+    // The sleep timer only ever stops the story *between* chapters when set to
+    // "end of chapter" — a chapter is always allowed to finish its sentence.
+    if (ref.read(sleepTimerProvider).blocksNextChapter) {
+      ref.read(sleepTimerProvider.notifier).off();
+      if (mounted) showErrorBanner(context, 'Goodnight 🌙 See you tomorrow.');
+      return;
+    }
     final id = _seriesId;
     if (id == null) return;
     final beats = await ref.read(storageRepoProvider).loadBeats(id);
@@ -230,9 +254,6 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     await _tts.stop();
     if (mounted) Navigator.of(context).maybePop();
   }
-
-  /// Restart from chapter 1 (re-reads and re-narrates from the start).
-  Future<void> _restart() => _goToSeq(0);
 
   Future<void> _next() async {
     _autoAdvance = false;
@@ -310,9 +331,69 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     );
   }
 
+  /// Offer the sleep timer: stop at the end of this chapter, or after a while.
+  Future<void> _pickSleepTimer() async {
+    final current = ref.read(sleepTimerProvider);
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              leading: Icon(Icons.bedtime_rounded),
+              title: Text('Stop the story…'),
+              subtitle: Text('Narration winds down on its own'),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              title: const Text('At the end of this chapter'),
+              selected: current.mode == SleepTimerMode.endOfChapter,
+              onTap: () => Navigator.pop(context, 'chapter'),
+            ),
+            for (final minutes in [10, 20, 30])
+              ListTile(
+                title: Text('In $minutes minutes'),
+                onTap: () => Navigator.pop(context, '$minutes'),
+              ),
+            if (current.isOn)
+              ListTile(
+                leading: const Icon(Icons.close_rounded),
+                title: const Text('Turn the timer off'),
+                onTap: () => Navigator.pop(context, 'off'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    final timer = ref.read(sleepTimerProvider.notifier);
+    switch (choice) {
+      case 'off':
+        timer.off();
+      case 'chapter':
+        timer.endOfChapter();
+      default:
+        timer.countdown(int.parse(choice));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final listening = ref.watch(listeningModeProvider);
+    final sleepTimer = ref.watch(sleepTimerProvider);
+
+    // The countdown ran out mid-chapter: hush the story where it stands.
+    ref.listen<SleepTimer>(sleepTimerProvider, (_, next) {
+      if (next.mode == SleepTimerMode.countdown && next.expired) {
+        _stop();
+        ref.read(sleepTimerProvider.notifier).off();
+        if (mounted) showErrorBanner(context, 'Goodnight 🌙 See you tomorrow.');
+      }
+    });
+
     final seriesId = _seriesId;
     final beats = seriesId == null
         ? const <Beat>[]
@@ -352,9 +433,14 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                 : const SizedBox.shrink()),
     );
 
+    // Listening mode drops the whole screen to near-black: the point is that
+    // there is nothing to look at.
+    const night = Color(0xFF07070C);
     return Scaffold(
+      backgroundColor: listening ? night : null,
       // ── One compact top bar: story name once, chapter under it ──
       appBar: AppBar(
+        backgroundColor: listening ? night : null,
         toolbarHeight: 64,
         titleSpacing: 0,
         leading: IconButton(
@@ -415,10 +501,24 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.replay_rounded),
-            tooltip: 'Start from chapter 1',
-            onPressed: _busy ? null : _restart,
+            icon: Icon(
+              listening ? Icons.visibility_off_rounded : Icons.nightlight_round,
+            ),
+            tooltip: listening ? 'Show the words' : 'Listen with eyes closed',
+            onPressed: () => ref.read(listeningModeProvider.notifier).toggle(),
           ),
+          // The timer's label doubles as its "it's on" indicator.
+          sleepTimer.isOn
+              ? TextButton.icon(
+                  onPressed: _pickSleepTimer,
+                  icon: const Icon(Icons.bedtime_rounded, size: 18),
+                  label: Text(sleepTimer.label),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.bedtime_outlined),
+                  tooltip: 'Sleep timer',
+                  onPressed: _pickSleepTimer,
+                ),
           IconButton(
             icon: const Icon(Icons.home_rounded),
             tooltip: 'Home',
@@ -450,12 +550,19 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: _ReadingText(
-                      text: widget.beat.text,
-                      progress: _tts.progressStream,
-                      style: theme.textTheme.titleMedium?.copyWith(height: 1.6),
-                      footer: footer,
-                    ),
+                    child: listening
+                        ? _ListeningView(
+                            chapter: widget.beat.seq + 1,
+                            progress: _tts.progressStream,
+                          )
+                        : _ReadingText(
+                            text: widget.beat.text,
+                            progress: _tts.progressStream,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              height: 1.6,
+                            ),
+                            footer: footer,
+                          ),
                   ),
                   // Edge arrows, vertically centred at each side, always visible.
                   if (widget.beat.seq > 0)
@@ -517,6 +624,49 @@ class _NavArrow extends StatelessWidget {
     tooltip: icon == Icons.chevron_left_rounded ? 'Previous' : 'Next',
     onPressed: onTap,
   );
+}
+
+/// Listening mode: no words, no glare. A dim moon, the chapter number, and a
+/// hairline showing how far through the chapter the voice has got — enough to
+/// tell it's still playing, not enough to look at. See `docs/ui-ux.md`.
+class _ListeningView extends StatelessWidget {
+  const _ListeningView({required this.chapter, required this.progress});
+
+  final int chapter;
+  final Stream<double> progress;
+
+  @override
+  Widget build(BuildContext context) {
+    const ink = Color(0xFF6E6E85); // dim enough for a dark room
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 48),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('🌙', style: TextStyle(fontSize: 64)),
+          const SizedBox(height: 20),
+          Text(
+            'Chapter $chapter',
+            style: const TextStyle(color: ink, fontSize: 16, letterSpacing: 1),
+          ),
+          const SizedBox(height: 28),
+          StreamBuilder<double>(
+            stream: progress,
+            initialData: 0,
+            builder: (context, snap) => ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: (snap.data ?? 0).clamp(0.0, 1.0),
+                minHeight: 3,
+                backgroundColor: const Color(0xFF17171F),
+                valueColor: const AlwaysStoppedAnimation(ink),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// The chapter text with read-along behaviour: it auto-scrolls to keep pace

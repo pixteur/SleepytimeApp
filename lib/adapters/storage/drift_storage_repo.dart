@@ -337,6 +337,8 @@ class DriftStorageRepo implements StorageRepo {
             seedSummary: Value(s.seedSummary),
             storyBible: Value(s.storyBible),
             branchedFromBeatId: Value(s.branchedFromBeatId),
+            lastReadSeq: Value(s.lastReadSeq),
+            lastReadAt: Value(s.lastReadAt),
             updatedAt: Value(DateTime.now()),
           ),
         );
@@ -365,6 +367,8 @@ class DriftStorageRepo implements StorageRepo {
     storyBible: r.storyBible,
     branchedFromBeatId: r.branchedFromBeatId,
     status: r.status,
+    lastReadSeq: r.lastReadSeq,
+    lastReadAt: r.lastReadAt,
   );
 
   /// Extra themes ride in one column as comma-separated enum names.
