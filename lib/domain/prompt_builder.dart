@@ -37,6 +37,16 @@ class PromptBuilder {
       )
       ..writeln(_themeGuidance(req.series))
       ..writeln('Write the story in ${_languageName(req.child.language)}.')
+      // A voice reads this text, so markup is not skipped over — it is spoken.
+      // Emphasis around a foreign word is the common case: *vélo* comes out as
+      // "asterisk vélo asterisk".
+      ..writeln(
+        'Write "story_text" and "summary" as plain prose. Never use asterisks, '
+        'underscores, backticks, brackets, headings, bullet points or any '
+        'other formatting — not even to emphasise a word or to mark one that '
+        'is in another language. This chapter is read aloud, so anything like '
+        'that is spoken to the child character by character.',
+      )
       ..writeln(
         'Target length per chapter: ${_lengthFor(req.child.detailLevel)}.',
       )
@@ -314,7 +324,10 @@ class PromptBuilder {
             'thing, not a diff or a note. Return "summary", "characters" and '
             '"open_threads" unchanged unless your edits made them inaccurate. '
             'Keep "story_title" and "chapter_title" as they are unless they '
-            'misname what actually happens.',
+            'misname what actually happens. The one thing to fix even when '
+            'passing them through: strip any asterisks, underscores or other '
+            'formatting out of them, including emphasis around a word in '
+            'another language — those are read out character by character.',
           )
           ..writeln()
           ..writeln('DIRECTION FOR THE NARRATOR.')

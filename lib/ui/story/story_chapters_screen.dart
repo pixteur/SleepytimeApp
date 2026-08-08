@@ -537,7 +537,12 @@ class _DownloadIconState extends State<_DownloadIcon> {
   @override
   void didUpdateWidget(_DownloadIcon old) {
     super.didUpdateWidget(old);
-    if (old.signature != widget.signature) _check();
+    // Re-check on every rebuild, not just when the signature changes. Playing
+    // a chapter caches its audio without changing anything this widget is
+    // built from, so a signature-only check kept showing the answer from when
+    // the list was first built — audio saved, badge still empty. The check is
+    // a handful of cache lookups, which is cheap next to being wrong.
+    _check();
   }
 
   Future<void> _check() async {
