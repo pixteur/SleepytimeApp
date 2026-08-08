@@ -35,6 +35,9 @@ class LibraryPaths {
   /// Exported single-file audiobooks (whole story joined into one audio file).
   static Future<Directory> audiobooks() => _sub('audiobooks');
 
+  /// Exported Lunii story packs (STUdio archive zips).
+  static Future<Directory> luniiPacks() => _sub('lunii');
+
   /// Story cover / character art (reserved for future use).
   static Future<Directory> images() => _sub('images');
 }

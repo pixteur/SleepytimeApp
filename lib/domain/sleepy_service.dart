@@ -5,6 +5,8 @@ import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
+import '../adapters/export/cover_image.dart';
+import '../adapters/export/lunii_pack.dart';
 import '../adapters/export/sleepy_codec.dart';
 import '../adapters/storage/library_paths.dart';
 import '../adapters/storage/storage_repo.dart';
@@ -193,6 +195,46 @@ class SleepyService {
       b.add(part);
     }
     return b.toBytes();
+  }
+
+  /// Export the story as a **Lunii story pack** — a STUdio archive zip the
+  /// grown-up opens in STUdio and transfers onto the storyteller, so the child
+  /// can listen away from the app. Needs the narration cached (play or download
+  /// the story first). Returns the pack's path.
+  Future<String> exportLuniiPack(
+    Series series, {
+    required String language,
+    required String voiceSignature,
+    required String mimeType,
+  }) async {
+    final beats = await _repo.loadBeats(series.id);
+    final chapters = <LuniiChapter>[];
+    for (final b in beats) {
+      final bytes = await _cache.get(_key(voiceSignature, language, b.text));
+      if (bytes == null || bytes.isEmpty) continue;
+      chapters.add(
+        LuniiChapter(
+          name: 'Chapter ${b.seq + 1}',
+          audio: bytes,
+          mimeType: mimeType,
+        ),
+      );
+    }
+    if (chapters.isEmpty) {
+      throw StateError(
+        'No narration saved yet — play or download the story first.',
+      );
+    }
+    final bytes = encodeLuniiPack(
+      title: series.title,
+      description: series.storyBible.trim(),
+      chapters: chapters,
+      cover: nightSkyCover(seed: series.title),
+    );
+    final dir = await LibraryPaths.luniiPacks();
+    final file = File(p.join(dir.path, '${_safeName(series.title)}.zip'));
+    await file.writeAsBytes(bytes);
+    return file.path;
   }
 
   Future<Directory> exportsDir() => LibraryPaths.stories();

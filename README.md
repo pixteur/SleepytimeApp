@@ -33,6 +33,7 @@ Built **Flutter-first for PC (Windows)**, designed to port cleanly to **macOS an
 - **Bookshelf → Worlds → Episodes → Characters** — a loved world (e.g. "Bob and Leo") spawns endless consistent episodes. A grown-up tunes the world (premise, themes, cast) behind **Edit world**; adding a character introduces them in the next story, and removing one gives them a warm on-the-page goodbye rather than silently deleting them.
 - **Read-along** — text auto-scrolls and highlights the word being read.
 - **`.sleepy` files** — export/import a story (text + audio) as one shareable file.
+- **Export a story out of the app** — a single-file **audiobook** for a phone or car, or a **Lunii story pack** for the screen-free storyteller box (see [docs/lunii-export.md](docs/lunii-export.md)).
 - **Parent mode** — grown-up controls (delete/rename/edit) are hidden by default so kids can't change things, and every deletion needs the parent gate plus a two-step confirmation.
 - **One settings page** — parent mode, story AI, and voice on a single scroll.
 

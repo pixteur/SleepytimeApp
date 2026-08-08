@@ -160,9 +160,39 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
           );
       if (mounted) showErrorBanner(context, 'Audiobook saved: $path');
     } catch (e) {
-      if (mounted) showErrorBanner(context, 'Audiobook export failed: $e');
+      if (mounted) showErrorBanner(context, 'Audiobook export: ${_reason(e)}');
     }
   }
+
+  /// A STUdio pack for the Lunii storyteller, saved in the library. The
+  /// grown-up opens it in STUdio and transfers it to the device.
+  Future<void> _exportLunii(Series series) async {
+    final child = ref.read(activeChildProvider);
+    final lang = child?.language ?? 'en';
+    final tts = ref.read(ttsProvider);
+    try {
+      final path = await ref
+          .read(sleepyServiceProvider)
+          .exportLuniiPack(
+            series,
+            language: lang,
+            voiceSignature: tts.voiceSignature,
+            mimeType: tts.audioMimeType,
+          );
+      if (mounted) {
+        showErrorBanner(
+          context,
+          'Lunii pack saved — open it in STUdio to transfer: $path',
+        );
+      }
+    } catch (e) {
+      if (mounted) showErrorBanner(context, 'Lunii export: ${_reason(e)}');
+    }
+  }
+
+  /// "No narration saved yet…" reads better than "Bad state: No narration…".
+  String _reason(Object error) =>
+      error is StateError ? error.message : friendlyProviderError(error);
 
   Future<void> _open(Beat beat) async {
     await Navigator.push(
@@ -286,16 +316,22 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                 value: 'text',
                 child: Text('Text to share (friend rebuilds voice)'),
               ),
-              if (parentMode)
+              if (parentMode) ...[
                 const PopupMenuItem(
                   value: 'audiobook',
                   child: Text('Audiobook — single file (parents)'),
                 ),
+                const PopupMenuItem(
+                  value: 'lunii',
+                  child: Text('Lunii story pack (parents)'),
+                ),
+              ],
             ],
             onSelected: (v) {
               if (v == 'sleepy') _export(series);
               if (v == 'text') _exportText(series);
               if (v == 'audiobook') _exportAudiobook(series);
+              if (v == 'lunii') _exportLunii(series);
             },
           ),
         ],
