@@ -208,6 +208,38 @@ in [lib/adapters/audio/lame.dart](../lib/adapters/audio/lame.dart). It is
 Windows-only for now; `canEncodeMp3` is false elsewhere, and a caller that
 finds it false should offer the STUdio zip instead.
 
+## Building a pack
+
+[lib/adapters/lunii/device_pack.dart](../lib/adapters/lunii/device_pack.dart)
+assembles the tree above from a story's chapters. It **returns the files, it
+does not write them** — a pack is a value that can be inspected, asserted over
+and diffed long before anyone decides where to put it, and nothing in the
+builder can reach a device by accident.
+
+It is the last place a format mistake can be caught cheaply, so it refuses
+audio that is not MPEG-1 Layer III 44.1 kHz mono and images that are not
+320×240. Past that point the bytes are ciphered, on a device, and silent.
+
+`test/adapters/device_pack_test.dart` runs the probe's own assertions inward:
+the indexes decipher into `000\XXXXXXXX` paths, `bt` reproduces the head of
+`ri` byte for byte, `ni` is plaintext with counts agreeing with `ri` and `si`,
+and following the list index from the cover walks every chapter exactly once.
+
+### Two things a device write will settle
+
+Neither can be answered from the nine packs on hand, so both are guesses made
+as conservatively as possible.
+
+- **A cover node with no audio.** Every pack on the device plays a title
+  jingle from node 0; a generated story has none, so its cover node carries
+  `audio = -1`. That is what the field is for, but no pack here exercises it.
+- **`bt` when `ri` is shorter than 64 bytes.** `bt` is a fixed 64 bytes taken
+  from the head of `ri`. Every device pack has at least six images, so its
+  `ri` is comfortably longer; a story whose chapters share one cover has a
+  12-byte `ri`. The builder zero-pads so `bt` keeps the size every real one
+  has, but whether the firmware minds is unknown. Giving each chapter its own
+  picture sidesteps it entirely.
+
 ## Writing safely
 
 The nine packs already on a device are purchased content, and a botched `.pi`
@@ -218,3 +250,6 @@ is what loses them. So:
   `.pi` — a half-written pack that is not listed is invisible, whereas a listed
   pack that is half-written is not.
 - Never touch `.cfg`.
+- Snapshot with [tool/lunii_manifest.dart](../tool/lunii_manifest.dart) either
+  side of the write. It exits non-zero if anything changed that shouldn't
+  have, so it can gate the first attempt as well as explain it afterwards.

@@ -155,9 +155,11 @@ Beyond the phase docs, these are live and verified on hardware:
 - **Narration cues** — the pass also writes direction for the voice; chunking
   splits only where the feeling changes. [docs/narration-cues.md](docs/narration-cues.md)
 - **Lunii** — the FW2 format is fully reverse-validated against a physical
-  device; the STUdio zip export ships. Audio can now be encoded to what the
-  device plays (LAME over FFI, Windows only). Direct-to-device writing is
-  **not** built. [docs/lunii-sync.md](docs/lunii-sync.md)
+  device; the STUdio zip export ships. Audio and images can now be encoded to
+  what the device takes (LAME over FFI for MP3, Windows only; RLE4 BMP in pure
+  Dart), and `device_pack.dart` assembles a whole pack — but it returns the
+  files rather than writing them. **Nothing writes to a device yet.**
+  [docs/lunii-sync.md](docs/lunii-sync.md)
 - **Deferred** — [docs/plan-competing-llms.md](docs/plan-competing-llms.md)
 
 `tool/` holds read-only diagnostics: `lunii_probe` (re-checks the crypto
