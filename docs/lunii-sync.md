@@ -243,13 +243,59 @@ as conservatively as possible.
 ## Writing safely
 
 The nine packs already on a device are purchased content, and a botched `.pi`
-is what loses them. So:
+is what loses them. So
+[lib/adapters/lunii/device_writer.dart](../lib/adapters/lunii/device_writer.dart):
 
-- Copy `.pi` and `.md` into the app's library folder before the first write.
-- Write the new `.content/<PACK>/` tree fully, and only then append the uuid to
-  `.pi` — a half-written pack that is not listed is invisible, whereas a listed
-  pack that is half-written is not.
-- Never touch `.cfg`.
-- Snapshot with [tool/lunii_manifest.dart](../tool/lunii_manifest.dart) either
-  side of the write. It exits non-zero if anything changed that shouldn't
-  have, so it can gate the first attempt as well as explain it afterwards.
+- Refuses anything that does not look like a storyteller, and re-derives the
+  device key and checks it against an installed pack's `bt` before writing
+  with it.
+- Copies `.pi` and `.md` aside before touching a byte.
+- Writes the new `.content/<PACK>/` tree fully, reading each file back, and
+  only then appends the uuid to `.pi` — a half-written pack that is not listed
+  is invisible, whereas a listed pack that is half-written is not.
+- Never opens `.cfg`.
+
+Snapshot with [tool/lunii_manifest.dart](../tool/lunii_manifest.dart) either
+side of the write. It exits non-zero if anything changed that shouldn't have.
+
+**`.pi` must be appended to, not rewritten.** Every file at the root of a
+storyteller carries the Hidden attribute, and Windows refuses the
+`CREATE_ALWAYS` that `File.writeAsBytes` uses on a hidden file — "Access is
+denied", at the very last step, after the whole content tree is already on
+disk. Opening the existing file to append is fine, and it is the better
+semantic anyway: the ids already there are never read into memory and written
+back, so no bug in this code can scramble them.
+
+### The first write
+
+Done, on the FW2 device here, 2026-08-09: three chapters of real narration
+from the app's cache, re-encoded, with the night-sky cover.
+
+```
+Wrote 11 files. 9 packs → 10
+```
+
+`lunii_manifest diff` over the whole volume, before and after:
+
+```
+added: 10   (all under .content/CE4D1B54/)
+removed: 0
+changed: 1  (~ /.pi)
+OK — 10 new file(s), .pi appended; nothing else touched.
+```
+
+`lunii_probe` then passes on the new pack exactly as it does on Lunii's own:
+device key verified across all ten, `hdr=512 node=44 nodes=4 img=1/1 snd=3/3`,
+every list entry in range.
+
+**Still unconfirmed: whether it plays.** Everything above says the bytes are
+right by every check that can be made from a PC. Only the device can say
+whether it shows up in the wheel and reads the story — and in particular
+whether it minds a cover node with no audio, or a `bt` padded because `ri` is
+shorter than 64 bytes. Both are noted above; a three-chapter pack has four
+images at most, so the short `ri` cannot be sidestepped for small stories.
+
+An attempt that fails partway leaves a directory `.pi` does not list. The
+device cannot see it, and
+[tool/lunii_remove_orphan.dart](../tool/lunii_remove_orphan.dart) clears it —
+refusing, always, to remove anything `.pi` does list.

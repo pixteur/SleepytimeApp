@@ -66,12 +66,12 @@ void main(List<String> args) {
   final bt = File('$dir\\bt').readAsBytesSync();
   final riRaw = File('$dir\\ri').readAsBytesSync();
   final btPlain = luniiDecipher(Uint8List.fromList(bt), key);
-  final expected = riRaw.sublist(0, btPlain.length);
+  final expected = riRaw.sublist(0, _shared(btPlain, riRaw));
   stdout.writeln('\nbt: ${bt.length} bytes');
   stdout.writeln('   bt deciphered : ${_hex(btPlain.sublist(0, 16))}');
   stdout.writeln('   ri on disk    : ${_hex(expected.sublist(0, 16))}');
   stdout.writeln(
-    _eq(btPlain, expected)
+    _eq(btPlain.sublist(0, expected.length), expected)
         ? '   OK  device key verified (bt == ciphered head of ri)'
         : '   FAIL device key wrong',
   );
@@ -82,7 +82,8 @@ void main(List<String> args) {
     final head = File('$d\\ri').readAsBytesSync();
     final boot = File('$d\\bt').readAsBytesSync();
     final plain = luniiDecipher(Uint8List.fromList(boot), key);
-    return _eq(plain, head.sublist(0, plain.length));
+    final n = _shared(plain, head);
+    return _eq(plain.sublist(0, n), head.sublist(0, n));
   });
   stdout.writeln(
     '   ${all ? "OK" : "FAIL"}  same key verified across all '
@@ -181,6 +182,13 @@ bool _looksLikeIndex(Uint8List plain) {
   }
   return true;
 }
+
+/// How much of `bt` and `ri` can be compared. `bt` is always 64 bytes, but a
+/// pack this app wrote whose chapters share one cover has a 12-byte `ri` and
+/// the rest of `bt` is padding — so compare the overlap rather than reading
+/// off the end of the shorter one.
+int _shared(List<int> a, List<int> b) =>
+    a.length < b.length ? a.length : b.length;
 
 bool _eq(List<int> a, List<int> b) {
   if (a.length != b.length) return false;

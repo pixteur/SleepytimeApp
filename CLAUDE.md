@@ -140,6 +140,14 @@ behind it. Surveying a Lunii's own sounds one-frame-deep reports a confident
 rate, layer and channel mode *are* safe to read from frame one — bitrate is
 not. Same shape as the migration trap: a plausible answer, no error, wrong.
 
+**Every file at a storyteller's root is Hidden, so `.pi` must be appended to,
+not rewritten.** Windows refuses the `CREATE_ALWAYS` that `File.writeAsBytes`
+uses on a hidden file. It fails at the *last* step of a device write, after
+the whole content tree is on disk — and because `.pi` goes last by design, the
+half-done pack was invisible and the device was unharmed. Open the file and
+append; it is also the safer semantic, since the existing pack ids are then
+never rewritten at all.
+
 **Verify against the real database or device, not just tests.** Both the
 migration bug and the download-badge bug passed every test and failed
 immediately in the app. `tool/` holds read-only probes for exactly this.
@@ -155,10 +163,12 @@ Beyond the phase docs, these are live and verified on hardware:
 - **Narration cues** — the pass also writes direction for the voice; chunking
   splits only where the feeling changes. [docs/narration-cues.md](docs/narration-cues.md)
 - **Lunii** — the FW2 format is fully reverse-validated against a physical
-  device; the STUdio zip export ships. Audio and images can now be encoded to
-  what the device takes (LAME over FFI for MP3, Windows only; RLE4 BMP in pure
-  Dart), and `device_pack.dart` assembles a whole pack — but it returns the
-  files rather than writing them. **Nothing writes to a device yet.**
+  device; the STUdio zip export ships. Audio and images encode to what the
+  device takes (LAME over FFI for MP3, Windows only; RLE4 BMP in pure Dart),
+  `device_pack.dart` assembles a pack and `device_writer.dart` installs one.
+  **A pack has been written to real hardware** and passes `lunii_manifest`
+  (nothing else touched) and `lunii_probe` — but whether the device *plays* it
+  is still unconfirmed. No UI calls any of this yet.
   [docs/lunii-sync.md](docs/lunii-sync.md)
 - **Deferred** — [docs/plan-competing-llms.md](docs/plan-competing-llms.md)
 
@@ -168,6 +178,10 @@ against an attached device), `lunii_audio_survey` and `lunii_image_survey`
 stream, not just headers), `lunii_manifest` (proves a write touched only what
 it should), `db_schema` / `columns_check` (what the on-disk database actually
 has), `refine_diff` and `cue_report`.
+
+Two `tool/` scripts do write: `lunii_write` (dry run unless `--write`) and
+`lunii_remove_orphan` (refuses anything `.pi` lists). Snapshot with
+`lunii_manifest` either side of using them.
 
 ## Before committing
 
