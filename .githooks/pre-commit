@@ -1,0 +1,39 @@
+#!/bin/sh
+# Format staged Dart files before they are committed.
+#
+# CI runs `dart format --output=none --set-exit-if-changed .`, which fails the
+# whole job on formatting alone — before analyze or tests even run. Rather than
+# reject the commit and make you run the command yourself, this formats what is
+# already staged and re-stages it, so the commit that lands is the formatted
+# one and CI has nothing to complain about.
+#
+# Enable it once per clone:
+#     git config core.hooksPath .githooks
+#
+# Skip it for a single commit with `git commit --no-verify`.
+
+staged=$(git diff --cached --name-only --diff-filter=ACM -- '*.dart')
+[ -z "$staged" ] && exit 0
+
+# A staged deletion has nothing to format, and passing a missing path to
+# `dart format` fails the whole run.
+present=""
+for f in $staged; do
+  [ -f "$f" ] && present="$present $f"
+done
+[ -z "$present" ] && exit 0
+
+if ! command -v dart >/dev/null 2>&1; then
+  echo "pre-commit: dart is not on PATH — skipping format." >&2
+  exit 0
+fi
+
+# shellcheck disable=SC2086
+if ! dart format $present >/dev/null; then
+  echo "pre-commit: dart format failed. Commit aborted." >&2
+  exit 1
+fi
+
+# shellcheck disable=SC2086
+git add $present
+exit 0
