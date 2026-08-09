@@ -17,7 +17,11 @@ class ElevenLabsTtsSynthesizer implements TtsSynthesizer {
     required SecretStore secrets,
     http.Client? httpClient,
     this.voiceName = '21m00Tcm4TlvDq8ikWAM', // "Rachel"
-    this.model = 'eleven_multilingual_v2',
+    // v3 is the only ElevenLabs model that takes direction inline, so it is
+    // the only one that can act on a narration cue at all. Older models still
+    // work — they simply fall back to voice_settings, and `_directed` leaves
+    // their text alone so no tag is ever spoken.
+    this.model = 'eleven_v3',
   }) : _secrets = secrets, // ignore: prefer_initializing_formals
        _http = httpClient ?? http.Client();
 
@@ -43,6 +47,44 @@ class ElevenLabsTtsSynthesizer implements TtsSynthesizer {
   @override
   String get voiceSignature => 'elevenlabs/$model/$voiceName';
 
+  /// Tags v3 understands, mapped from the cue's own words.
+  ///
+  /// A deliberately short whitelist. An unrecognised tag is not ignored — it
+  /// is **spoken**, so a child would hear "bracket mischievously bracket" mid
+  /// story. Anything not on this list is dropped rather than guessed at, and
+  /// the sound-effect and experimental tags are left out entirely: a bedtime
+  /// story has no use for [explosion], and the experimental ones are
+  /// documented as inconsistent across voices.
+  static const Map<String, String> _tags = {
+    'whisper': '[whispers]',
+    'hushed': '[whispers]',
+    'excited': '[excited]',
+    'delighted': '[excited]',
+    'curious': '[curious]',
+    'wistful': '[sighs]',
+    'sleepy': '[sighs]',
+    'tired': '[sighs]',
+    'mischievous': '[mischievously]',
+    'playful': '[mischievously]',
+  };
+
+  /// The passage with at most one leading audio tag.
+  ///
+  /// v3 takes its direction inline, so unlike the other engines the cue has to
+  /// enter the text — but only here, at the moment of synthesis. The stored
+  /// chapter is never touched, so nothing can leak into the screen, an export,
+  /// or the Lunii pack. One tag at the front, never mid-sentence, because a
+  /// tag inside a line reads as a stage direction and breaks the flow.
+  String _directed(String text, NarrationCue cue) {
+    // Only v3 understands audio tags; an older model reads them out loud.
+    if (!model.startsWith('eleven_v3')) return text;
+    for (final word in [cue.volume, cue.emotion]) {
+      final tag = _tags[word.trim().toLowerCase()];
+      if (tag != null) return '$tag $text';
+    }
+    return text;
+  }
+
   @override
   Future<Uint8List> synthesize(
     String text, {
@@ -62,14 +104,13 @@ class ElevenLabsTtsSynthesizer implements TtsSynthesizer {
         'accept': 'audio/mpeg',
         'content-type': 'application/json',
       },
-      // v2 takes no free-text direction, so the cue is expressed through the
-      // voice settings it does have: lower stability lets the reading move
-      // more, which is what a cue with any feeling in it is asking for.
       body: jsonEncode({
-        'text': text,
+        'text': _directed(text, cue),
         'model_id': model,
         if (!cue.isEmpty)
           'voice_settings': {
+            // A cue carrying feeling wants a reading that moves; without one,
+            // hold steady so a chapter keeps one voice throughout.
             'stability': cue.emotion.isEmpty ? 0.5 : 0.35,
             'similarity_boost': 0.75,
             'style': cue.emotion.isEmpty ? 0.0 : 0.35,
