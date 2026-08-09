@@ -8,6 +8,8 @@ import 'package:uuid/uuid.dart';
 import '../adapters/export/cover_image.dart';
 import '../adapters/export/lunii_pack.dart';
 import '../adapters/export/sleepy_codec.dart';
+import '../adapters/lunii/device_writer.dart';
+import '../adapters/lunii/lunii_transfer.dart';
 import '../adapters/storage/library_paths.dart';
 import '../adapters/storage/storage_repo.dart';
 import '../adapters/tts/audio_cache.dart';
@@ -277,6 +279,63 @@ class SleepyService {
     final file = File(p.join(dir.path, '${_safeName(series.title)}.zip'));
     await file.writeAsBytes(bytes);
     return file.path;
+  }
+
+  /// Storytellers plugged in right now, by drive root. Empty when there is
+  /// none, which is how the menu decides whether to offer sending.
+  List<String> attachedLuniiDevices() => findLuniiDevices();
+
+  /// Write the story straight onto an attached storyteller — the same pack the
+  /// STUdio zip describes, but installed directly, so no grown-up has to run a
+  /// second program.
+  ///
+  /// A chapter whose narration is not fully downloaded is left out rather than
+  /// sent half-finished, and the count comes back so the caller can say so.
+  /// The heavy part runs off the UI isolate; see `lunii_transfer.dart`.
+  Future<LuniiTransfer> sendToLunii(
+    Series series, {
+    required String language,
+    required String voiceSignature,
+    LuniiCoverMotif motif = LuniiCoverMotif.nightSky,
+    String? drive,
+  }) async {
+    final devices = attachedLuniiDevices();
+    final target = drive ?? (devices.isEmpty ? null : devices.first);
+    if (target == null) {
+      throw StateError(
+        'No storyteller found. Plug the Lunii in with its USB cable and try '
+        'again.',
+      );
+    }
+
+    final beats = await _repo.loadBeats(series.id);
+    final chapterChunks = <List<Uint8List>>[];
+    var skipped = 0;
+    for (final beat in beats) {
+      final chunks = await _chapterChunks(beat, voiceSignature, language);
+      if (chunks == null) {
+        skipped++;
+        continue;
+      }
+      chapterChunks.add(chunks);
+    }
+    if (chapterChunks.isEmpty) {
+      throw StateError(
+        'No narration saved yet — play or download the story first.',
+      );
+    }
+
+    final backup = await LibraryPaths.deviceBackups();
+    return sendStoryToLunii(
+      LuniiTransferRequest(
+        drive: target,
+        backupDirectory: backup.path,
+        title: series.title,
+        chapterChunks: chapterChunks,
+        skipped: skipped,
+        motif: motif,
+      ),
+    );
   }
 
   Future<Directory> exportsDir() => LibraryPaths.stories();

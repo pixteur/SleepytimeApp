@@ -40,4 +40,8 @@ class LibraryPaths {
 
   /// Story cover / character art (reserved for future use).
   static Future<Directory> images() => _sub('images');
+
+  /// Copies of a storyteller's `.pi` and `.md`, taken before anything is
+  /// written to it. Small, and the only way back if a transfer goes wrong.
+  static Future<Directory> deviceBackups() => _sub('device-backup');
 }

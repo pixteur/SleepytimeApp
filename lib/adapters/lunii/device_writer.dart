@@ -168,6 +168,28 @@ class LuniiDevice {
       packDirectories.contains(_directoryName(uuid));
 }
 
+/// Attached storytellers, by drive root.
+///
+/// Windows only for now, and deliberately dumb: try each drive letter and see
+/// which one [LuniiDevice.open] accepts. The cheap `.content` check first
+/// keeps it from touching drives that plainly are not storytellers, and A–C
+/// are skipped so the system drive is never probed.
+List<String> findLuniiDevices() {
+  if (!Platform.isWindows) return const [];
+  final found = <String>[];
+  for (var letter = 'D'.codeUnitAt(0); letter <= 'Z'.codeUnitAt(0); letter++) {
+    final root = '${String.fromCharCode(letter)}:';
+    try {
+      if (!Directory(_join(root, '.content')).existsSync()) continue;
+      LuniiDevice.open(root);
+      found.add(root);
+    } on Object catch (_) {
+      // Not a storyteller, or not ready. Either way, not ours.
+    }
+  }
+  return found;
+}
+
 /// What a write would do, before it does it.
 class WritePlan {
   const WritePlan({

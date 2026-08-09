@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../adapters/ai/provider_exceptions.dart';
+import '../../adapters/lunii/lunii_transfer.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../../domain/models/series.dart';
@@ -36,6 +37,10 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
 
   /// A whole-story download is running; chapters are saved one at a time.
   bool _downloading = false;
+
+  /// A transfer is in flight. The work is in a worker isolate, so the app
+  /// stays responsive; this only stops a second send being started on top.
+  bool _sending = false;
 
   /// How many chapters that run has got through, for the progress label.
   int _downloaded = 0;
@@ -169,6 +174,67 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
       if (mounted) showErrorBanner(context, 'Audiobook saved: $path');
     } catch (e) {
       if (mounted) showErrorBanner(context, 'Audiobook export: ${_reason(e)}');
+    }
+  }
+
+  /// Write the story straight onto a plugged-in storyteller.
+  ///
+  /// The one export that changes something outside the app, on hardware
+  /// holding content somebody paid for — so it asks first, names the device
+  /// and the picture, and says afterwards exactly what it did.
+  Future<void> _sendToLunii(Series series) async {
+    if (_sending) return;
+    final service = ref.read(sleepyServiceProvider);
+    final devices = service.attachedLuniiDevices();
+    if (devices.isEmpty) {
+      showErrorBanner(
+        context,
+        'No storyteller found. Plug the Lunii in with its USB cable, then try '
+        'again.',
+      );
+      return;
+    }
+
+    final motif = await showDialog<LuniiCoverMotif>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Send to the Lunii'),
+        content: Text(
+          '"${series.title}" will be added to the storyteller on '
+          '${devices.first}. Nothing already on it is changed.\n\n'
+          'Which picture should it show?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          for (final option in LuniiCoverMotif.values)
+            TextButton(
+              onPressed: () => Navigator.pop(context, option),
+              child: Text(option.label),
+            ),
+        ],
+      ),
+    );
+    if (motif == null || !mounted) return;
+
+    setState(() => _sending = true);
+    showErrorBanner(context, 'Sending to the Lunii — this takes a minute…');
+    try {
+      final child = ref.read(activeChildProvider);
+      final result = await service.sendToLunii(
+        series,
+        language: child?.language ?? 'en',
+        voiceSignature: ref.read(ttsProvider).voiceSignature,
+        motif: motif,
+        drive: devices.first,
+      );
+      if (mounted) showErrorBanner(context, result.summary);
+    } catch (e) {
+      if (mounted) showErrorBanner(context, 'Send failed: ${_reason(e)}');
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
   }
 
@@ -415,6 +481,10 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                   child: Text('Audiobook — single file'),
                 ),
                 PopupMenuItem(value: 'lunii', child: Text('Lunii story pack')),
+                PopupMenuItem(
+                  value: 'lunii-send',
+                  child: Text('Send to the Lunii (plugged in)'),
+                ),
                 // No "(parents)" suffix any more — the whole menu is behind
                 // parent mode now.
                 PopupMenuItem(
@@ -427,6 +497,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                 if (v == 'text') _exportText(series);
                 if (v == 'audiobook') _exportAudiobook(series);
                 if (v == 'lunii') _exportLunii(series);
+                if (v == 'lunii-send') _sendToLunii(series);
                 if (v == 'refine') _refineStory(series);
               },
             ),
