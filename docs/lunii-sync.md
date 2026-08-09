@@ -112,9 +112,34 @@ slices into it at *list index* for *count* entries. `ri` and `si` are runs of
 These are device requirements, not conveniences — both confirmed by decoding
 assets off the attached device.
 
-- **Images** — BMP, exactly **320×240**, **4-bit RLE4**, 16-level greyscale
-  palette.
+- **Images** — BMP, exactly **320×240**, **4 bpp, BI_RLE4**, with a 16-entry
+  palette carried per image.
 - **Audio** — **MPEG-1 Layer III, 44.1 kHz, mono**, no ID3 tags.
+
+### Images
+
+From [tool/lunii_image_survey.dart](../tool/lunii_image_survey.dart), which
+reads the headers *and* decodes the RLE stream of all **199 images in 9
+packs**. Every one agrees:
+
+| | |
+|--|--|
+| Shape | 320×240, 4 bpp, `BI_RLE4`, bottom-up, 40-byte `BITMAPINFOHEADER` |
+| Palette | 16 BGRA entries immediately after the header, pixel data straight after that |
+| Sizes | `bfSize` and `biSizeImage` both correct on all 199 |
+| Stream | decodes to exactly 320×240 and ends cleanly, all 199 |
+| Escapes | end-of-line, absolute, end-of-bitmap — **no delta anywhere** |
+| Longest run | 255 px, the format's maximum |
+
+**The palette is per image, and it is not greyscale.** Only 149 of the 199 are
+grey, and even those are not a fixed 16-level ramp — each file carries its own
+unordered, unevenly spaced palette, the signature of a quantiser
+(`0x00 0x66 0xff 0x3c 0xea …`). The remaining 50 are colour. So an encoder is
+free to choose its own 16 colours; nothing has to be flattened to grey.
+
+Two things follow for whoever writes that encoder. Runs cap at 255 px. And
+since no image on the device uses RLE4's delta escape, the firmware's support
+for it is unproven — emit runs, absolute, end-of-line and end-of-bitmap only.
 
 The audio figures come from [tool/lunii_audio_survey.dart](../tool/lunii_audio_survey.dart),
 which walks every frame of every sound on an attached device. On the FW2

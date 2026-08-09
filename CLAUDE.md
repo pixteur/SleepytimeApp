@@ -161,10 +161,11 @@ Beyond the phase docs, these are live and verified on hardware:
 - **Deferred** — [docs/plan-competing-llms.md](docs/plan-competing-llms.md)
 
 `tool/` holds read-only diagnostics: `lunii_probe` (re-checks the crypto
-against an attached device), `lunii_audio_survey` (what audio format the
-device's own packs actually are), `lunii_manifest` (proves a write touched
-only what it should), `db_schema` / `columns_check` (what the on-disk database
-actually has), `refine_diff` and `cue_report`.
+against an attached device), `lunii_audio_survey` and `lunii_image_survey`
+(what format the device's own assets actually are — both decode the whole
+stream, not just headers), `lunii_manifest` (proves a write touched only what
+it should), `db_schema` / `columns_check` (what the on-disk database actually
+has), `refine_diff` and `cue_report`.
 
 ## Before committing
 
