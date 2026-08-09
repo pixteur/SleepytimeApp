@@ -100,6 +100,61 @@ Prefer this order unless product strategy changes:
 - [docs/safety.md](docs/safety.md)
 - [README.md](README.md)
 
+## Traps that have already cost time
+
+Read these before touching the areas they describe. Each one shipped a bug
+that only surfaced on a real device.
+
+**Migrations: never reuse a schema version another branch has used.** Every
+branch on a dev machine shares one database in the documents folder. A branch
+that stamps a version another branch hasn't reached means `onUpgrade` never
+fires for the skipped step — `from == to`, so the callback is skipped
+entirely — and the column is silently never added. It surfaces far away as a
+null-check crash when drift maps a row, or "no such column" on save. Guard
+each step with `_addColumnIfMissing`, and note `beforeOpen` reconciles missing
+columns regardless of version. **In-memory tests cannot catch this**: they go
+through `onCreate` and always get every column.
+
+**Anything a voice reads is spoken literally.** Markup is not skipped — an
+asterisk, a bracketed gloss, a language tag, an unrecognised audio tag all get
+read out to a child, character by character. Narration direction therefore
+never enters `story_text`; it travels as structured cues and each adapter
+renders it. See [docs/narration-cues.md](docs/narration-cues.md).
+
+**Playback is chunked, and the reader is not.** The voice provider is given a
+few sizeable chunks so one chunk's playback outlasts the next one's synthesis.
+Position is reported *per clip*, so anything mapping progress across a whole
+chapter must scale it. Cache keys are per chunk, so UI that rebuilds its own
+key will not match.
+
+**Verify against the real database or device, not just tests.** Both the
+migration bug and the download-badge bug passed every test and failed
+immediately in the app. `tool/` holds read-only probes for exactly this.
+
+## Current state
+
+Beyond the phase docs, these are live and verified on hardware:
+
+- **Story quality** — every chapter gets an editorial second pass before it is
+  saved or spoken; per-chapter titles. [docs/story-quality.md](docs/story-quality.md)
+- **Narration cues** — the pass also writes direction for the voice; chunking
+  splits only where the feeling changes. [docs/narration-cues.md](docs/narration-cues.md)
+- **Lunii** — the FW2 format is fully reverse-validated against a physical
+  device; the STUdio zip export ships. Direct-to-device writing is **not**
+  built. [docs/lunii-sync.md](docs/lunii-sync.md)
+- **Deferred** — [docs/plan-competing-llms.md](docs/plan-competing-llms.md)
+
+`tool/` holds read-only diagnostics: `lunii_probe` (re-checks the crypto
+against an attached device), `lunii_manifest` (proves a write touched only
+what it should), `db_schema` / `columns_check` (what the on-disk database
+actually has), `refine_diff` and `cue_report`.
+
+## Before committing
+
+CI runs `dart format --output=none --set-exit-if-changed .` **before** analyze
+and tests, so an unformatted file fails the whole job on whitespace. Enable the
+shared hook once per clone: `git config core.hooksPath .githooks`.
+
 ## Reference docs
 
 - Flutter iOS setup: <https://docs.flutter.dev/platform-integration/ios/setup>
