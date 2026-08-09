@@ -133,7 +133,9 @@ class StoryChoice {
 
 ### Persistence
 
-Schema v6 → v7: one `TEXT` column on `beats`, `choices`, holding the JSON list.
+Schema bump: one `TEXT` column on `beats`, `choices`, holding the JSON list,
+**and** the `mode` column on `series` from the decision in §7 (`intEnum<StoryMode>`,
+default `bedtime`, so every existing story is unchanged).
 Follow the `CastChanges.encode()/decode()` pattern — JSON in a text column,
 tolerant decode that returns empty on garbage, so a partially-written row can
 never crash the bookshelf.
@@ -212,7 +214,7 @@ At most one fork every other chapter, and **never on the last chapter** — an
 ending should not be a decision. `StoryRequest.wantsChoices` computes as:
 
 ```dart
-adventureMode && !mustConclude && chapterNumber.isOdd
+series.mode == StoryMode.adventure && !mustConclude && chapterNumber.isOdd
 ```
 
 A 6-chapter story then has 2–3 decisions: a story, not a quiz.
@@ -446,18 +448,32 @@ has no branch budget**. FLAM can offer a child three doors. We can offer them a
 door they invent themselves — and then remember what they found behind it, in
 this story and the next one.
 
-## 7. Open questions
+## 7. Decisions and open questions
 
-1. Does Adventure mode live in the same app, or is it a mode switch in the
-   parent area? *(Recommendation: a per-story choice at creation — "a story to
-   fall asleep to" vs "a story to play". It then rides on `Series`, so the
-   engine reads one flag and the shelf can show both kinds side by side.)*
-2. Is the choice input tap-only, or is the microphone in the loop? We have STT
+**Decided — Adventure mode is per story, chosen at creation.** Not a global
+switch and not a parent setting: the creator asks "a story to fall asleep to"
+or "a story to play", and the answer rides on `Series` as a `StoryMode` enum
+(`bedtime` / `adventure`). Consequences:
+
+- The engine reads one flag. `wantsChoices`, the backpack, and the chapter cap
+  all key off it, so nothing needs a second source of truth.
+- The shelf shows both kinds side by side; a world can hold both, so the same
+  characters appear in an afternoon adventure and that night's bedtime story.
+- It needs a column (`mode`, `intEnum<StoryMode>`, defaulting to `bedtime` so
+  every existing story stays exactly as it is) — fold this into Phase A's
+  migration rather than adding one of its own.
+- Bedtime remains the default selection in the creator. Adventure is the
+  deliberate choice, never the accident.
+
+Still open:
+
+1. Is the choice input tap-only, or is the microphone in the loop? We have STT
    in the architecture but not in the nightly flow.
-3. Do keepsakes belong to the child (across all worlds) or to the world?
+2. Do keepsakes belong to the child (across all worlds) or to the world?
    *(Recommendation: the child — it is their shelf of souvenirs.)*
-4. Does Adventure mode need its own chapter cap? `maxChapters = 6` is tuned for
-   bedtime; an afternoon adventure might want 10–12.
+3. Does Adventure mode need its own chapter cap? `maxChapters = 6` is tuned for
+   bedtime; an afternoon adventure might want 10–12. Now that mode is on
+   `Series`, this is a one-line answer whenever you want it.
 
 ## Sources
 
