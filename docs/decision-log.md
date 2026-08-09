@@ -4,6 +4,43 @@
 
 ---
 
+## 2026-08-09 — The Lunii write path works end to end
+
+**Confirmed on hardware.** A six-chapter story ("Ashi's adventure") built,
+written and played start to finish on the FW2 device. That closes the two
+questions the format could not answer on its own: a cover node with
+`audio = -1` is fine, and a `bt` zero-padded because `ri` is under 64 bytes is
+fine. The first attempt errored after its last chapter — a node with autoplay
+and no onward transition — which `tool/lunii_node_survey.dart` traced to a
+shape that exists nowhere on a working device.
+
+**Open, in rough priority order:**
+
+- **Spoken menus.** The device is navigated by ear: a child too young to read
+  picks a pack by hearing it announce itself, and steps through chapters the
+  same way. Every pack Lunii ships plays a title jingle from node 0 and speaks
+  its options. Ours are silent, so a generated story is findable only by
+  someone who can see the screen. This is the single thing standing between
+  "it plays" and "a child can use it alone". Needs a short synthesized line
+  per pack and per chapter, which the voice providers can already produce —
+  the work is graph shape and cue wording, not new plumbing.
+- **No tests for the send path.** `lunii_transfer.dart` and
+  `SleepyService.sendToLunii` have none: not the isolate boundary, not the
+  chapter-skipping when narration is missing, not the MP3 pass-through branch.
+  Everything under them is covered; the seam is not.
+- **OpenAI's voice cannot be sent.** It returns 24 kHz MP3 and re-encoding
+  needs a decode step. The vendored DLL exports mpglib's `hip_decode*`, so the
+  path is open but unbuilt; today that voice gets a clear refusal.
+- **Windows only.** `canEncodeMp3` is false elsewhere, so macOS/iOS would need
+  their own LAME build before any of this works there.
+- **LAME is not credited in the UI.** Its licence asks for an acknowledgement
+  and a link, and there is no About screen to put one in. Release-blocking,
+  small.
+
+**Affects:** `docs/lunii-sync.md`, `CLAUDE.md`.
+
+---
+
 ## 2026-08-09 — MP3 encoding for the Lunii write path: LAME over FFI
 
 **Context:** Writing a pack straight onto a storyteller needs audio in the

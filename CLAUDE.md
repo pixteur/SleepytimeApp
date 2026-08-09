@@ -166,9 +166,11 @@ Beyond the phase docs, these are live and verified on hardware:
   device; the STUdio zip export ships. Audio and images encode to what the
   device takes (LAME over FFI for MP3, Windows only; RLE4 BMP in pure Dart),
   `device_pack.dart` assembles a pack and `device_writer.dart` installs one.
-  **A pack has been written to real hardware** and passes `lunii_manifest`
-  (nothing else touched) and `lunii_probe` — but whether the device *plays* it
-  is still unconfirmed. No UI calls any of this yet.
+  **Confirmed end to end on real hardware**: a six-chapter story writes,
+  passes `lunii_manifest` (nothing else touched) and `lunii_probe`, and plays
+  start to finish on the device. "Send to the Lunii" is in the parent-only
+  share menu. The device navigates by ear and our packs are silent on the
+  cover — spoken menus are the next thing it needs.
   [docs/lunii-sync.md](docs/lunii-sync.md)
 - **Deferred** — [docs/plan-competing-llms.md](docs/plan-competing-llms.md)
 

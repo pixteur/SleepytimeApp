@@ -225,20 +225,25 @@ the indexes decipher into `000\XXXXXXXX` paths, `bt` reproduces the head of
 `ri` byte for byte, `ni` is plaintext with counts agreeing with `ri` and `si`,
 and following the list index from the cover walks every chapter exactly once.
 
-### Two things a device write will settle
+### Two things the device has now settled
 
-Neither can be answered from the nine packs on hand, so both are guesses made
-as conservatively as possible.
+Neither could be answered from the nine packs on hand, so both were guesses
+made as conservatively as possible. A six-chapter story played start to finish
+on the FW2 device on 2026-08-09, which answers both:
 
-- **A cover node with no audio.** Every pack on the device plays a title
-  jingle from node 0; a generated story has none, so its cover node carries
-  `audio = -1`. That is what the field is for, but no pack here exercises it.
-- **`bt` when `ri` is shorter than 64 bytes.** `bt` is a fixed 64 bytes taken
-  from the head of `ri`. Every device pack has at least six images, so its
-  `ri` is comfortably longer; a story whose chapters share one cover has a
-  12-byte `ri`. The builder zero-pads so `bt` keeps the size every real one
-  has, but whether the firmware minds is unknown. Giving each chapter its own
-  picture sidesteps it entirely.
+- **A cover node with no audio works.** Every pack that shipped with the
+  device plays a title jingle from node 0; a generated story has none, so its
+  cover node carries `audio = -1`. The firmware is fine with it.
+- **`bt` padded because `ri` is short works.** `bt` is a fixed 64 bytes from
+  the head of `ri`. Every shipped pack has at least six images so its `ri` is
+  comfortably longer, while a story whose chapters share one cover has a
+  12-byte `ri` and the builder zero-pads the rest. The device accepts it.
+
+What is *not* settled is whether a silent cover is a good idea. The device
+navigates by ear — a child too young to read picks a pack by listening to it
+announce itself — so a pack that says nothing is hard to find. That is a
+product gap, not a format one; see the open items in
+[decision-log.md](decision-log.md).
 
 ## Writing safely
 
@@ -288,12 +293,10 @@ OK — 10 new file(s), .pi appended; nothing else touched.
 device key verified across all ten, `hdr=512 node=44 nodes=4 img=1/1 snd=3/3`,
 every list entry in range.
 
-**Still unconfirmed: whether it plays.** Everything above says the bytes are
-right by every check that can be made from a PC. Only the device can say
-whether it shows up in the wheel and reads the story — and in particular
-whether it minds a cover node with no audio, or a `bt` padded because `ri` is
-shorter than 64 bytes. Both are noted above; a three-chapter pack has four
-images at most, so the short `ri` cannot be sidestepped for small stories.
+**That first pack played its chapters and then threw an error screen** — its
+last chapter had no onward transition, and autoplay followed it into `-1`. The
+fix and the survey behind it are described under the node graph above. The
+second attempt, a six-chapter story, played start to finish.
 
 An attempt that fails partway leaves a directory `.pi` does not list. The
 device cannot see it, and

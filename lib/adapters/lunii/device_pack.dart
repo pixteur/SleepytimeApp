@@ -263,14 +263,12 @@ DevicePack buildDevicePack({
 /// what ties a pack to one storyteller, and it is the check
 /// `tool/lunii_probe.dart` runs against every pack on a device.
 ///
-/// **Unverified when there are fewer than six images.** Every pack on the
-/// device has at least six, so its `ri` comfortably exceeds 64 bytes and the
-/// head simply exists. A generated story whose chapters share one cover has a
-/// 12-byte `ri`, and what the firmware does when it goes looking for 64 bytes
-/// of a 12-byte file is not a question any pack on the device can answer.
-/// Zero-padding at least keeps `bt` the fixed 64 bytes every real one is. The
-/// first write to a device is what will settle it; see the open question in
-/// `docs/lunii-sync.md`.
+/// **Zero-padded when there are fewer than six images.** Every pack that ships
+/// with a device has at least six, so its `ri` comfortably exceeds 64 bytes
+/// and the head simply exists. A generated story whose chapters share one
+/// cover has a 12-byte `ri`, and the rest of `bt` is padding. That was an open
+/// question until a pack built this way played on the FW2 device — the
+/// firmware does not mind.
 Uint8List _bootFile(Uint8List riCiphered, List<int> deviceKey) {
   final head = Uint8List(_bootSize);
   final available = riCiphered.length < _bootSize
