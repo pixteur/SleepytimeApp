@@ -181,9 +181,13 @@ stream, not just headers), `lunii_manifest` (proves a write touched only what
 it should), `db_schema` / `columns_check` (what the on-disk database actually
 has), `refine_diff` and `cue_report`.
 
-Two `tool/` scripts do write: `lunii_write` (dry run unless `--write`) and
-`lunii_remove_orphan` (refuses anything `.pi` lists). Snapshot with
-`lunii_manifest` either side of using them.
+`lunii_node_survey` reports how the packs on a device wire their story graphs;
+`audio_cache_audit` finds cached narration a voice provider got wrong.
+
+Three `tool/` scripts do write: `lunii_write` (dry run unless `--write`),
+`lunii_remove_orphan` (refuses anything `.pi` lists) and `audio_cache_audit`
+(read-only unless `--delete`). Snapshot with `lunii_manifest` either side of
+using the first two.
 
 ## Before committing
 

@@ -17,7 +17,7 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import '../audio/mp3_encoder.dart';
-import '../audio/mp3_frame.dart';
+import '../audio/mp3_decoder.dart';
 import '../audio/wav.dart';
 import '../export/cover_image.dart';
 
@@ -124,15 +124,22 @@ LuniiTransfer buildAndWritePack(LuniiTransferRequest request) {
 
 /// One chapter's chunks as a single MP3 the device will play.
 ///
-/// Trimming happens per chunk rather than once at the end, because a voice
-/// provider's dead air can land in the middle of a chapter as easily as after
-/// it. See [trimTrailingSilence].
+/// Every voice ends up in the same place — samples, trimmed, joined, encoded
+/// at what the device plays — whether it handed back WAV or MP3. Going through
+/// samples even for MP3 that is already the right shape costs a decode, and
+/// buys a chapter that is one clean stream rather than several concatenated
+/// ones, with the dead air taken out of each.
+///
+/// Trimming is per chunk rather than once at the end, because a provider's
+/// dead air can land in the middle of a chapter as easily as after it. See
+/// [trimTrailingSilence].
 Uint8List _chapterAudio(List<Uint8List> chunks) {
   final parts = <WavAudio>[];
   for (final chunk in chunks) {
     final raw = decompressAudio(chunk);
-    if (_isMp3(raw)) return _passThroughMp3(chunks);
-    parts.add(trimTrailingSilence(decodeWav(raw)));
+    parts.add(
+      trimTrailingSilence(_isMp3(raw) ? decodeMp3(raw) : decodeWav(raw)),
+    );
   }
   return encodePcmToLuniiMp3(joinWav(parts));
 }
@@ -145,27 +152,3 @@ bool _isMp3(Uint8List bytes) =>
         bytes[1] == 0x49 && // I
         bytes[2] == 0x46 && // F
         bytes[3] == 0x46); //  F
-
-/// A voice that already returns MP3 cannot be re-encoded without a decoder,
-/// which is not built. If it happens to be exactly what the device plays it
-/// can go straight through; otherwise say so plainly rather than shipping
-/// something that will not play.
-Uint8List _passThroughMp3(List<Uint8List> chunks) {
-  final joined = BytesBuilder();
-  for (final chunk in chunks) {
-    joined.add(decompressAudio(chunk));
-  }
-  final bytes = joined.toBytes();
-  final header = Mp3FrameHeader.findFirst(bytes);
-  if (header == null ||
-      header.version != MpegVersion.mpeg1 ||
-      header.sampleRate != luniiSampleRate ||
-      header.mode != ChannelMode.mono) {
-    throw LuniiDeviceException(
-      'This voice returns ${header?.summary ?? 'audio'} and the storyteller '
-      'needs MPEG1 44100Hz mono. Re-encoding MP3 is not supported yet — '
-      'switch voice, or use the Lunii story pack export instead.',
-    );
-  }
-  return bytes;
-}

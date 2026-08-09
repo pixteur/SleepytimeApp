@@ -14,7 +14,11 @@ fine. The first attempt errored after its last chapter — a node with autoplay
 and no onward transition — which `tool/lunii_node_survey.dart` traced to a
 shape that exists nowhere on a working device.
 
-**Open, in rough priority order:**
+**Since closed:** the send path is covered by tests at both levels; OpenAI's
+voice is sendable now that mpglib decodes MP3 back to samples; LAME is
+credited in Settings. See the entry below.
+
+**Still open, in rough priority order:**
 
 - **Spoken menus.** The device is navigated by ear: a child too young to read
   picks a pack by hearing it announce itself, and steps through chapters the
@@ -24,18 +28,49 @@ shape that exists nowhere on a working device.
   "it plays" and "a child can use it alone". Needs a short synthesized line
   per pack and per chapter, which the voice providers can already produce —
   the work is graph shape and cue wording, not new plumbing.
-- **No tests for the send path.** `lunii_transfer.dart` and
-  `SleepyService.sendToLunii` have none: not the isolate boundary, not the
-  chapter-skipping when narration is missing, not the MP3 pass-through branch.
-  Everything under them is covered; the seam is not.
-- **OpenAI's voice cannot be sent.** It returns 24 kHz MP3 and re-encoding
-  needs a decode step. The vendored DLL exports mpglib's `hip_decode*`, so the
-  path is open but unbuilt; today that voice gets a clear refusal.
-- **Windows only.** `canEncodeMp3` is false elsewhere, so macOS/iOS would need
-  their own LAME build before any of this works there.
-- **LAME is not credited in the UI.** Its licence asks for an acknowledgement
-  and a link, and there is no About screen to put one in. Release-blocking,
-  small.
+- **Windows only.** `canEncodeMp3` and `canDecodeMp3` are false elsewhere,
+  because the vendored LAME is an x64 Windows DLL. macOS and iOS need their
+  own build, made on a Mac, before any of this works there — and this repo has
+  no Apple platform directories yet either. Not something that can be started
+  from here.
+- **Dead air in the cache is worked around, not fixed.** A transfer trims it;
+  playback in the app still plays the hole.
+  `tool/audio_cache_audit.dart` finds the offenders — one chunk in 131 on the
+  machine this was written on, holding 636 seconds of silence — and will
+  delete them so they re-synthesize. Whether the app should trim on the way
+  *in*, or refuse to cache a clip that is mostly silence, is undecided.
+
+**Affects:** `docs/lunii-sync.md`, `CLAUDE.md`.
+
+---
+
+## 2026-08-09 — Loose ends after the Lunii write path landed
+
+**Tests for the send path.** `lunii_transfer.dart` and
+`SleepyService.sendToLunii` had none. Fifteen now, at both levels. The
+fixtures taught the lesson: an MP3 built from frame headers with no payload
+parses perfectly and decodes to nothing, so a hand-built fixture tests the
+header reader and never reaches the decoder. They are really encoded now.
+
+**MP3 in, via mpglib.** `lib/adapters/audio/mp3_decoder.dart` binds
+`hip_decode1_headers` from the same DLL as the encoder, so OpenAI's 24 kHz MP3
+can be decoded to samples and re-encoded at what the device plays. Every voice
+now takes the same route — samples, trimmed, joined, encoded — rather than
+MP3 taking a pass-through branch that could only accept audio already in the
+right shape. `encodePcmToMp3` gained explicit rate/bitrate/channel arguments;
+`encodePcmToLuniiMp3` is that with the device's settings.
+
+One bug worth remembering: the first decode loop threw "no decodable frames"
+for any clip small enough to fit in a single input chunk. mpglib produces
+nothing on the call that feeds it — it is still finding sync — and hands over
+everything on the calls afterwards, so a loop that gives up before draining
+sees an empty result. Larger clips hid it by taking more than one chunk.
+
+**LAME credited.** `lib/ui/settings/about_section.dart`, in Settings. Its
+licence asks for an acknowledgement and a link in exchange for shipping the
+encoder, and there was nowhere in the app saying so. It also reports whether
+the encoder actually loaded, which is the difference between "send to the
+Lunii" working and quietly not being offered.
 
 **Affects:** `docs/lunii-sync.md`, `CLAUDE.md`.
 

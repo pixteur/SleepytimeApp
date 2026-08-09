@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sleepytime/adapters/audio/mp3_encoder.dart';
 import 'package:sleepytime/adapters/audio/mp3_frame.dart';
+import 'package:sleepytime/adapters/audio/wav.dart';
 import 'package:sleepytime/adapters/lunii/device_writer.dart';
 import 'package:sleepytime/adapters/lunii/lunii_cipher.dart';
 import 'package:sleepytime/adapters/lunii/lunii_transfer.dart';
@@ -53,24 +55,25 @@ void main() {
   }
 
   /// A cached chunk that is already MP3, as the ElevenLabs and OpenAI voices
-  /// return — either what the device plays or, deliberately, not.
+  /// return — either at what the device plays, or at 24 kHz like OpenAI.
   ///
-  /// The frames have to be spaced by the length their own header declares. A
-  /// scan will not trust a lone sync pattern with nothing that follows on from
-  /// it, so frames at the wrong stride read as no MP3 at all rather than as
-  /// the wrong one.
+  /// Really encoded, not hand-built. Frame headers with no payload behind them
+  /// parse perfectly well and decode to nothing at all, so a fixture made that
+  /// way tests the header reader and never reaches the decoder.
   Uint8List mp3Chunk({bool deviceReady = true}) {
-    // MPEG1 128 kbps at 44100: 144 * 128000 / 44100. MPEG2 64 kbps at 22050:
-    // 72 * 64000 / 22050.
-    final stride = deviceReady ? 417 : 208;
-    final header = deviceReady
-        ? const [0xFF, 0xFB, 0x90, 0xC0] // MPEG1 44100 mono
-        : const [0xFF, 0xF3, 0x90, 0xC0]; // MPEG2 22050 mono
-    final bytes = Uint8List(stride * 3);
-    for (var i = 0; i < 3; i++) {
-      bytes.setRange(i * stride, i * stride + 4, header);
+    final rate = deviceReady ? 44100 : 24000;
+    final samples = Int16List(rate ~/ 2);
+    for (var i = 0; i < samples.length; i++) {
+      samples[i] = (sin(2 * pi * 440 * i / rate) * 8000).round();
     }
-    return compressAudio(bytes);
+    return compressAudio(
+      encodePcmToMp3(
+        WavAudio(samples: samples, sampleRate: rate, channels: 1),
+        sampleRate: rate,
+        bitrateKbps: deviceReady ? luniiBitrateKbps : 64,
+        mono: true,
+      ),
+    );
   }
 
   LuniiTransferRequest request({
@@ -119,46 +122,7 @@ void main() {
     });
   });
 
-  group('audio the device cannot play', () {
-    test('MP3 already in the device\'s format goes straight through', () {
-      makeDevice();
-      final transfer = buildAndWritePack(
-        request(
-          chapters: [
-            [mp3Chunk(), mp3Chunk()],
-          ],
-        ),
-      );
-      expect(transfer.chapters, 1);
-      // The chunks are concatenated untouched, so the sound file on the
-      // device is exactly the two of them.
-      final dir = '$root/.content/${transfer.packName}/sf/000';
-      final written = Directory(dir).listSync().whereType<File>().single;
-      expect(written.lengthSync(), 417 * 6);
-    });
-
-    test('MP3 at another rate is refused, naming what it found', () {
-      makeDevice();
-      expect(
-        () => buildAndWritePack(
-          request(
-            chapters: [
-              [mp3Chunk(deviceReady: false)],
-            ],
-          ),
-        ),
-        throwsA(
-          isA<LuniiDeviceException>()
-              .having((e) => e.message, 'names the format', contains('22050'))
-              .having(
-                (e) => e.message,
-                'suggests a way round',
-                contains('story pack export'),
-              ),
-        ),
-      );
-    });
-
+  group('refusals', () {
     test('nothing to send is refused before the device is touched', () {
       makeDevice();
       expect(
@@ -174,7 +138,7 @@ void main() {
         () => buildAndWritePack(
           request(
             chapters: [
-              [mp3Chunk()],
+              [wavChunk()],
             ],
           ),
         ),
@@ -182,6 +146,50 @@ void main() {
       );
     });
   });
+
+  group(
+    'voices that hand back MP3',
+    () {
+      setUp(makeDevice);
+
+      test('a chapter already in the device\'s format still goes', () {
+        final transfer = buildAndWritePack(
+          request(
+            chapters: [
+              [mp3Chunk(), mp3Chunk()],
+            ],
+          ),
+        );
+        expect(transfer.chapters, 1);
+        final sound = Directory(
+          '$root/.content/${transfer.packName}/sf/000',
+        ).listSync().whereType<File>().single;
+        expect(
+          Mp3FrameHeader.parse(luniiPlain(sound))?.summary,
+          'MPEG1 L3 ${luniiSampleRate}Hz ${luniiBitrateKbps}kbps mono',
+        );
+      });
+
+      test('a chapter at another rate is re-encoded, not refused', () {
+        // This is the OpenAI voice's shape. Before the decoder existed it was
+        // turned away at this point; now it goes through samples like the rest.
+        final transfer = buildAndWritePack(
+          request(
+            chapters: [
+              [mp3Chunk(deviceReady: false)],
+            ],
+          ),
+        );
+        final sound = Directory(
+          '$root/.content/${transfer.packName}/sf/000',
+        ).listSync().whereType<File>().single;
+        final header = Mp3FrameHeader.parse(luniiPlain(sound))!;
+        expect(header.sampleRate, luniiSampleRate);
+        expect(header.mode, ChannelMode.mono);
+      });
+    },
+    skip: canEncodeMp3 ? false : 'needs the vendored LAME (Windows)',
+  );
 
   group(
     'building from cached WAV',

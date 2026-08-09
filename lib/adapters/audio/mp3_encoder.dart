@@ -22,9 +22,9 @@
 /// on the way through, so a 24 kHz mono capture goes in and a 44.1 kHz mono
 /// stream comes out in one pass.
 ///
-/// Not handled yet: **MP3 in**. OpenAI's voice returns 24 kHz MP3, which has to
-/// be decoded before it can be re-encoded. The vendored DLL does export
-/// mpglib's `hip_decode*`, so the way through is open — it is simply not built.
+/// MP3 in goes through [mp3_decoder.dart](mp3_decoder.dart) first — OpenAI's
+/// voice returns 24 kHz MP3, which has to be samples again before it can be
+/// re-encoded. mpglib ships in the same DLL, so that costs no extra binary.
 ///
 /// See [docs/lunii-sync.md](../../../docs/lunii-sync.md).
 library;
@@ -63,7 +63,25 @@ Uint8List wavToLuniiMp3(Uint8List wav) => encodePcmToLuniiMp3(decodeWav(wav));
 /// As [wavToLuniiMp3], for already-decoded samples.
 ///
 /// Throws [LameException] if the library is missing or the encode fails.
-Uint8List encodePcmToLuniiMp3(WavAudio audio) {
+Uint8List encodePcmToLuniiMp3(WavAudio audio) => encodePcmToMp3(
+  audio,
+  sampleRate: luniiSampleRate,
+  bitrateKbps: luniiBitrateKbps,
+  mono: true,
+);
+
+/// Encode to whatever is asked for.
+///
+/// [encodePcmToLuniiMp3] is this with the device's settings, and is what the
+/// app calls. The general form exists because a test needs to make an MP3 that
+/// is *not* what the device plays, in order to prove the decoder and the
+/// re-encode turn one into the other.
+Uint8List encodePcmToMp3(
+  WavAudio audio, {
+  required int sampleRate,
+  required int bitrateKbps,
+  required bool mono,
+}) {
   if (audio.frames == 0) {
     throw const LameException('Nothing to encode: the audio has no samples');
   }
@@ -76,9 +94,9 @@ Uint8List encodePcmToLuniiMp3(WavAudio audio) {
   // MONO out means LAME averages the pair down for us.
   lame.setInSampleRate(gfp, audio.sampleRate);
   lame.setNumChannels(gfp, audio.channels);
-  lame.setOutSampleRate(gfp, luniiSampleRate);
-  lame.setMode(gfp, LameMode.mono);
-  lame.setBitrateKbps(gfp, luniiBitrateKbps);
+  lame.setOutSampleRate(gfp, sampleRate);
+  lame.setMode(gfp, mono ? LameMode.mono : LameMode.jointStereo);
+  lame.setBitrateKbps(gfp, bitrateKbps);
   lame.setQuality(gfp, 2);
   // The device's own packs carry the tag, so write a real one — which obliges
   // the backfill after the flush below.
@@ -90,16 +108,17 @@ Uint8List encodePcmToLuniiMp3(WavAudio audio) {
     lame.close(gfp);
     throw LameException(
       'LAME rejected ${audio.sampleRate} Hz / ${audio.channels}ch → '
-      '$luniiSampleRate Hz mono at $luniiBitrateKbps kbps',
+      '$sampleRate Hz ${mono ? 'mono' : 'stereo'} at $bitrateKbps kbps',
     );
   }
 
   // Resampling upward means more samples out than in, so the output buffer is
   // sized from the output rate — the usual "1.25 bytes per sample + 7200"
   // rule of thumb applied to what actually lands in it.
-  final outFramesPerChunk =
-      (_framesPerChunk * luniiSampleRate / audio.sampleRate).ceil();
-  final mp3BufferSize = (outFramesPerChunk * 1.25).ceil() + _flushBufferSize;
+  final outFramesPerChunk = (_framesPerChunk * sampleRate / audio.sampleRate)
+      .ceil();
+  final mp3BufferSize =
+      (outFramesPerChunk * (mono ? 1.25 : 2.5)).ceil() + _flushBufferSize;
 
   final pcmBuffer = calloc<Int16>(_framesPerChunk * audio.channels);
   final mp3Buffer = calloc<Uint8>(mp3BufferSize);
@@ -147,7 +166,7 @@ Uint8List encodePcmToLuniiMp3(WavAudio audio) {
 
     final mp3 = out.toBytes();
     _writeLametag(lame, gfp, mp3);
-    _verify(mp3);
+    _verify(mp3, sampleRate, mono);
     return mp3;
   } finally {
     calloc.free(pcmBuffer);
@@ -180,22 +199,24 @@ void _writeLametag(Lame lame, Pointer<Void> gfp, Uint8List mp3) {
   }
 }
 
-/// Prove the bytes really are what the device expects, rather than trusting
-/// that the settings above took effect.
-void _verify(Uint8List mp3) {
+/// Prove the bytes really are what was asked for, rather than trusting that
+/// the settings above took effect.
+///
+/// Layer III is checked outright — nothing here should ever produce anything
+/// else. Version is not: MPEG-2 is simply what LAME emits below 32 kHz, and a
+/// caller asking for that rate has asked for that version.
+void _verify(Uint8List mp3, int sampleRate, bool mono) {
   final header = Mp3FrameHeader.parse(mp3);
   if (header == null) {
     throw const LameException(
       'Encoded output does not start with an MP3 frame',
     );
   }
-  if (header.version != MpegVersion.mpeg1 ||
-      header.layer != 3 ||
-      header.sampleRate != luniiSampleRate ||
-      header.mode != ChannelMode.mono) {
+  final isMono = header.mode == ChannelMode.mono;
+  if (header.layer != 3 || header.sampleRate != sampleRate || isMono != mono) {
     throw LameException(
-      'Encoded ${header.summary}, but the storyteller needs '
-      'MPEG1 L3 ${luniiSampleRate}Hz mono',
+      'Encoded ${header.summary}, but ${sampleRate}Hz '
+      '${mono ? 'mono' : 'stereo'} was asked for',
     );
   }
 }

@@ -9,6 +9,7 @@ import '../../adapters/prefs/app_prefs.dart';
 import '../../adapters/secrets/secret_store.dart';
 import '../../app_providers.dart';
 import '../../domain/prompt_builder.dart';
+import 'about_section.dart';
 import 'settings_section.dart';
 import 'voice_section.dart';
 
@@ -350,6 +351,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               const Divider(height: 40),
               const VoiceSection(),
+              const Divider(height: 40),
+              const AboutSection(),
               const SizedBox(height: 24),
             ],
           ),

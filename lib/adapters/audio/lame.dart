@@ -63,6 +63,69 @@ typedef LameFlush = int Function(LameGfp, Pointer<Uint8>, int);
 /// `lame_get_lametag_frame`.
 typedef LameLametag = int Function(LameGfp, Pointer<Uint8>, int);
 
+/// `hip_t`, mpglib's decoder handle. Opaque, like [LameGfp].
+typedef HipHandle = Pointer<Void>;
+
+/// `mp3data_struct` — what mpglib learned from the frames it has seen.
+///
+/// Only the leading fields are read, but the whole struct has to be declared
+/// so its size is right: mpglib writes all of it, and a short one would be
+/// written past.
+final class Mp3Data extends Struct {
+  @Int32()
+  external int headerParsed;
+  @Int32()
+  external int stereo;
+  @Int32()
+  external int sampleRate;
+  @Int32()
+  external int bitrate;
+  @Int32()
+  external int mode;
+  @Int32()
+  external int modeExt;
+  @Int32()
+  external int frameSize;
+
+  /// `unsigned long` — 32 bits on Windows, where this is the only build.
+  @Uint32()
+  external int totalSamples;
+  @Int32()
+  external int totalFrames;
+  @Int32()
+  external int frameNumber;
+}
+
+/// `hip_decode_init`.
+typedef HipInit = HipHandle Function();
+
+/// `hip_decode_exit`.
+typedef HipExit = int Function(HipHandle);
+
+/// `hip_decode1_headers` — one call's worth of MP3 in, PCM out, and whatever
+/// the decoder has worked out about the stream so far.
+typedef HipDecodeHeaders =
+    int Function(
+      HipHandle,
+      Pointer<Uint8>,
+      int,
+      Pointer<Int16>,
+      Pointer<Int16>,
+      Pointer<Mp3Data>,
+    );
+
+typedef _HipInitNative = HipHandle Function();
+typedef _HipExitNative = Int32 Function(HipHandle);
+typedef _HipDecodeHeadersNative =
+    Int32 Function(
+      HipHandle,
+      Pointer<Uint8>,
+      Size,
+      Pointer<Int16>,
+      Pointer<Int16>,
+      Pointer<Mp3Data>,
+    );
+
 typedef _InitNative = LameGfp Function();
 typedef _SetIntNative = Int32 Function(LameGfp, Int32);
 typedef _SetVoidIntNative = Void Function(LameGfp, Int32);
@@ -116,7 +179,17 @@ class Lame {
       ),
       close = _library.lookupFunction<_GfpToIntNative, LameGfpToInt>(
         'lame_close',
-      );
+      ),
+      hipInit = _library.lookupFunction<_HipInitNative, HipInit>(
+        'hip_decode_init',
+      ),
+      hipExit = _library.lookupFunction<_HipExitNative, HipExit>(
+        'hip_decode_exit',
+      ),
+      hipDecodeHeaders = _library
+          .lookupFunction<_HipDecodeHeadersNative, HipDecodeHeaders>(
+            'hip_decode1_headers',
+          );
 
   static LameSetInt _setter(DynamicLibrary lib, String symbol) =>
       lib.lookupFunction<_SetIntNative, LameSetInt>(symbol);
@@ -164,6 +237,15 @@ class Lame {
   final LameLametag getLametagFrame;
 
   final LameGfpToInt close;
+
+  // ── mpglib, the decoder that ships in the same library ──────────────
+  /// Allocate a decoder. Separate from the encoder handle entirely.
+  final HipInit hipInit;
+  final HipExit hipExit;
+
+  /// Feed MP3 bytes and take PCM out. Returns samples per channel, 0 when it
+  /// wants more input before it can answer, and negative on a broken stream.
+  final HipDecodeHeaders hipDecodeHeaders;
 
   static Lame? _instance;
   static bool _tried = false;
