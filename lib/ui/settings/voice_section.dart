@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../adapters/prefs/app_prefs.dart';
+import '../../adapters/secrets/secret_store.dart';
 import '../../adapters/tts/elevenlabs_tts_synthesizer.dart';
 import '../../adapters/tts/gemini_tts_synthesizer.dart';
 import '../../adapters/tts/openai_tts_synthesizer.dart';
@@ -32,6 +33,10 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
   /// Overrides the model this engine synthesizes with. Blank uses the
   /// adapter's own default, which is what almost everyone should leave it on.
   final _model = TextEditingController();
+
+  /// Masked reminder of the saved ElevenLabs key, e.g. `sk_1••••7f2c`. Empty
+  /// when none is saved, or when it was saved before hints existed.
+  String _elevenHint = '';
   VoiceEngine _engine = VoiceEngine.device;
   String _voice = '';
   bool _busy = false;
@@ -59,6 +64,7 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
       _engine = engine;
       _voice = prefs.voiceName(engine.name) ?? _defaultVoice(engine);
       _model.text = prefs.voiceModel(engine.name) ?? '';
+      _elevenHint = prefs.keyHint(ElevenLabsTtsSynthesizer.keyName);
     });
   }
 
@@ -101,6 +107,7 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
       _engine = e;
       _voice = prefs.voiceName(e.name) ?? _defaultVoice(e);
       _model.text = prefs.voiceModel(e.name) ?? '';
+      _elevenHint = prefs.keyHint(ElevenLabsTtsSynthesizer.keyName);
       _status = null;
     });
   }
@@ -120,9 +127,15 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
     }
     if (_engine == VoiceEngine.elevenlabs &&
         _elevenKey.text.trim().isNotEmpty) {
+      final key = _elevenKey.text.trim();
       await ref
           .read(secretStoreProvider)
-          .writeKey(ElevenLabsTtsSynthesizer.keyName, _elevenKey.text.trim());
+          .writeKey(ElevenLabsTtsSynthesizer.keyName, key);
+      // Recorded while the key is in hand — the secret is never read back out
+      // of the OS store just to show which one is saved.
+      final hint = SecretStore.hintFor(key);
+      await prefs.setKeyHint(ElevenLabsTtsSynthesizer.keyName, hint);
+      if (mounted) setState(() => _elevenHint = hint);
     }
     await ref.read(voiceConfigProvider.notifier).refresh();
 
@@ -217,10 +230,15 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
               controller: _elevenKey,
               obscureText: true,
               enabled: !_busy,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'ElevenLabs API key',
+                // Naming the saved key lets a parent tell which one is in
+                // there without the app reading the secret back.
+                hintText: _elevenHint.isEmpty
+                    ? null
+                    : '$_elevenHint — type to replace it',
                 helperText: 'Get one at elevenlabs.io',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
             )
           else
