@@ -38,7 +38,10 @@ void main() {
         volume: 'hushed',
         note: 'linger on the last line',
       );
-      expect(cue.asDirection(), 'slow, hushed, wistful. linger on the last line');
+      expect(
+        cue.asDirection(),
+        'slow, hushed, wistful. linger on the last line',
+      );
     });
 
     test('round-trips through encode so it can key the audio cache', () {

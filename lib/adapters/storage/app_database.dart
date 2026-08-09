@@ -271,13 +271,13 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         await _addColumnIfMissing(
           // The SQL table is `series`; `seriesTable` is only the Dart name.
-        'series',
+          'series',
           'last_read_seq',
           () => m.addColumn(seriesTable, seriesTable.lastReadSeq),
         );
         await _addColumnIfMissing(
           // The SQL table is `series`; `seriesTable` is only the Dart name.
-        'series',
+          'series',
           'last_read_at',
           () => m.addColumn(seriesTable, seriesTable.lastReadAt),
         );
@@ -317,10 +317,18 @@ class AppDatabase extends _$AppDatabase {
       //
       // Reconciling on open costs a few pragma reads and is a no-op once
       // everything is present, which is cheaper than the debugging it saves.
-      await _ensureColumn(// The SQL table is `series`; `seriesTable` is only the Dart name.
-        'series', 'last_read_seq', 'INTEGER');
-      await _ensureColumn(// The SQL table is `series`; `seriesTable` is only the Dart name.
-        'series', 'last_read_at', 'INTEGER');
+      await _ensureColumn(
+        // The SQL table is `series`; `seriesTable` is only the Dart name.
+        'series',
+        'last_read_seq',
+        'INTEGER',
+      );
+      await _ensureColumn(
+        // The SQL table is `series`; `seriesTable` is only the Dart name.
+        'series',
+        'last_read_at',
+        'INTEGER',
+      );
       await _ensureColumn('beats', 'chapter_title', "TEXT NOT NULL DEFAULT ''");
       await _ensureColumn(
         'beats',

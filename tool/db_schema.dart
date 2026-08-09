@@ -29,14 +29,18 @@ void main(List<String> args) {
     );
   }
 
-  stdout.writeln('\nrows: ${db.select('select count(*) c from beats').first['c']}');
+  stdout.writeln(
+    '\nrows: ${db.select('select count(*) c from beats').first['c']}',
+  );
   if (hasChapterTitle) {
     final nulls = db
         .select('select count(*) c from beats where chapter_title is null')
         .first['c'];
     stdout.writeln('rows with NULL chapter_title: $nulls');
   } else {
-    stdout.writeln('chapter_title column is ABSENT — the migration did not run');
+    stdout.writeln(
+      'chapter_title column is ABSENT — the migration did not run',
+    );
   }
   db.close();
 }

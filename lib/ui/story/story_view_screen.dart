@@ -162,11 +162,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
       // Warm with the next chapter's own direction, or the cache fills with
       // undirected audio that playback then misses.
       if (next != null) {
-        await _tts.preload(
-          next.text,
-          language: _lang,
-          notes: next.narration,
-        );
+        await _tts.preload(next.text, language: _lang, notes: next.narration);
       }
     } catch (_) {
       /* preload is an optimization only */

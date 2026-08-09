@@ -197,11 +197,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
         var saved = false;
         for (var attempt = 0; attempt < 2 && !saved; attempt++) {
           try {
-            await tts.preload(
-              beat.text,
-              language: lang,
-              notes: beat.narration,
-            );
+            await tts.preload(beat.text, language: lang, notes: beat.narration);
             saved = true;
           } catch (_) {
             if (attempt == 0) {

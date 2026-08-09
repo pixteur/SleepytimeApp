@@ -21,8 +21,10 @@ void main(List<String> args) {
 
   final md = File('$root\\.md').readAsBytesSync();
   final pi = File('$root\\.pi').readAsBytesSync();
-  stdout.writeln('.md ${md.length} bytes, .pi ${pi.length} bytes '
-      '(${pi.length ~/ 16} packs)');
+  stdout.writeln(
+    '.md ${md.length} bytes, .pi ${pi.length} bytes '
+    '(${pi.length ~/ 16} packs)',
+  );
 
   // Pack dir name is the last 4 bytes of the uuid, uppercase hex.
   final packs = <String>[];
@@ -53,7 +55,9 @@ void main(List<String> args) {
       stdout.writeln('   [$i] ${_ascii(plain.sublist(i * 12, i * 12 + 12))}');
     }
     final ok = _looksLikeIndex(plain);
-    stdout.writeln('   ${ok ? "OK  generic key deciphers $name" : "FAIL not an asset index"}');
+    stdout.writeln(
+      '   ${ok ? "OK  generic key deciphers $name" : "FAIL not an asset index"}',
+    );
   }
 
   // The boot file is the *ciphered* head of `ri`, re-ciphered with the device
@@ -66,9 +70,11 @@ void main(List<String> args) {
   stdout.writeln('\nbt: ${bt.length} bytes');
   stdout.writeln('   bt deciphered : ${_hex(btPlain.sublist(0, 16))}');
   stdout.writeln('   ri on disk    : ${_hex(expected.sublist(0, 16))}');
-  stdout.writeln(_eq(btPlain, expected)
-      ? '   OK  device key verified (bt == ciphered head of ri)'
-      : '   FAIL device key wrong');
+  stdout.writeln(
+    _eq(btPlain, expected)
+        ? '   OK  device key verified (bt == ciphered head of ri)'
+        : '   FAIL device key wrong',
+  );
 
   // And the same key must hold for every pack already on the device.
   final all = packs.every((p) {
@@ -78,8 +84,10 @@ void main(List<String> args) {
     final plain = luniiDecipher(Uint8List.fromList(boot), key);
     return _eq(plain, head.sublist(0, plain.length));
   });
-  stdout.writeln('   ${all ? "OK" : "FAIL"}  same key verified across all '
-      '${packs.length} packs');
+  stdout.writeln(
+    '   ${all ? "OK" : "FAIL"}  same key verified across all '
+    '${packs.length} packs',
+  );
 
   // The node index is the story graph itself. Its header repeats counts we can
   // check independently (node count from the file size, resource counts from
@@ -89,12 +97,14 @@ void main(List<String> args) {
     final d = '$root\\.content\\$pack';
     // `ni` is stored in the clear — deciphering it would corrupt the header.
     final ni = File('$d\\ni').readAsBytesSync();
-    final images = luniiDecipher(
+    final images =
+        luniiDecipher(
           File('$d\\ri').readAsBytesSync(),
           luniiGenericKey,
         ).length ~/
         12;
-    final sounds = luniiDecipher(
+    final sounds =
+        luniiDecipher(
           File('$d\\si').readAsBytesSync(),
           luniiGenericKey,
         ).length ~/
@@ -106,14 +116,17 @@ void main(List<String> args) {
     final imageCount = h.getUint32(16, Endian.little);
     final soundCount = h.getUint32(20, Endian.little);
     final fromSize = (ni.length - headerSize) / nodeSize;
-    final ok = headerSize == 0x200 &&
+    final ok =
+        headerSize == 0x200 &&
         nodeSize == 0x2C &&
         fromSize == nodeCount &&
         imageCount == images &&
         soundCount == sounds;
-    stdout.writeln('$pack  hdr=$headerSize node=$nodeSize '
-        'nodes=$nodeCount (size says $fromSize)  img=$imageCount/$images  '
-        'snd=$soundCount/$sounds  ${ok ? "OK" : "MISMATCH"}');
+    stdout.writeln(
+      '$pack  hdr=$headerSize node=$nodeSize '
+      'nodes=$nodeCount (size says $fromSize)  img=$imageCount/$images  '
+      'snd=$soundCount/$sounds  ${ok ? "OK" : "MISMATCH"}',
+    );
   }
 
   // `li` is a flat run of stage-node indices that action nodes slice into, so
@@ -126,12 +139,15 @@ void main(List<String> args) {
     final li = luniiDecipher(File('$d\\li').readAsBytesSync(), luniiGenericKey);
     final view = ByteData.sublistView(li);
     final values = [
-      for (var i = 0; i * 4 < li.length; i++) view.getInt32(i * 4, Endian.little),
+      for (var i = 0; i * 4 < li.length; i++)
+        view.getInt32(i * 4, Endian.little),
     ];
     final inRange = values.every((v) => v >= 0 && v < nodes);
-    stdout.writeln('$pack  ${values.length} entries, nodes=$nodes  '
-        'first=${values.take(8).toList()}  '
-        '${inRange ? "OK all in range" : "OUT OF RANGE"}');
+    stdout.writeln(
+      '$pack  ${values.length} entries, nodes=$nodes  '
+      'first=${values.take(8).toList()}  '
+      '${inRange ? "OK all in range" : "OUT OF RANGE"}',
+    );
   }
 
   // One node, byte by byte — to pin down where the control flags sit.
@@ -142,16 +158,18 @@ void main(List<String> args) {
     final off = 0x200 + i * 0x2C;
     final n = ByteData.sublistView(ni, off, off + 0x2C);
     stdout.writeln('node $i: ${_hex(ni.sublist(off, off + 0x2C))}');
-    stdout.writeln('   image=${n.getInt32(0, Endian.little)} '
-        'audio=${n.getInt32(4, Endian.little)} '
-        'ok=[${n.getInt32(8, Endian.little)},${n.getInt32(12, Endian.little)},'
-        '${n.getInt32(16, Endian.little)}] '
-        'home=[${n.getInt32(20, Endian.little)},'
-        '${n.getInt32(24, Endian.little)},${n.getInt32(28, Endian.little)}] '
-        'flags16@32=[${n.getUint16(32, Endian.little)},'
-        '${n.getUint16(34, Endian.little)},${n.getUint16(36, Endian.little)},'
-        '${n.getUint16(38, Endian.little)},${n.getUint16(40, Endian.little)}] '
-        'tail=${_hex(ni.sublist(off + 42, off + 0x2C))}');
+    stdout.writeln(
+      '   image=${n.getInt32(0, Endian.little)} '
+      'audio=${n.getInt32(4, Endian.little)} '
+      'ok=[${n.getInt32(8, Endian.little)},${n.getInt32(12, Endian.little)},'
+      '${n.getInt32(16, Endian.little)}] '
+      'home=[${n.getInt32(20, Endian.little)},'
+      '${n.getInt32(24, Endian.little)},${n.getInt32(28, Endian.little)}] '
+      'flags16@32=[${n.getUint16(32, Endian.little)},'
+      '${n.getUint16(34, Endian.little)},${n.getUint16(36, Endian.little)},'
+      '${n.getUint16(38, Endian.little)},${n.getUint16(40, Endian.little)}] '
+      'tail=${_hex(ni.sublist(off + 42, off + 0x2C))}',
+    );
   }
 }
 
@@ -172,9 +190,8 @@ bool _eq(List<int> a, List<int> b) {
   return true;
 }
 
-String _ascii(List<int> bytes) => String.fromCharCodes(
-      bytes.map((b) => b >= 0x20 && b < 0x7f ? b : 0x2e),
-    );
+String _ascii(List<int> bytes) =>
+    String.fromCharCodes(bytes.map((b) => b >= 0x20 && b < 0x7f ? b : 0x2e));
 
 String _hex(List<int> bytes) =>
     bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');

@@ -35,10 +35,12 @@ void main(List<String> args) {
 
   final packs = <String>[];
   for (var i = 0; i < pi.length; i += 16) {
-    packs.add(pi
-        .sublist(i + 12, i + 16)
-        .map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase())
-        .join());
+    packs.add(
+      pi
+          .sublist(i + 12, i + 16)
+          .map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase())
+          .join(),
+    );
   }
 
   // Candidate answers, per pack: bt should decipher to one of these.
@@ -76,7 +78,9 @@ void main(List<String> args) {
             final all = targets.entries.every(
               (e) => e.value.any((t) => t.matches(key)),
             );
-            stdout.writeln('     all ${packs.length} packs: ${all ? "OK" : "no"}');
+            stdout.writeln(
+              '     all ${packs.length} packs: ${all ? "OK" : "no"}',
+            );
             if (all) return;
           }
         }
@@ -84,8 +88,10 @@ void main(List<String> args) {
     }
   }
   if (found == 0) {
-    stdout.writeln('No offset/mapping reproduced bt. '
-        'bt is probably not derived from ri — widen the search.');
+    stdout.writeln(
+      'No offset/mapping reproduced bt. '
+      'bt is probably not derived from ri — widen the search.',
+    );
   }
 }
 

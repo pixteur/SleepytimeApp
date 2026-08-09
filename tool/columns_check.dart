@@ -26,8 +26,10 @@ void main(List<String> args) {
     'beats.narration_json': beats.contains('narration_json'),
   };
 
-  stdout.writeln('user_version: '
-      '${db.select('pragma user_version').first['user_version']}');
+  stdout.writeln(
+    'user_version: '
+    '${db.select('pragma user_version').first['user_version']}',
+  );
   for (final e in expected.entries) {
     stdout.writeln('${e.value ? "OK  " : "MISSING "} ${e.key}');
   }

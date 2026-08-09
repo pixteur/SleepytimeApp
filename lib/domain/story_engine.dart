@@ -260,7 +260,10 @@ class StoryEngine {
   /// hears read aloud — so the length is measured, the safety guard runs
   /// again, and the plot-critical fields are carried over from the draft
   /// rather than accepted from the edit.
-  Future<StorySegment?> _refine(StoryRequest request, StorySegment draft) async {
+  Future<StorySegment?> _refine(
+    StoryRequest request,
+    StorySegment draft,
+  ) async {
     final before = _wordCount(draft.storyText);
     if (before == 0) return null;
     try {
@@ -335,10 +338,8 @@ class StoryEngine {
     return _paragraphCount(repaired) >= (wanted / 2).ceil() ? repaired : null;
   }
 
-  static int _paragraphCount(String text) => text
-      .split(RegExp(r'\n\s*\n'))
-      .where((p) => p.trim().isNotEmpty)
-      .length;
+  static int _paragraphCount(String text) =>
+      text.split(RegExp(r'\n\s*\n')).where((p) => p.trim().isNotEmpty).length;
 
   static String _preferring(String edited, String original) =>
       edited.trim().isEmpty ? original : edited;

@@ -52,7 +52,8 @@ List<NarratedChunk> narratedChunks(
   // today — same chunks, same cache keys, same request count.
   if (notes.cues.every((c) => c.isEmpty)) {
     return [
-      for (final chunk in sizeChunker(text)) NarratedChunk(chunk, notes.cueAt(-1)),
+      for (final chunk in sizeChunker(text))
+        NarratedChunk(chunk, notes.cueAt(-1)),
     ];
   }
 

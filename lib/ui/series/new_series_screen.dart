@@ -371,18 +371,15 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
                   setState(() => _secondLanguage = v ?? _secondLanguage),
             ),
             const SizedBox(height: 8),
-            Text(
-              switch (_language) {
-                _LanguageMode.sprinkle =>
-                  'A handful of words, repeated through the story so their '
-                      'meaning comes from what happens around them.',
-                _LanguageMode.halfAndHalf =>
-                  'Roughly half in each, switching where the story gives a '
-                      'reason to. Still followable knowing only the first.',
-                _LanguageMode.one => '',
-              },
-              style: theme.textTheme.bodySmall,
-            ),
+            Text(switch (_language) {
+              _LanguageMode.sprinkle =>
+                'A handful of words, repeated through the story so their '
+                    'meaning comes from what happens around them.',
+              _LanguageMode.halfAndHalf =>
+                'Roughly half in each, switching where the story gives a '
+                    'reason to. Still followable knowing only the first.',
+              _LanguageMode.one => '',
+            }, style: theme.textTheme.bodySmall),
           ],
           const SizedBox(height: 24),
           Text('How does it begin?', style: theme.textTheme.titleMedium),

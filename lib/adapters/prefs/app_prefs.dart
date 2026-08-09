@@ -37,8 +37,7 @@ class AppPrefs {
   Future<void> setKeyHint(String keyName, String hint) =>
       _prefs.setString(_hintKey(keyName), hint);
 
-  Future<void> clearKeyHint(String keyName) =>
-      _prefs.remove(_hintKey(keyName));
+  Future<void> clearKeyHint(String keyName) => _prefs.remove(_hintKey(keyName));
 
   static String _hintKey(String keyName) => 'key_hint_$keyName';
 

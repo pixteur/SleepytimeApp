@@ -13,6 +13,7 @@ abstract class SecretStore {
     if (k.length < 12) return '';
     return '${k.substring(0, 4)}••••${k.substring(k.length - 4)}';
   }
+
   Future<String?> readKey(String providerId);
   Future<bool> hasKey(String providerId);
   Future<void> deleteKey(String providerId);

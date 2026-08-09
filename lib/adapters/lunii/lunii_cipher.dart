@@ -50,7 +50,8 @@ Uint8List _transform(Uint8List data, List<int> key, {required bool decipher}) {
   final out = Uint8List.fromList(data);
   // A partial word at the end of a short file is left alone: the cipher works
   // on whole 32-bit words.
-  final blockBytes = (out.length < luniiCipherBlock ? out.length : luniiCipherBlock) & ~3;
+  final blockBytes =
+      (out.length < luniiCipherBlock ? out.length : luniiCipherBlock) & ~3;
   if (blockBytes < 8) return out;
 
   final view = ByteData.sublistView(out, 0, blockBytes);
@@ -70,7 +71,9 @@ Uint8List _transform(Uint8List data, List<int> key, {required bool decipher}) {
 }
 
 int _mx(int y, int z, int sum, int e, int p, List<int> key) {
-  final shifted = (((z >> 5) ^ ((y << 2) & _mask)) + ((y >> 3) ^ ((z << 4) & _mask))) & _mask;
+  final shifted =
+      (((z >> 5) ^ ((y << 2) & _mask)) + ((y >> 3) ^ ((z << 4) & _mask))) &
+      _mask;
   final keyed = ((sum ^ y) + (key[(p & 3) ^ e] ^ z)) & _mask;
   return (shifted ^ keyed) & _mask;
 }
