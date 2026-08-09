@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-08-09 — v1.1.0
+
+First version bump since the project was scaffolded — 48 commits, and one new
+thing a user can actually do: **send a story straight to a Lunii storyteller**.
+
+- Narration re-encoded to the MPEG-1 44.1 kHz mono the device plays, via LAME
+  over FFI; MP3-returning voices decoded back to samples first via mpglib, so
+  every voice can be sent.
+- Covers drawn in the sixteen colours the device shows, as 4-bit RLE4 BMP —
+  a night sky, or a bicycle.
+- Whole packs assembled and installed, with `.pi` appended last and a backup
+  taken first, so a failed transfer leaves the device as it was.
+- "Send to the Lunii" in the parent-only share menu.
+- Dead air trimmed out of cached narration on the way to the device.
+- LAME credited in Settings, as its licence asks.
+
+Verified on a physical FW2 device: a six-chapter story writes, touches nothing
+else on the volume, and plays start to finish.
+
+`msix_version` moves with `version:` — Windows will not install an MSIX whose
+version is not higher than the one already installed.
+
+---
+
 ## 2026-08-09 — The Lunii write path works end to end
 
 **Confirmed on hardware.** A six-chapter story ("Ashi's adventure") built,
