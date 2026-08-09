@@ -298,6 +298,7 @@ class SleepyService {
     required String voiceSignature,
     LuniiCoverMotif motif = LuniiCoverMotif.nightSky,
     String? drive,
+    String? backupDirectory,
   }) async {
     final devices = attachedLuniiDevices();
     final target = drive ?? (devices.isEmpty ? null : devices.first);
@@ -325,11 +326,13 @@ class SleepyService {
       );
     }
 
-    final backup = await LibraryPaths.deviceBackups();
+    // Injectable so a test can point it at a temp folder; the app always uses
+    // the library, which needs platform channels a unit test does not have.
+    final backup = backupDirectory ?? (await LibraryPaths.deviceBackups()).path;
     return sendStoryToLunii(
       LuniiTransferRequest(
         drive: target,
-        backupDirectory: backup.path,
+        backupDirectory: backup,
         title: series.title,
         chapterChunks: chapterChunks,
         skipped: skipped,

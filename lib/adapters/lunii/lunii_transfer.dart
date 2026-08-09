@@ -137,9 +137,14 @@ Uint8List _chapterAudio(List<Uint8List> chunks) {
   return encodePcmToLuniiMp3(joinWav(parts));
 }
 
+/// Cached narration is WAV from most voices and MP3 from the rest, and the
+/// cache does not record which. RIFF's magic is the tell.
 bool _isMp3(Uint8List bytes) =>
-    bytes.length > 4 &&
-    !(bytes[0] == 0x52 && bytes[1] == 0x49); // not "RI" of RIFF
+    bytes.length < 4 ||
+    !(bytes[0] == 0x52 && // R
+        bytes[1] == 0x49 && // I
+        bytes[2] == 0x46 && // F
+        bytes[3] == 0x46); //  F
 
 /// A voice that already returns MP3 cannot be re-encoded without a decoder,
 /// which is not built. If it happens to be exactly what the device plays it
