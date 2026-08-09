@@ -234,7 +234,12 @@ class StoryEngine {
     await _saveSeriesProgress(
       series,
       safe,
-      nameIt: series.autoTitle && isFirstChapter && lastFallbackReason == null,
+      // Any chapter may name the story, not only the first. Naming used to be
+      // first-chapter-only, so one fallback on chapter 1 — a rate limit is
+      // enough — left the "Naming it…" placeholder showing to a child for the
+      // life of the story with no way back. `autoTitle` switches itself off
+      // once a name sticks, so this stops on its own.
+      nameIt: series.autoTitle && lastFallbackReason == null,
     );
     // The send-off has been written, so the world's cast is settled again.
     // (A fallback chapter didn't say goodbye — keep them pending for next time.)

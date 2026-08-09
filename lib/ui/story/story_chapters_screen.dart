@@ -34,6 +34,12 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
   bool _building = false;
   bool _active = true;
 
+  /// A whole-story download is running; chapters are saved one at a time.
+  bool _downloading = false;
+
+  /// How many chapters that run has got through, for the progress label.
+  int _downloaded = 0;
+
   @override
   void initState() {
     super.initState();
@@ -164,6 +170,60 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
     } catch (e) {
       if (mounted) showErrorBanner(context, 'Audiobook export: ${_reason(e)}');
     }
+  }
+
+  /// Save every chapter's narration, in order, one at a time.
+  ///
+  /// Sequential on purpose. Each chapter is several requests to the voice
+  /// provider, so starting them all at once is a burst — and a burst is what
+  /// trips a per-minute limit, which then reads as "you are out of quota" even
+  /// on a paid plan. One chapter at a time keeps it to a trickle.
+  ///
+  /// A chapter that fails is retried once after a pause, since a rate-limit
+  /// refusal is usually over within seconds, and the rest of the story
+  /// continues either way — one missing chapter should not stop the download.
+  Future<void> _downloadAll(List<Beat> beats) async {
+    if (_downloading) return;
+    final lang = ref.read(activeChildProvider)?.language ?? 'en';
+    final tts = ref.read(ttsProvider);
+    setState(() {
+      _downloading = true;
+      _downloaded = 0;
+    });
+    var failed = 0;
+    try {
+      for (final beat in beats) {
+        if (!mounted || !_active) return;
+        var saved = false;
+        for (var attempt = 0; attempt < 2 && !saved; attempt++) {
+          try {
+            await tts.preload(
+              beat.text,
+              language: lang,
+              notes: beat.narration,
+            );
+            saved = true;
+          } catch (_) {
+            if (attempt == 0) {
+              await Future<void>.delayed(const Duration(seconds: 4));
+            }
+          }
+        }
+        if (!saved) failed++;
+        if (mounted) setState(() => _downloaded++);
+      }
+    } finally {
+      if (mounted) setState(() => _downloading = false);
+    }
+    if (!mounted) return;
+    showErrorBanner(
+      context,
+      failed == 0
+          ? 'All ${beats.length} chapters saved — this story now plays without '
+                'the internet.'
+          : '${beats.length - failed} of ${beats.length} chapters saved. '
+                'Tap again to retry the rest.',
+    );
   }
 
   /// Re-edit a finished story into a second, polished copy. The original is
@@ -409,6 +469,27 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
               },
             ),
           ),
+          // One button saves the whole story, in order. Kids see only this —
+          // the per-chapter badges are a grown-up's tool.
+          if (beats.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: OutlinedButton.icon(
+                onPressed: _downloading ? null : () => _downloadAll(beats),
+                icon: _downloading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.download_for_offline_outlined),
+                label: Text(
+                  _downloading
+                      ? 'Saving chapter ${_downloaded + 1} of ${beats.length}…'
+                      : 'Save the whole story for offline',
+                ),
+              ),
+            ),
           if (_building) const LinearProgressIndicator(),
           Expanded(
             child: beats.isEmpty
@@ -438,23 +519,26 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _DownloadIcon(
-                                signature: '$voiceSig|$lang|${b.id}',
-                                isCached: () => ref
-                                    .read(ttsProvider)
-                                    .isCached(
-                                      b.text,
-                                      language: lang,
-                                      notes: b.narration,
-                                    ),
-                                onDownload: () => ref
-                                    .read(ttsProvider)
-                                    .preload(
-                                      b.text,
-                                      language: lang,
-                                      notes: b.narration,
-                                    ),
-                              ),
+                              // Per-chapter control is a grown-up's tool; a
+                              // child gets the one button above instead.
+                              if (parentMode)
+                                _DownloadIcon(
+                                  signature: '$voiceSig|$lang|${b.id}',
+                                  isCached: () => ref
+                                      .read(ttsProvider)
+                                      .isCached(
+                                        b.text,
+                                        language: lang,
+                                        notes: b.narration,
+                                      ),
+                                  onDownload: () => ref
+                                      .read(ttsProvider)
+                                      .preload(
+                                        b.text,
+                                        language: lang,
+                                        notes: b.narration,
+                                      ),
+                                ),
                               if (parentMode)
                                 PopupMenuButton<String>(
                                   itemBuilder: (_) => const [
