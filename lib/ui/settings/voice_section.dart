@@ -28,6 +28,10 @@ const _engineLabels = {
 
 class _VoiceSectionState extends ConsumerState<VoiceSection> {
   final _elevenKey = TextEditingController();
+
+  /// Overrides the model this engine synthesizes with. Blank uses the
+  /// adapter's own default, which is what almost everyone should leave it on.
+  final _model = TextEditingController();
   VoiceEngine _engine = VoiceEngine.device;
   String _voice = '';
   bool _busy = false;
@@ -43,6 +47,7 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
   @override
   void dispose() {
     _elevenKey.dispose();
+    _model.dispose();
     super.dispose();
   }
 
@@ -53,8 +58,18 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
     setState(() {
       _engine = engine;
       _voice = prefs.voiceName(engine.name) ?? _defaultVoice(engine);
+      _model.text = prefs.voiceModel(engine.name) ?? '';
     });
   }
+
+  /// What this engine uses when the model field is left blank — shown as the
+  /// field's hint so the default is visible without having to type it.
+  String _defaultModel(VoiceEngine e) => switch (e) {
+    VoiceEngine.openai => OpenAiTtsSynthesizer.defaultModel,
+    VoiceEngine.elevenlabs => ElevenLabsTtsSynthesizer.defaultModel,
+    VoiceEngine.gemini => GeminiTtsSynthesizer.defaultModel,
+    VoiceEngine.device => '',
+  };
 
   String _defaultVoice(VoiceEngine e) => switch (e) {
     VoiceEngine.openai => 'nova',
@@ -85,6 +100,7 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
     setState(() {
       _engine = e;
       _voice = prefs.voiceName(e.name) ?? _defaultVoice(e);
+      _model.text = prefs.voiceModel(e.name) ?? '';
       _status = null;
     });
   }
@@ -98,6 +114,9 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
     await prefs.setVoiceEngine(_engine.name);
     if (_engine != VoiceEngine.device) {
       await prefs.setVoiceName(_engine.name, _voice);
+      // Blank means "whatever the adapter defaults to", so a cleared field
+      // returns to the built-in rather than sending an empty model id.
+      await prefs.setVoiceModel(_engine.name, _model.text.trim());
     }
     if (_engine == VoiceEngine.elevenlabs &&
         _elevenKey.text.trim().isNotEmpty) {
@@ -177,6 +196,20 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
                 ? null
                 : (v) => setState(() => _voice = v ?? _voice),
             decoration: const InputDecoration(border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _model,
+            enabled: !_busy,
+            decoration: InputDecoration(
+              labelText: 'Model (advanced)',
+              hintText: _defaultModel(_engine),
+              helperText:
+                  'Leave blank for the default. Worth changing if a model is '
+                  'retired, or to move off a preview model with tighter limits.',
+              helperMaxLines: 3,
+              border: const OutlineInputBorder(),
+            ),
           ),
           const SizedBox(height: 12),
           if (_engine == VoiceEngine.elevenlabs)

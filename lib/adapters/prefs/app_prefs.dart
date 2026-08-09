@@ -57,6 +57,16 @@ class AppPrefs {
   Future<void> setVoiceName(String engine, String name) =>
       _prefs.setString('voicename_$engine', name);
 
+  /// The model to synthesize with, per engine (null or empty → the adapter's
+  /// own default). Separate from the voice on purpose: a provider can retire a
+  /// model without the voice changing, and a preview model's rate limits can
+  /// differ sharply from a stable one's — worth being able to switch without
+  /// a rebuild.
+  String? voiceModel(String engine) => _prefs.getString('voicemodel_$engine');
+
+  Future<void> setVoiceModel(String engine, String model) =>
+      _prefs.setString('voicemodel_$engine', model);
+
   // ── Parent mode ─────────────────────────────────────────────────
   static const _parentModeKey = 'parent_mode';
 

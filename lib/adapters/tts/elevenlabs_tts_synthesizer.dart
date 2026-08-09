@@ -21,7 +21,7 @@ class ElevenLabsTtsSynthesizer implements TtsSynthesizer {
     // the only one that can act on a narration cue at all. Older models still
     // work — they simply fall back to voice_settings, and `_directed` leaves
     // their text alone so no tag is ever spoken.
-    this.model = 'eleven_v3',
+    this.model = defaultModel,
   }) : _secrets = secrets, // ignore: prefer_initializing_formals
        _http = httpClient ?? http.Client();
 
@@ -46,6 +46,9 @@ class ElevenLabsTtsSynthesizer implements TtsSynthesizer {
 
   @override
   String get voiceSignature => 'elevenlabs/$model/$voiceName';
+
+  /// Used when the grown-up hasn't chosen one in Voice setup.
+  static const String defaultModel = 'eleven_v3';
 
   /// Tags v3 understands, mapped from the cue's own words.
   ///

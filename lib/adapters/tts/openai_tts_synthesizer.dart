@@ -18,9 +18,12 @@ class OpenAiTtsSynthesizer implements TtsSynthesizer {
     required SecretStore secrets,
     http.Client? httpClient,
     this.voiceName = 'nova',
-    this.model = 'gpt-4o-mini-tts',
+    this.model = defaultModel,
   }) : _secrets = secrets, // ignore: prefer_initializing_formals
        _http = httpClient ?? http.Client();
+
+  /// Used when the grown-up hasn't chosen one in Voice setup.
+  static const String defaultModel = 'gpt-4o-mini-tts';
 
   static const String keyName = 'openai';
   static const String _endpoint = 'https://api.openai.com/v1/audio/speech';

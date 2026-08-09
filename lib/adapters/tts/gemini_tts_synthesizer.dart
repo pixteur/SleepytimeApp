@@ -18,9 +18,12 @@ class GeminiTtsSynthesizer implements TtsSynthesizer {
     required SecretStore secrets,
     http.Client? httpClient,
     this.voiceName = 'Kore',
-    this.model = 'gemini-2.5-flash-preview-tts',
+    this.model = defaultModel,
   }) : _secrets = secrets, // ignore: prefer_initializing_formals
        _http = httpClient ?? http.Client();
+
+  /// Used when the grown-up hasn't chosen one in Voice setup.
+  static const String defaultModel = 'gemini-2.5-flash-preview-tts';
 
   static const String keyName = 'gemini';
   static const String _base =

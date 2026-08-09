@@ -168,9 +168,10 @@ String? ttsKeyNameFor(VoiceEngine engine) => switch (engine) {
 };
 
 class VoiceConfig {
-  const VoiceConfig(this.engine, this.voiceName);
+  const VoiceConfig(this.engine, this.voiceName, [this.model = '']);
   final VoiceEngine engine;
   final String voiceName; // '' = engine default
+  final String model; // '' = the adapter's own default
 }
 
 /// Resolves the active voice engine. Falls back to device TTS unless the chosen
@@ -201,7 +202,11 @@ class VoiceConfigController extends Notifier<VoiceConfig> {
         .read(secretStoreProvider)
         .hasKey(ttsKeyNameFor(engine)!);
     if (!hasKey) return const VoiceConfig(VoiceEngine.device, '');
-    return VoiceConfig(engine, prefs.voiceName(engine.name) ?? '');
+    return VoiceConfig(
+      engine,
+      prefs.voiceName(engine.name) ?? '',
+      prefs.voiceModel(engine.name) ?? '',
+    );
   }
 
   Future<void> refresh() async => state = await _resolve();
@@ -221,6 +226,9 @@ final ttsProvider = Provider<TtsProvider>((ref) {
       OpenAiTtsSynthesizer(
         secrets: secrets,
         voiceName: cfg.voiceName.isEmpty ? 'nova' : cfg.voiceName,
+        model: cfg.model.isEmpty
+            ? OpenAiTtsSynthesizer.defaultModel
+            : cfg.model,
       ),
       TtsProviderId.openai,
       cache: cache,
@@ -231,6 +239,9 @@ final ttsProvider = Provider<TtsProvider>((ref) {
         voiceName: cfg.voiceName.isEmpty
             ? '21m00Tcm4TlvDq8ikWAM'
             : cfg.voiceName,
+        model: cfg.model.isEmpty
+            ? ElevenLabsTtsSynthesizer.defaultModel
+            : cfg.model,
       ),
       TtsProviderId.elevenlabs,
       cache: cache,
@@ -239,6 +250,9 @@ final ttsProvider = Provider<TtsProvider>((ref) {
       GeminiTtsSynthesizer(
         secrets: secrets,
         voiceName: cfg.voiceName.isEmpty ? 'Kore' : cfg.voiceName,
+        model: cfg.model.isEmpty
+            ? GeminiTtsSynthesizer.defaultModel
+            : cfg.model,
       ),
       TtsProviderId.gemini,
       cache: cache,
