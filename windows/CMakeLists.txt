@@ -87,6 +87,22 @@ if(PLUGIN_BUNDLED_LIBRARIES)
     COMPONENT Runtime)
 endif()
 
+# LAME, loaded at run time by lib/adapters/audio/lame.dart to encode the
+# 44.1 kHz mono MP3 a Lunii storyteller requires. It goes next to the
+# executable so DynamicLibrary.open finds it by bare name. Its LGPL text has
+# to ship with it, but lands in licenses/lame/ rather than beside the exe,
+# where a bare COPYING would read as the app's own terms.
+# See windows/third_party/lame/README.md.
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lame/libmp3lame.dll"
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
+install(FILES
+  "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lame/COPYING"
+  "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lame/LICENSE"
+  "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lame/README.md"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/licenses/lame"
+  COMPONENT Runtime)
+
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
 install(DIRECTORY "${NATIVE_ASSETS_DIR}"

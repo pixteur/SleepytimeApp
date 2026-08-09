@@ -4,6 +4,63 @@
 
 ---
 
+## 2026-08-09 — MP3 encoding for the Lunii write path: LAME over FFI
+
+**Context:** Writing a pack straight onto a storyteller needs audio in the
+device's format. Of the app's voices only ElevenLabs already conforms; Gemini
+and the Windows voice hand back 24 kHz WAV. Nothing in pure Dart resamples and
+encodes MP3, so this needs a native library.
+
+**Decision:** vendor **LAME 3.100** (`libmp3lame.dll`, x64) at
+`windows/third_party/lame/` and bind it over FFI. `lib/adapters/audio/`:
+`lame.dart` (bindings), `wav.dart` (RIFF chunk parser), `mp3_frame.dart` (frame
+header reader), `mp3_encoder.dart` (the policy). CMake installs the DLL beside
+the executable and its LGPL text under `licenses/lame/`.
+
+**Why LAME, dynamically linked:** it does the resample and the encode in one
+pass — declare the input rate, ask for 44100 out, and 24 kHz mono goes in and
+44.1 kHz mono comes out. Loading it at run time rather than static linking is
+also what keeps the LGPL simple: the source is unmodified and anyone can
+substitute their own build.
+
+**Format, measured not assumed:** `tool/lunii_audio_survey.dart` walks every
+frame of every sound on an attached device. All **1,867,061 frames across 375
+sounds in 9 packs** are MPEG-1 Layer III, 44.1 kHz, mono — no exceptions, no
+ID3, audio always at byte 0. Those three are hard requirements. Bitrate is
+**not**: the device's own content is VBR, 32–320 kbps, mean 90.
+
+**Bitrate choice:** 128 kbps **CBR**, with the leading Xing/LAME tag the device's
+own files all carry. Constant is one less variable in an embedded decoder and
+128 sits inside the range the device already plays. Costs size — 960 kB per
+minute against ~670 kB at the device's own average — which against 7.4 GB of
+storage does not signify.
+
+**Alternatives considered:** matching the device's VBR (smaller, but another
+unverified variable before a first device write); shelling out to `ffmpeg` (a
+much larger dependency to ship, and a process boundary for something that
+takes 900 ms in-process); a pure-Dart encoder (none exists that is credible).
+
+**Trap found:** the first survey read only each file's *first* frame and
+concluded "128 kbps CBR" — confidently, and wrong. A VBR file opens with a
+Xing tag frame whose bitrate describes the tag. Recorded in CLAUDE.md.
+
+**Verified:** 38 tests, of which 12 are real encodes through the DLL (skipped
+off Windows, so CI stays green on Linux). Three real cached narrations from
+`<Documents>/Sleepytime/audio` re-encoded and checked with **ffprobe** rather
+than the app's own parser: 44100 Hz, mono, 128000 bps, duration preserved to
+the millisecond (56.930 s in, 56.930952 s out). 57 s of audio encodes in
+931 ms.
+
+**Open questions:** OpenAI's 24 kHz MP3 still needs a decode step before it can
+be re-encoded — the DLL exports mpglib's `hip_decode*`, so the path is open but
+unbuilt. macOS/iOS have no vendored build, so `canEncodeMp3` is false there and
+callers should fall back to the STUdio zip. Nothing has yet been written to a
+device: this produces the audio, it does not place it.
+
+**Affects:** `docs/lunii-sync.md`, `CLAUDE.md`, `windows/CMakeLists.txt`.
+
+---
+
 ## 2026-06-15 — `.sleepy` shareable story format
 
 A story can now be exported/imported as a single **`.sleepy`** file — the

@@ -114,13 +114,49 @@ assets off the attached device.
 
 - **Images** — BMP, exactly **320×240**, **4-bit RLE4**, 16-level greyscale
   palette.
-- **Audio** — **MP3, 44.1 kHz, mono**, no ID3 tags. A frame header read off the
-  device decodes as MPEG-1 Layer III / 44100 / mono, tagged by LAME 3.99.5.
+- **Audio** — **MPEG-1 Layer III, 44.1 kHz, mono**, no ID3 tags.
 
-The audio requirement is the awkward one. Of the app's voices only ElevenLabs
-(`mp3_44100_128`) already conforms; Gemini and the Windows voice produce 24 kHz
-WAV and OpenAI produces 24 kHz MP3, so they need resampling and re-encoding.
-See [decision-log.md](decision-log.md) for how that is handled.
+The audio figures come from [tool/lunii_audio_survey.dart](../tool/lunii_audio_survey.dart),
+which walks every frame of every sound on an attached device. On the FW2
+device here that is **1,867,061 frames across 375 sounds in 9 packs**, and the
+result is completely uniform:
+
+| | |
+|--|--|
+| Format | MPEG-1 Layer III, 44100 Hz, mono — **every frame**, no exceptions |
+| Bitrate | **VBR**, 32–320 kbps; most common 80, mean 90 |
+| Tag | Xing/LAME on all 375; no ID3 on any |
+| Layout | audio starts at byte 0; frame walk consumes each file exactly |
+
+So sample rate, layer and channel mode are hard requirements and bitrate is
+not — the device happily plays anything from 32 to 320 kbps.
+
+**Read the whole stream, not the first frame.** These files are VBR and a VBR
+file opens with a Xing tag frame whose bitrate describes the tag, not the
+audio. A first-frame-only survey of this device reports a confident, wrong
+"128 kbps CBR". Sample rate, layer and mode *are* safe to read from frame one;
+bitrate is not.
+
+## Producing it
+
+[lib/adapters/audio/mp3_encoder.dart](../lib/adapters/audio/mp3_encoder.dart)
+encodes to **128 kbps CBR** — inside the range the device demonstrably plays,
+constant so there is one less variable in an embedded decoder, and carrying the
+same leading LAME tag the device's own files have. A minute of narration is
+960 kB, against about 670 kB had we matched the device's own VBR.
+
+Of the app's voices only ElevenLabs (`mp3_44100_128`) already conforms. Gemini
+and the Windows voice produce 24 kHz WAV, which goes straight through the
+encoder: LAME resamples 24 kHz → 44.1 kHz and downmixes in the same pass, at
+roughly 60× realtime. **OpenAI's 24 kHz MP3 is not handled yet** — it has to be
+decoded first, and while the vendored DLL does export mpglib's `hip_decode*`,
+that path is not built.
+
+Encoding is native, via LAME vendored at
+[windows/third_party/lame/](../windows/third_party/lame/README.md) and bound over FFI
+in [lib/adapters/audio/lame.dart](../lib/adapters/audio/lame.dart). It is
+Windows-only for now; `canEncodeMp3` is false elsewhere, and a caller that
+finds it false should offer the STUdio zip instead.
 
 ## Writing safely
 

@@ -133,9 +133,18 @@ chapter *without* cues is a single chunk whose key happens to be identical —
 so the demo story and every cue-less test passed. `tool/export_keys_check.dart`
 re-checks it against the real library.
 
+**An MP3's first frame does not describe the file.** A VBR file opens with a
+Xing tag frame, and that frame's bitrate describes the tag, not the audio
+behind it. Surveying a Lunii's own sounds one-frame-deep reports a confident
+"128 kbps CBR"; walking all 1.87M frames shows VBR from 32 to 320. Sample
+rate, layer and channel mode *are* safe to read from frame one — bitrate is
+not. Same shape as the migration trap: a plausible answer, no error, wrong.
+
 **Verify against the real database or device, not just tests.** Both the
 migration bug and the download-badge bug passed every test and failed
 immediately in the app. `tool/` holds read-only probes for exactly this.
+An independent decoder counts as verification too — `ffprobe` confirmed the
+MP3 encoder's output rather than the app's own parser vouching for itself.
 
 ## Current state
 
@@ -146,13 +155,15 @@ Beyond the phase docs, these are live and verified on hardware:
 - **Narration cues** — the pass also writes direction for the voice; chunking
   splits only where the feeling changes. [docs/narration-cues.md](docs/narration-cues.md)
 - **Lunii** — the FW2 format is fully reverse-validated against a physical
-  device; the STUdio zip export ships. Direct-to-device writing is **not**
-  built. [docs/lunii-sync.md](docs/lunii-sync.md)
+  device; the STUdio zip export ships. Audio can now be encoded to what the
+  device plays (LAME over FFI, Windows only). Direct-to-device writing is
+  **not** built. [docs/lunii-sync.md](docs/lunii-sync.md)
 - **Deferred** — [docs/plan-competing-llms.md](docs/plan-competing-llms.md)
 
 `tool/` holds read-only diagnostics: `lunii_probe` (re-checks the crypto
-against an attached device), `lunii_manifest` (proves a write touched only
-what it should), `db_schema` / `columns_check` (what the on-disk database
+against an attached device), `lunii_audio_survey` (what audio format the
+device's own packs actually are), `lunii_manifest` (proves a write touched
+only what it should), `db_schema` / `columns_check` (what the on-disk database
 actually has), `refine_diff` and `cue_report`.
 
 ## Before committing
