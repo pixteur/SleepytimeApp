@@ -36,4 +36,15 @@ fi
 
 # shellcheck disable=SC2086
 git add $present
+
+# The migration check only matters when the schema itself is being touched, so
+# it stays out of the way of every other commit.
+if echo "$staged" | grep -q 'lib/adapters/storage/app_database.dart'; then
+  if ! dart run tool/check_migrations.dart; then
+    echo "" >&2
+    echo "pre-commit: migration check failed. Commit aborted." >&2
+    exit 1
+  fi
+fi
+
 exit 0
