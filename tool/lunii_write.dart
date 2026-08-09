@@ -1,89 +1,174 @@
-/// Build a pack from cached narration and put it on an attached storyteller.
+/// Put a story from the library onto an attached storyteller.
 ///
 /// **Dry run unless `--write` is given.** Without it this reports exactly what
-/// would be created and touches nothing, which is how the first attempt at any
+/// would change and touches nothing, which is how any first attempt against a
 /// device should start.
 ///
-///     dart run tool/lunii_write.dart --drive F: --chapters 3
-///     dart run tool/lunii_write.dart --drive F: --chapters 3 --write
+///     dart run tool/lunii_write.dart --drive F: --series <id> --cover velo
+///     dart run tool/lunii_write.dart --drive F: --series <id> --write
+///     dart run tool/lunii_write.dart --drive F: --remove CE4D1B54 --write
 ///
-/// Audio comes from the app's own cache under `<Documents>/Sleepytime/audio`,
-/// re-encoded to the 44.1 kHz mono MP3 the device plays. The picture is the
-/// night-sky cover reduced to sixteen colours.
+/// Chapters come from the library database and their narration from the app's
+/// audio cache, joined per chapter and re-encoded to the 44.1 kHz mono MP3 the
+/// device plays. Cache keys come from `chapterAudioKeys` — never built here by
+/// hand, because playback keys per chunk with the narration cue mixed in.
 ///
-/// Take a manifest snapshot either side of a real write — that is what proves
+/// Take a manifest snapshot either side of a real write; that is what proves
 /// nothing else moved:
 ///
 ///     dart run tool/lunii_manifest.dart snapshot F: before.json
-///     dart run tool/lunii_write.dart --drive F: --write
+///     …write…
 ///     dart run tool/lunii_manifest.dart snapshot F: after.json
 ///     dart run tool/lunii_manifest.dart diff before.json after.json
 library;
 
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:sleepytime/adapters/audio/mp3_encoder.dart';
+import 'package:sleepytime/adapters/audio/wav.dart';
 import 'package:sleepytime/adapters/export/cover_image.dart';
+import 'package:sleepytime/adapters/image/bmp_rle4.dart';
 import 'package:sleepytime/adapters/lunii/device_pack.dart';
 import 'package:sleepytime/adapters/lunii/device_writer.dart';
 import 'package:sleepytime/adapters/tts/audio_compression.dart';
+import 'package:sleepytime/adapters/tts/narrated_chunks.dart';
+import 'package:sleepytime/domain/models/narration.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 void main(List<String> args) {
   final drive = _option(args, '--drive') ?? 'F:';
-  final wanted = int.parse(_option(args, '--chapters') ?? '3');
-  final audioDir =
-      _option(args, '--audio') ??
-      '${Platform.environment['USERPROFILE']}\\Documents\\Sleepytime\\audio';
-  final backupDir =
-      _option(args, '--backup') ??
-      '${Platform.environment['USERPROFILE']}\\Documents\\Sleepytime\\device-backup';
   final live = args.contains('--write');
+  final home = Platform.environment['USERPROFILE'];
+  final backupDir = '$home\\Documents\\Sleepytime\\device-backup';
 
   final device = LuniiDevice.open(drive);
   stdout.writeln(
     'Device $drive  firmware "${device.firmware}"  '
     '${device.packIds.length} packs installed',
   );
-  stdout.writeln('  key verified against ${device.packDirectories.first}');
 
+  final remove = _option(args, '--remove');
+  if (remove != null) {
+    final target = device.packIds.cast<Uint8List?>().firstWhere(
+      (id) => _directoryName(id!) == remove.toUpperCase(),
+      orElse: () => null,
+    );
+    if (target == null) {
+      stderr.writeln('$remove is not installed on $drive');
+      exitCode = 1;
+      return;
+    }
+    if (!live) {
+      stdout.writeln('\nDRY RUN — would unlist $remove and delete its files.');
+      return;
+    }
+    final gone = removePack(device, target, backupDirectory: backupDir);
+    stdout.writeln(
+      'Removed $remove ($gone files). '
+      '${device.packIds.length} packs → ${LuniiDevice.open(drive).packIds.length}',
+    );
+    return;
+  }
+
+  final seriesId = _option(args, '--series');
+  if (seriesId == null) {
+    stderr.writeln('--series <id> is required (or --remove <PACK>)');
+    exitCode = 2;
+    return;
+  }
   if (!canEncodeMp3) {
     stderr.writeln('No MP3 encoder on this platform — see docs/lunii-sync.md');
     exitCode = 1;
     return;
   }
 
-  // Real narration out of the app's cache, re-encoded to what the device takes.
+  final voice =
+      _option(args, '--voice') ?? 'gemini/gemini-2.5-flash-preview-tts/Aoede';
+  final language = _option(args, '--language') ?? 'en';
+  final audioDir = '$home\\Documents\\Sleepytime\\audio';
+
+  final db = sqlite3.open(
+    '$home\\Documents\\sleepytime.sqlite',
+    mode: OpenMode.readOnly,
+  );
+  final series = db.select('select * from series where id = ?', [seriesId]);
+  if (series.isEmpty) {
+    stderr.writeln('No series $seriesId');
+    exitCode = 1;
+    return;
+  }
+  final title = series.first['title'] as String? ?? 'A story';
+  final beats = db.select(
+    'select seq, story_text, narration_json, chapter_title from beats '
+    'where series_id = ? order by seq',
+    [seriesId],
+  );
+  stdout.writeln('\n"$title" — ${beats.length} chapters');
+
   final chapters = <DevicePackChapter>[];
-  final sources = Directory(audioDir).listSync().whereType<File>().toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
-  for (final file in sources) {
-    if (chapters.length >= wanted) break;
-    final raw = decompressAudio(file.readAsBytesSync());
-    if (raw.length < 12 || String.fromCharCodes(raw, 0, 4) != 'RIFF') continue;
-    final mp3 = wavToLuniiMp3(raw);
+  for (final beat in beats) {
+    // The one place a chapter maps to its cache entries. Never by hand: the
+    // keys are per chunk with the narration cue mixed in.
+    final keys = chapterAudioKeys(
+      voiceSignature: voice,
+      language: language,
+      text: beat['story_text'] as String,
+      notes: _notes(beat['narration_json'] as String?),
+    );
+    final parts = <WavAudio>[];
+    var missing = 0;
+    for (final key in keys) {
+      final file = File('$audioDir\\$key');
+      if (!file.existsSync()) {
+        missing++;
+        continue;
+      }
+      // Trim per chunk, not just per chapter: a provider glitch can leave a
+      // hole in the middle of a story as easily as at its end.
+      parts.add(
+        trimTrailingSilence(decodeWav(decompressAudio(file.readAsBytesSync()))),
+      );
+    }
+    final label = beat['chapter_title'] as String? ?? 'Chapter ${beat['seq']}';
+    if (missing > 0 || parts.isEmpty) {
+      // A half-cached chapter would play as a story that stops mid-sentence.
+      stdout.writeln(
+        '  SKIP  $label — $missing of ${keys.length} chunks not downloaded',
+      );
+      continue;
+    }
+    final joined = joinWav(parts);
+    final mp3 = encodePcmToLuniiMp3(joined);
     chapters.add(DevicePackChapter(audio: mp3));
     stdout.writeln(
-      '  chapter ${chapters.length}: ${file.uri.pathSegments.last} '
-      '→ ${(mp3.length / 1024).round()} kB',
+      '  ${chapters.length.toString().padLeft(2)}. $label — '
+      '${keys.length} chunks, ${joined.duration.inSeconds}s, '
+      '${(mp3.length / 1024).round()} kB',
     );
   }
+  db.close();
+
   if (chapters.isEmpty) {
-    stderr.writeln('No cached WAV narration found in $audioDir');
+    stderr.writeln('No narration cached for this story.');
     exitCode = 1;
     return;
   }
 
+  final motif = _option(args, '--cover') ?? 'nightsky';
+  final IndexedImage cover = motif == 'velo'
+      ? veloCoverIndexed(seed: title)
+      : nightSkyCoverIndexed(seed: title);
+
   final pack = buildDevicePack(
     chapters: chapters,
     deviceKey: device.deviceKey,
-    cover: nightSkyCoverIndexed(seed: 'Sleepytime'),
+    cover: cover,
   );
   final plan = planWrite(device, pack);
-  stdout.writeln('\nPack ${pack.directoryName}');
+  stdout.writeln('\nPack ${pack.directoryName}  cover: $motif');
   stdout.writeln(plan.describe());
-  for (final path in plan.files.keys.toList()..sort()) {
-    stdout.writeln('    ${path.substring(device.root.length)}');
-  }
 
   if (!live) {
     stdout.writeln('\nDRY RUN — nothing written. Add --write to install.');
@@ -91,15 +176,26 @@ void main(List<String> args) {
   }
 
   stdout.writeln('\nBacking up .pi and .md to $backupDir');
-  for (final saved in backupDeviceIndexes(device, backupDir)) {
-    stdout.writeln('  $saved');
-  }
   final written = writePack(device, pack, backupDirectory: backupDir);
   stdout.writeln(
-    '\nWrote ${written.length} files. '
-    '${device.packIds.length} packs → ${LuniiDevice.open(drive).packIds.length}',
+    'Wrote ${written.length} files. ${device.packIds.length} packs → '
+    '${LuniiDevice.open(drive).packIds.length}',
   );
 }
+
+/// Narration cues, as `chapterAudioKeys` needs them — the cue is mixed into
+/// each chunk's key, so leaving it out would look up the wrong audio.
+NarrationNotes _notes(String? raw) {
+  final json = (raw ?? '{}').trim();
+  return NarrationNotes.fromJson(
+    jsonDecode(json.isEmpty ? '{}' : json) as Map<String, dynamic>,
+  );
+}
+
+String _directoryName(Uint8List uuid) => uuid
+    .sublist(uuid.length - 4)
+    .map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase())
+    .join();
 
 String? _option(List<String> args, String name) {
   final at = args.indexOf(name);

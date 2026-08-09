@@ -82,6 +82,87 @@ void main() {
     expect(decodeWav(wav.sublist(0, wav.length - 1)).frames, 99);
   });
 
+  group('joining and trimming', () {
+    WavAudio clip(List<int> samples, {int rate = 24000, int channels = 1}) =>
+        WavAudio(
+          samples: Int16List.fromList(samples),
+          sampleRate: rate,
+          channels: channels,
+        );
+
+    test('joins clips end to end', () {
+      final joined = joinWav([
+        clip([1, 2, 3]),
+        clip([4, 5]),
+      ]);
+      expect(joined.samples, [1, 2, 3, 4, 5]);
+      expect(joined.sampleRate, 24000);
+    });
+
+    test('refuses to join mismatched clips', () {
+      expect(
+        () => joinWav([
+          clip([1]),
+          clip([2], rate: 44100),
+        ]),
+        throwsA(isA<WavFormatException>()),
+      );
+      expect(() => joinWav([]), throwsA(isA<WavFormatException>()));
+    });
+
+    test('cuts dead air off the end, keeping half a second', () {
+      // Half a second of tone, then ten seconds of nothing — the shape a
+      // glitched chapter came back in.
+      final samples = Int16List(24000 * 11);
+      for (var i = 0; i < 12000; i++) {
+        samples[i] = 8000;
+      }
+      final trimmed = trimTrailingSilence(
+        WavAudio(samples: samples, sampleRate: 24000, channels: 1),
+      );
+      expect(trimmed.duration.inMilliseconds, closeTo(1000, 40));
+    });
+
+    test('leaves a quiet passage in the middle alone', () {
+      final samples = Int16List(24000 * 6);
+      for (var i = 0; i < 12000; i++) {
+        samples[i] = 8000; // speech
+      }
+      for (var i = 24000 * 5; i < 24000 * 5 + 12000; i++) {
+        samples[i] = 8000; // more speech, after five quiet seconds
+      }
+      final trimmed = trimTrailingSilence(
+        WavAudio(samples: samples, sampleRate: 24000, channels: 1),
+      );
+      expect(trimmed.duration.inMilliseconds, closeTo(6000, 40));
+    });
+
+    test('a clip with nothing to trim comes back whole', () {
+      final samples = Int16List(2400)..fillRange(0, 2400, 9000);
+      final audio = WavAudio(samples: samples, sampleRate: 24000, channels: 1);
+      expect(trimTrailingSilence(audio).samples.length, 2400);
+    });
+
+    test('a clip that is entirely silence is left as it is', () {
+      final audio = WavAudio(
+        samples: Int16List(24000),
+        sampleRate: 24000,
+        channels: 1,
+      );
+      expect(trimTrailingSilence(audio).samples.length, 24000);
+    });
+
+    test('stereo keeps whole frames', () {
+      final samples = Int16List(4000);
+      samples[0] = 9000;
+      samples[1] = 9000;
+      final trimmed = trimTrailingSilence(
+        WavAudio(samples: samples, sampleRate: 8000, channels: 2),
+      );
+      expect(trimmed.samples.length.isEven, isTrue);
+    });
+  });
+
   group('rejects what it cannot convert, saying what it found', () {
     test('not a RIFF file', () {
       expect(

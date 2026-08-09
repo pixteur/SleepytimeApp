@@ -37,6 +37,27 @@ class LuniiDeviceException implements Exception {
 /// Bytes per entry in `.pi` — one uuid per installed pack.
 const int _packIdSize = 16;
 
+/// Read a file, giving the drive a moment to wake if it has gone idle.
+///
+/// A storyteller that has been sitting attached and untouched fails its first
+/// access with `ERROR_NO_SUCH_DEVICE` — the volume is listed, `Get-Volume`
+/// reports its free space, and the very next read succeeds. It is the USB
+/// bridge waking up, not a missing device, and it cost two aborted runs before
+/// it was recognised.
+///
+/// Only reads retry. A write that fails is left to the caller: repeating one
+/// blindly is how a half-written file becomes a twice-written one.
+Uint8List _readWaking(File file, {int attempts = 3}) {
+  for (var attempt = 1; ; attempt++) {
+    try {
+      return file.readAsBytesSync();
+    } on FileSystemException catch (e) {
+      if (attempt >= attempts || e.osError?.errorCode != 433) rethrow;
+      sleep(const Duration(milliseconds: 300));
+    }
+  }
+}
+
 /// An attached storyteller, opened for reading.
 class LuniiDevice {
   LuniiDevice._({
@@ -78,13 +99,13 @@ class LuniiDevice {
         'root',
       );
     }
-    final mdBytes = md.readAsBytesSync();
+    final mdBytes = _readWaking(md);
     if (mdBytes.length < 0x200) {
       throw LuniiDeviceException(
         '.md is ${mdBytes.length} bytes; a storyteller\'s is at least 512',
       );
     }
-    final piBytes = pi.readAsBytesSync();
+    final piBytes = _readWaking(pi);
     if (piBytes.length % _packIdSize != 0) {
       throw LuniiDeviceException(
         '.pi is ${piBytes.length} bytes, not a whole number of '
@@ -210,9 +231,20 @@ List<String> backupDeviceIndexes(LuniiDevice device, String backupDirectory) {
   for (final name in ['.pi', '.md']) {
     final source = File(_join(device.root, name));
     if (!source.existsSync()) continue;
-    final target = _join(backupDirectory, name == '.pi' ? 'pi.bak' : 'md.bak');
-    source.copySync(target);
-    saved.add(target);
+    final target = File(
+      _join(backupDirectory, name == '.pi' ? 'pi.bak' : 'md.bak'),
+    );
+    // Read through the wake retry rather than copySync: this is usually the
+    // first real I/O of a session, so it is where an idle drive says
+    // ERROR_NO_SUCH_DEVICE.
+    final bytes = _readWaking(source);
+    // Delete an old backup rather than overwrite it. An earlier version of
+    // this copied the file, and copySync carries the source's attributes — so
+    // the backup of a Hidden `.pi` was itself Hidden, and rewriting it hit the
+    // very same CREATE_ALWAYS refusal, one level removed from the device.
+    if (target.existsSync()) target.deleteSync();
+    target.writeAsBytesSync(bytes, flush: true);
+    saved.add(target.path);
   }
   if (saved.isEmpty) {
     throw const LuniiDeviceException(
@@ -286,6 +318,68 @@ List<String> writePack(
   }
   written.add(pi.path);
   return written;
+}
+
+/// Uninstall a pack: drop it from `.pi`, then delete its files.
+///
+/// **The order is the reverse of [writePack], for the same reason.** Installing
+/// writes the files first because "present but unlisted" is harmless; removing
+/// unlists first because "listed but missing" is the state that breaks a
+/// library. Both orders avoid the same bad half-way house from opposite sides.
+///
+/// This is also the only place `.pi` gets shorter. It is truncated through a
+/// handle to the existing file rather than rewritten, because every file at a
+/// storyteller's root is Hidden and Windows refuses to recreate one.
+///
+/// Returns the number of files deleted.
+int removePack(
+  LuniiDevice device,
+  Uint8List uuid, {
+  required String backupDirectory,
+}) {
+  if (!device.hasPack(uuid)) {
+    throw LuniiDeviceException('Pack ${_directoryName(uuid)} is not installed');
+  }
+  backupDeviceIndexes(device, backupDirectory);
+
+  final keep = device.packIds
+      .where((id) => !_sameBytes(id, uuid))
+      .toList(growable: false);
+  if (keep.length != device.packIds.length - 1) {
+    throw const LuniiDeviceException(
+      '.pi does not hold exactly one copy of that pack — refusing to guess',
+    );
+  }
+  final rebuilt = Uint8List(keep.length * _packIdSize);
+  for (var i = 0; i < keep.length; i++) {
+    rebuilt.setRange(i * _packIdSize, (i + 1) * _packIdSize, keep[i]);
+  }
+
+  final pi = File(_join(device.root, '.pi'));
+  final handle = pi.openSync(mode: FileMode.append);
+  try {
+    // Truncate to nothing, then append: in append mode every write lands at
+    // the end, and after the truncate the end is the beginning.
+    handle.truncateSync(0);
+    handle.writeFromSync(rebuilt);
+    handle.flushSync();
+  } finally {
+    handle.closeSync();
+  }
+  if (!_sameBytes(pi.readAsBytesSync(), rebuilt)) {
+    throw LuniiDeviceException(
+      '.pi did not read back as written. The backup in $backupDirectory is '
+      'the original — restore it before unplugging.',
+    );
+  }
+
+  final dir = Directory(
+    _join(_join(device.root, '.content'), _directoryName(uuid)),
+  );
+  if (!dir.existsSync()) return 0;
+  final count = dir.listSync(recursive: true).whereType<File>().length;
+  dir.deleteSync(recursive: true);
+  return count;
 }
 
 bool _sameBytes(List<int> a, List<int> b) {

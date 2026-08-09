@@ -33,28 +33,8 @@ Uint8List nightSkyCover({String seed = ''}) => _bmp24(_draw(seed));
 /// stripes, and it happens to suit RLE4: a dithered gradient alternates
 /// between two indices, and an RLE4 run encodes exactly that — two nibbles,
 /// alternating — so the dither costs almost nothing to store.
-IndexedImage nightSkyCoverIndexed({String seed = ''}) {
-  final rgb = _draw(seed);
-  final pixels = Uint8List(_width * _height);
-  for (var y = 0; y < _height; y++) {
-    for (var x = 0; x < _width; x++) {
-      final i = (y * _width + x) * 3;
-      // _draw stores BGR, the order BMP wants.
-      pixels[y * _width + x] = _nearest(
-        rgb[i + 2],
-        rgb[i + 1],
-        rgb[i],
-        _bayer4[y & 3][x & 3],
-      );
-    }
-  }
-  return IndexedImage(
-    width: _width,
-    height: _height,
-    pixels: pixels,
-    palette: coverPalette,
-  );
-}
+IndexedImage nightSkyCoverIndexed({String seed = ''}) =>
+    _toIndexed(_draw(seed));
 
 /// Sixteen colours as `0xRRGGBB`: ten of sky from the top of the gradient to
 /// the horizon, four of moon from its body to its lit rim, two of star.
@@ -103,8 +83,154 @@ int _nearest(int r, int g, int b, int threshold) {
   return best;
 }
 
+/// Ashi's vélo under the same night sky — the cover for a story whose
+/// heroine's bicycle is a character in its own right.
+///
+/// Same palette and the same dither as [nightSkyCoverIndexed]: the bicycle is
+/// drawn in the moonlight creams already in the sixteen, so it needs no new
+/// entries and comes out glowing against the dark.
+IndexedImage veloCoverIndexed({String seed = ''}) =>
+    _toIndexed(_drawVelo(seed));
+
+/// A night-sky cover as 24-bit BMP bytes, with the bicycle — for the STUdio
+/// zip, which takes full colour.
+Uint8List veloCover({String seed = ''}) => _bmp24(_drawVelo(seed));
+
+/// Reduce a drawn BGR buffer to the sixteen colours a Lunii can show.
+IndexedImage _toIndexed(Uint8List rgb) {
+  final pixels = Uint8List(_width * _height);
+  for (var y = 0; y < _height; y++) {
+    for (var x = 0; x < _width; x++) {
+      final i = (y * _width + x) * 3;
+      pixels[y * _width + x] = _nearest(
+        rgb[i + 2],
+        rgb[i + 1],
+        rgb[i],
+        _bayer4[y & 3][x & 3],
+      );
+    }
+  }
+  return IndexedImage(
+    width: _width,
+    height: _height,
+    pixels: pixels,
+    palette: coverPalette,
+  );
+}
+
+/// The sky and stars, then a bicycle in silhouette-with-highlights.
+Uint8List _drawVelo(String seed) {
+  final pixels = _draw(seed, moon: false);
+
+  void plot(int x, int y, int r, int g, int b) {
+    if (x < 0 || x >= _width || y < 0 || y >= _height) return;
+    final i = (y * _width + x) * 3;
+    pixels[i] = b;
+    pixels[i + 1] = g;
+    pixels[i + 2] = r;
+  }
+
+  /// A disc of radius [thickness] at every step, which is how a line gets
+  /// width without any anti-aliasing machinery.
+  void stroke(
+    double x0,
+    double y0,
+    double x1,
+    double y1,
+    double thickness,
+    int r,
+    int g,
+    int b,
+  ) {
+    final steps = (max((x1 - x0).abs(), (y1 - y0).abs()) * 2).ceil() + 1;
+    for (var s = 0; s <= steps; s++) {
+      final t = s / steps;
+      final cx = x0 + (x1 - x0) * t;
+      final cy = y0 + (y1 - y0) * t;
+      // Always the centre: a thickness under ~0.71 satisfies the disc test
+      // nowhere, so without this a thin line draws precisely nothing.
+      plot(cx.round(), cy.round(), r, g, b);
+      for (var dy = -thickness; dy <= thickness; dy++) {
+        for (var dx = -thickness; dx <= thickness; dx++) {
+          if (dx * dx + dy * dy > thickness * thickness) continue;
+          plot((cx + dx).round(), (cy + dy).round(), r, g, b);
+        }
+      }
+    }
+  }
+
+  void ring(
+    double cx,
+    double cy,
+    double radius,
+    double thickness,
+    int r,
+    int g,
+    int b,
+  ) {
+    final steps = (radius * 8).ceil();
+    for (var s = 0; s < steps; s++) {
+      final a = 2 * pi * s / steps;
+      stroke(
+        cx + cos(a) * radius,
+        cy + sin(a) * radius,
+        cx + cos(a) * radius,
+        cy + sin(a) * radius,
+        thickness,
+        r,
+        g,
+        b,
+      );
+    }
+  }
+
+  // Moonlit cream, and a dimmer tone for the spokes so the wheels read as
+  // wheels rather than as solid discs.
+  const cr = 246, cg = 236, cb = 196;
+  const sr = 182, sg = 176, sb = 145;
+
+  const rearX = 92.0, frontX = 232.0, hubY = 170.0, radius = 40.0;
+  const crankX = 162.0, crankY = 170.0;
+  const seatX = 126.0, seatY = 118.0;
+  const headX = 206.0, headY = 116.0;
+
+  for (final cx in [rearX, frontX]) {
+    for (var s = 0; s < 8; s++) {
+      final a = pi * s / 8;
+      stroke(
+        cx - cos(a) * (radius - 2),
+        hubY - sin(a) * (radius - 2),
+        cx + cos(a) * (radius - 2),
+        hubY + sin(a) * (radius - 2),
+        0.5,
+        sr,
+        sg,
+        sb,
+      );
+    }
+    ring(cx, hubY, radius, 2, cr, cg, cb);
+    ring(cx, hubY, 3, 1.5, cr, cg, cb);
+  }
+
+  // Frame: chain stay, seat stay, seat tube, top tube, down tube, fork.
+  stroke(rearX, hubY, crankX, crankY, 2, cr, cg, cb);
+  stroke(rearX, hubY, seatX, seatY, 2, cr, cg, cb);
+  stroke(seatX, seatY, crankX, crankY, 2, cr, cg, cb);
+  stroke(seatX, seatY, headX, headY, 2, cr, cg, cb);
+  stroke(crankX, crankY, headX, headY, 2, cr, cg, cb);
+  stroke(headX, headY, frontX, hubY, 2, cr, cg, cb);
+
+  // Saddle, handlebars, and a crank arm so it looks ridden rather than parked.
+  stroke(seatX - 11, seatY - 5, seatX + 7, seatY - 5, 2.5, cr, cg, cb);
+  stroke(headX, headY, headX, headY - 12, 2, cr, cg, cb);
+  stroke(headX - 13, headY - 13, headX + 9, headY - 11, 2, cr, cg, cb);
+  stroke(crankX, crankY, crankX - 6, crankY + 13, 1.5, sr, sg, sb);
+
+  return pixels;
+}
+
 /// The picture itself, as BGR bytes, top row first.
-Uint8List _draw(String seed) {
+Uint8List _draw(String seed, {bool moon = true}) {
   // 3 bytes per pixel; 320 * 3 = 960 is already a multiple of 4, so BMP's
   // row padding never kicks in.
   final pixels = Uint8List(_width * _height * 3);
@@ -137,6 +263,8 @@ Uint8List _draw(String seed) {
     final glow = 150 + rng.nextInt(105);
     plot(x, y, glow, glow, (glow * 0.92).round());
   }
+
+  if (!moon) return pixels;
 
   // Crescent moon: a pale disc with a second disc bitten out of it.
   const cx = 232.0, cy = 76.0, radius = 46.0;

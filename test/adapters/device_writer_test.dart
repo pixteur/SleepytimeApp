@@ -295,6 +295,60 @@ void main() {
       }
     });
 
+    test('removing a pack unlists it first, then deletes it', () {
+      makeDevice(packs: 2);
+      final p = pack(seed: 31);
+      writePack(LuniiDevice.open(root), p, backupDirectory: '${temp.path}/b');
+      final before = File('$root/.pi').readAsBytesSync();
+      expect(LuniiDevice.open(root).packIds.length, 3);
+
+      final deleted = removePack(
+        LuniiDevice.open(root),
+        p.uuid,
+        backupDirectory: '${temp.path}/b2',
+      );
+      expect(deleted, greaterThan(0));
+
+      final after = LuniiDevice.open(root);
+      expect(after.packIds.length, 2);
+      expect(after.packDirectories, isNot(contains(p.directoryName)));
+      expect(
+        Directory('$root/.content/${p.directoryName}').existsSync(),
+        isFalse,
+      );
+      // The two survivors keep their ids, in order.
+      expect(File('$root/.pi').readAsBytesSync(), before.sublist(0, 32));
+    });
+
+    test('removing refuses a pack that is not installed', () {
+      makeDevice(packs: 1);
+      expect(
+        () => removePack(
+          LuniiDevice.open(root),
+          Uint8List(16),
+          backupDirectory: '${temp.path}/b',
+        ),
+        throwsA(isA<LuniiDeviceException>()),
+      );
+    });
+
+    test('a hidden .pi can still be shortened', () {
+      makeDevice(packs: 1);
+      final p = pack(seed: 55);
+      writePack(LuniiDevice.open(root), p, backupDirectory: '${temp.path}/b');
+      Process.runSync('attrib', ['+h', '$root\\.pi']);
+      addTearDown(() => Process.runSync('attrib', ['-h', '$root\\.pi']));
+      expect(
+        () => removePack(
+          LuniiDevice.open(root),
+          p.uuid,
+          backupDirectory: '${temp.path}/b2',
+        ),
+        returnsNormally,
+      );
+      expect(LuniiDevice.open(root).packIds.length, 1);
+    }, testOn: 'windows');
+
     test('the written pack satisfies the probe\'s bt identity on re-open', () {
       // The check that a pack belongs to this device, run against what was
       // actually written rather than what was in memory.
