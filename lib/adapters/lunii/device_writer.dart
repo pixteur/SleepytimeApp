@@ -378,11 +378,17 @@ int removePack(
   }
 
   final pi = File(_join(device.root, '.pi'));
+  // Append mode because it opens an existing file: the write-modes that would
+  // recreate it are the ones Windows refuses on a Hidden file.
   final handle = pi.openSync(mode: FileMode.append);
   try {
-    // Truncate to nothing, then append: in append mode every write lands at
-    // the end, and after the truncate the end is the beginning.
     handle.truncateSync(0);
+    // Truncating does not move the file position, and append mode is not
+    // uniformly "always write at the end" across platforms — on Linux this
+    // left the position at the old length and wrote the new list *after*
+    // 48 bytes of zeroes. Setting it explicitly is correct either way, since
+    // after the truncate the end and the beginning are the same place.
+    handle.setPositionSync(0);
     handle.writeFromSync(rebuilt);
     handle.flushSync();
   } finally {

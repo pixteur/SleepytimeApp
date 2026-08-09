@@ -316,6 +316,12 @@ void main() {
         Directory('$root/.content/${p.directoryName}').existsSync(),
         isFalse,
       );
+      // Shortening .pi is the only place this code makes a file smaller, and
+      // it goes through truncate-then-write on a handle. Check the length on
+      // its own: when that write landed at the wrong offset the file came back
+      // as the old length plus the new content, zero-padded in front, and the
+      // byte comparison alone made that look like scrambled ids.
+      expect(File('$root/.pi').lengthSync(), 32);
       // The two survivors keep their ids, in order.
       expect(File('$root/.pi').readAsBytesSync(), before.sublist(0, 32));
     });
