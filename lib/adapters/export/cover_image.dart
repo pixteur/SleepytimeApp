@@ -1,20 +1,110 @@
 /// Draws the picture the Lunii shows while a story plays: a night sky, a
-/// scatter of stars, and a crescent moon — the app's icon, in the 320×240
-/// 24-bit BMP the device expects.
+/// scatter of stars, and a crescent moon — the app's icon, at 320×240.
 ///
 /// Pure Dart on purpose: no image package, no font rendering, no asset to keep
 /// in sync. The star field is seeded from the story title, so a given story
-/// always gets the same sky. See `docs/lunii-export.md`.
+/// always gets the same sky.
+///
+/// Two ways out, because the two transfer routes want different things.
+/// [nightSkyCover] returns a 24-bit BMP for the STUdio zip, which converts on
+/// transfer. [nightSkyCoverIndexed] returns the sixteen colours a storyteller
+/// takes directly. See `docs/lunii-export.md` and `docs/lunii-sync.md`.
 library;
 
 import 'dart:math';
 import 'dart:typed_data';
 
+import '../image/bmp_rle4.dart';
+
 const int _width = 320;
 const int _height = 240;
 
 /// A night-sky cover as 24-bit BMP bytes.
-Uint8List nightSkyCover({String seed = ''}) {
+Uint8List nightSkyCover({String seed = ''}) => _bmp24(_draw(seed));
+
+/// The same picture reduced to the sixteen colours a Lunii can show.
+///
+/// The palette is chosen rather than computed — ten steps of sky, four of
+/// moonlight, two of starlight — because we drew the picture and know what is
+/// in it. A quantiser would spend entries working that out.
+///
+/// Ten sky steps across 240 rows would band visibly, so the mapping is
+/// ordered-dithered against a 4×4 Bayer matrix. The trade is noise instead of
+/// stripes, and it happens to suit RLE4: a dithered gradient alternates
+/// between two indices, and an RLE4 run encodes exactly that — two nibbles,
+/// alternating — so the dither costs almost nothing to store.
+IndexedImage nightSkyCoverIndexed({String seed = ''}) {
+  final rgb = _draw(seed);
+  final pixels = Uint8List(_width * _height);
+  for (var y = 0; y < _height; y++) {
+    for (var x = 0; x < _width; x++) {
+      final i = (y * _width + x) * 3;
+      // _draw stores BGR, the order BMP wants.
+      pixels[y * _width + x] = _nearest(
+        rgb[i + 2],
+        rgb[i + 1],
+        rgb[i],
+        _bayer4[y & 3][x & 3],
+      );
+    }
+  }
+  return IndexedImage(
+    width: _width,
+    height: _height,
+    pixels: pixels,
+    palette: coverPalette,
+  );
+}
+
+/// Sixteen colours as `0xRRGGBB`: ten of sky from the top of the gradient to
+/// the horizon, four of moon from its body to its lit rim, two of star.
+const List<int> coverPalette = [
+  // Sky, ten even steps of the same gradient _draw paints.
+  0x0C0E2E, 0x101133, 0x151438, 0x19173D, 0x1E1A42,
+  0x221E48, 0x27214D, 0x2B2452, 0x302757, 0x342A5C,
+  // Moon, body to lit rim.
+  0x969278, 0xB6B091, 0xD6CEAA, 0xF6ECC4,
+  // Stars, faint and bright.
+  0x96968A, 0xFFFFEB,
+];
+
+/// A 4×4 ordered-dither matrix, scaled to 0…15.
+const List<List<int>> _bayer4 = [
+  [0, 8, 2, 10],
+  [12, 4, 14, 6],
+  [3, 11, 1, 9],
+  [15, 7, 13, 5],
+];
+
+/// Nearest palette entry to a colour, nudged by the dither threshold so that
+/// a value sitting between two entries alternates between them across
+/// neighbouring pixels instead of snapping to one.
+int _nearest(int r, int g, int b, int threshold) {
+  // The nudge is about half the gap between adjacent sky steps, which is what
+  // sets how far a pixel may be pushed toward its neighbour.
+  const spread = 5;
+  final offset = (threshold - 8) * spread ~/ 8;
+  final tr = (r + offset).clamp(0, 255);
+  final tg = (g + offset).clamp(0, 255);
+  final tb = (b + offset).clamp(0, 255);
+
+  var best = 0;
+  var bestDistance = 1 << 30;
+  for (var i = 0; i < coverPalette.length; i++) {
+    final dr = ((coverPalette[i] >> 16) & 0xFF) - tr;
+    final dg = ((coverPalette[i] >> 8) & 0xFF) - tg;
+    final db = (coverPalette[i] & 0xFF) - tb;
+    final distance = dr * dr + dg * dg + db * db;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/// The picture itself, as BGR bytes, top row first.
+Uint8List _draw(String seed) {
   // 3 bytes per pixel; 320 * 3 = 960 is already a multiple of 4, so BMP's
   // row padding never kicks in.
   final pixels = Uint8List(_width * _height * 3);
@@ -70,7 +160,7 @@ Uint8List nightSkyCover({String seed = ''}) {
     }
   }
 
-  return _bmp24(pixels);
+  return pixels;
 }
 
 /// Wrap bottom-up BGR rows in a 24-bit BMP header.

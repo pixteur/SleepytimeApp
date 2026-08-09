@@ -137,11 +137,36 @@ unordered, unevenly spaced palette, the signature of a quantiser
 (`0x00 0x66 0xff 0x3c 0xea …`). The remaining 50 are colour. So an encoder is
 free to choose its own 16 colours; nothing has to be flattened to grey.
 
-Two things follow for whoever writes that encoder. Runs cap at 255 px. And
-since no image on the device uses RLE4's delta escape, the firmware's support
-for it is unproven — emit runs, absolute, end-of-line and end-of-bitmap only.
+Two things follow for the encoder. Runs cap at 255 px. And since no image on
+the device uses RLE4's delta escape, the firmware's support for it is
+unproven — emit runs, absolute, end-of-line and end-of-bitmap only.
 
-The audio figures come from [tool/lunii_audio_survey.dart](../tool/lunii_audio_survey.dart),
+Every stream also ends `00 00 00 01`: an end-of-line for the final row and
+then end-of-bitmap. `ffmpeg` grumbles at that ("ended frame decode with 2
+bytes left over") — and grumbles identically at the device's own files, so it
+is the convention here rather than a defect.
+
+#### Producing it
+
+[lib/adapters/image/bmp_rle4.dart](../lib/adapters/image/bmp_rle4.dart)
+encodes and decodes this. The decoder earns its place twice over: it is how
+the survey reads the device, and running all 199 device images through
+decode → encode → decode returns identical pixels every time, at 98% of their
+original size. That is the strongest check available short of writing to the
+device.
+
+[cover_image.dart](../lib/adapters/export/cover_image.dart) is the producer.
+Its palette is chosen rather than computed — ten steps of sky, four of moon,
+two of star — because we drew the picture and know what is in it. The ten sky
+steps would band across 240 rows, so the reduction is ordered-dithered against
+a 4×4 Bayer matrix, which suits RLE4 nicely: a dither alternates between two
+indices and an RLE4 run *is* two alternating nibbles, so it costs almost
+nothing to store. The night sky comes to 15.9 kB against 230 kB for the same
+picture at 24-bit, with all sixteen entries in use.
+
+### Audio
+
+From [tool/lunii_audio_survey.dart](../tool/lunii_audio_survey.dart),
 which walks every frame of every sound on an attached device. On the FW2
 device here that is **1,867,061 frames across 375 sounds in 9 packs**, and the
 result is completely uniform:
@@ -162,7 +187,7 @@ audio. A first-frame-only survey of this device reports a confident, wrong
 "128 kbps CBR". Sample rate, layer and mode *are* safe to read from frame one;
 bitrate is not.
 
-## Producing it
+#### Producing it
 
 [lib/adapters/audio/mp3_encoder.dart](../lib/adapters/audio/mp3_encoder.dart)
 encodes to **128 kbps CBR** — inside the range the device demonstrably plays,

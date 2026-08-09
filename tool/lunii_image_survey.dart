@@ -22,6 +22,7 @@ library;
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:sleepytime/adapters/image/bmp_rle4.dart';
 import 'package:sleepytime/adapters/lunii/lunii_cipher.dart';
 
 /// BMP compression values, from the `biCompression` field.
@@ -55,8 +56,12 @@ void main(List<String> args) {
   var offsetOdd = 0;
   var rleSizeOdd = 0;
   var longestRun = 0;
+  var roundTripped = 0;
+  var ours = 0;
+  var theirs = 0;
   final rle = <String, int>{};
   final escapes = <String, int>{};
+  final library = <String, int>{};
   String? samplePalette;
 
   for (final pack in packs) {
@@ -135,6 +140,27 @@ void main(List<String> args) {
       if (walk.runs > 0) {
         longestRun = walk.longest > longestRun ? walk.longest : longestRun;
       }
+
+      // Now put the library through the same file. Decoding all 199 is the
+      // real check on `bmp_rle4.dart`, and re-encoding what came out says
+      // whether the encoder is faithful and how its compression compares to
+      // whatever produced these.
+      try {
+        final decoded = decodeBmpRle4(bytes);
+        final reencoded = encodeBmpRle4(decoded);
+        final round = decodeBmpRle4(reencoded);
+        if (_samePixels(decoded, round)) {
+          roundTripped++;
+        } else {
+          library['re-encode changed pixels'] =
+              (library['re-encode changed pixels'] ?? 0) + 1;
+        }
+        ours += reencoded.length;
+        theirs += bytes.length;
+      } on BmpFormatException catch (e) {
+        library['decode failed: ${e.message}'] =
+            (library['decode failed: ${e.message}'] ?? 0) + 1;
+      }
     }
 
     stdout.writeln(
@@ -176,6 +202,29 @@ void main(List<String> args) {
   if (samplePalette != null) {
     stdout.writeln('  first palette seen (grey levels): $samplePalette');
   }
+
+  stdout.writeln(
+    '\n── lib/adapters/image/bmp_rle4.dart against the same files ──',
+  );
+  stdout.writeln('  decoded and re-encoded intact: $roundTripped/$files');
+  for (final e in library.entries) {
+    stdout.writeln('  ${e.value.toString().padLeft(4)}  ${e.key}');
+  }
+  if (theirs > 0) {
+    stdout.writeln(
+      '  size: ours ${(ours / 1024).round()} kB vs theirs '
+      '${(theirs / 1024).round()} kB '
+      '(${(100 * ours / theirs).round()}%)',
+    );
+  }
+}
+
+bool _samePixels(IndexedImage a, IndexedImage b) {
+  if (a.width != b.width || a.height != b.height) return false;
+  for (var i = 0; i < a.pixels.length; i++) {
+    if (a.pixels[i] != b.pixels[i]) return false;
+  }
+  return true;
 }
 
 class _RleWalk {
