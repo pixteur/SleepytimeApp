@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
@@ -10,6 +9,10 @@ import 'package:path_provider/path_provider.dart';
 import '../storage/library_paths.dart';
 import 'audio_compression.dart';
 
+// The key function lives in its own Flutter-free file; re-exported so every
+// existing `import 'audio_cache.dart'` still finds `audioCacheKey`.
+export 'audio_cache_key.dart';
+
 /// Persists synthesized narration audio so a chapter never has to be re-fetched
 /// from the cloud: replaying, paging back, or reopening a saved story all play
 /// straight from disk (instant + gap-free, and no extra API cost). Keyed by a
@@ -18,21 +21,6 @@ import 'audio_compression.dart';
 abstract class AudioCache {
   Future<Uint8List?> get(String key);
   Future<void> put(String key, Uint8List bytes);
-}
-
-/// Stable, dependency-free 64-bit FNV-1a hash of [input] as hex — used as the
-/// cache filename. Must stay stable across runs (String.hashCode is not), so we
-/// compute it by hand over the UTF-8 bytes.
-String audioCacheKey(String input) {
-  const int fnvOffset = 0xcbf29ce484222325;
-  const int fnvPrime = 0x100000001b3;
-  var hash = fnvOffset;
-  for (final b in utf8.encode(input)) {
-    hash = (hash ^ b) * fnvPrime; // 64-bit wraparound is intentional
-  }
-  // Drop the sign bit for a clean, positive hex string (63 bits is plenty of
-  // entropy for a filename key).
-  return (hash & 0x7FFFFFFFFFFFFFFF).toRadixString(16).padLeft(16, '0');
 }
 
 /// File-backed cache under the app-support directory. Safe to call before the

@@ -22,26 +22,21 @@ or tap the cloud icon on each chapter first. The export only bundles audio it
 finds in the cache; with none, it tells you so rather than writing a silent
 pack.
 
-> **Known bug — the export cannot find cued narration.** Playback caches audio
-> **per chunk**, keyed by the chunk's text *plus its narration cue*. Every audio
-> export — this one, the audiobook, and `.sleepy` with audio — still asks for a
+A chapter is only included when **all** of it is cached — a pack that stops
+mid-sentence is worse than one the grown-up is told to download first.
+
+> **Fixed bug, worth knowing about.** Playback caches audio **per chunk**, keyed
+> by the chunk's text *plus its narration cue*. The exports used to ask for a
 > single key built from the whole chapter text, which nothing writes once a
-> chapter has cues. Chapters written before narration cues (one chunk, no cue)
-> still export fine, which is why this hid: the bundled demo works, and anything
-> the editorial pass has touched silently exports nothing.
+> chapter has cues — so a fully-downloaded story exported as "no narration saved
+> yet". It hid because a chapter with no cues is one chunk with an empty suffix,
+> making the two keys identical: the bundled demo worked, and everything the
+> editorial pass touched silently exported nothing.
 >
-> Measured with `dart run tool/export_keys_check.dart all`:
->
-> ```
-> Obsidian Stone      chapters=11  playback-cached=11  export-would-find=11
-> Ashi's adventure    chapters=6   playback-cached=4   export-would-find=0
-> ```
->
-> The fix is to give the chapter→cache-key mapping one home (chunker + cue
-> suffix) that both `CloudTtsProvider` and `SleepyService` use, and to
-> concatenate a chapter's chunks on export. `.sleepy` additionally needs to
-> carry the chunks separately so an imported story is playable, which means the
-> manifest must carry each chapter's narration notes too.
+> Both sides now go through `chapterAudioKeys` in
+> [narrated_chunks.dart](../lib/adapters/tts/narrated_chunks.dart) — one home for
+> the chapter→cache-key mapping. `dart run tool/export_keys_check.dart all`
+> stands as a check against them drifting apart again.
 
 ## What the pack contains
 

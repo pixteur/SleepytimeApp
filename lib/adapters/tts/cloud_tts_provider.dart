@@ -166,7 +166,7 @@ class CloudTtsProvider implements TtsProvider {
   }) async {
     final cache = _cache;
     if (cache == null) return false;
-    final chunks = narratedChunks(text, notes, _chunkText);
+    final chunks = narratedChunks(text, notes, sizeChunks);
     if (chunks.isEmpty) return false;
     // A chapter counts as saved only when every chunk is — a half-cached
     // chapter still needs the network to finish playing.
@@ -190,7 +190,7 @@ class CloudTtsProvider implements TtsProvider {
     _notes = notes;
     // Let errors propagate — callers that want best-effort warming already catch
     // them; an explicit "download this chapter" needs to know if it failed.
-    for (final chunk in narratedChunks(text, notes, _chunkText)) {
+    for (final chunk in narratedChunks(text, notes, sizeChunks)) {
       await _cachedSynthesize(chunk, language, voice);
     }
   }
@@ -206,7 +206,7 @@ class CloudTtsProvider implements TtsProvider {
     _lang = language;
     _voice = voice;
     _notes = notes;
-    _chunks = narratedChunks(text, notes, _chunkText);
+    _chunks = narratedChunks(text, notes, sizeChunks);
     _jobs.clear();
     _i = 0;
     _active = true;
@@ -303,36 +303,5 @@ class CloudTtsProvider implements TtsProvider {
     await _states.close();
     await _progress.close();
     await _done.close();
-  }
-
-  /// Synthesize a whole chapter as ONE request when possible: a single request
-  /// gives a consistent voice (volume/prosody drift between separate Gemini TTS
-  /// calls is what made paragraphs sound like "a different reader"), removes
-  /// inter-paragraph seams entirely, and makes far fewer API calls (one per
-  /// chapter, not per paragraph) — so rate limits are hit far less often.
-  ///
-  /// Only a very long chapter is split, and then only on sentence boundaries
-  /// into large pieces, to stay within the provider's per-request limit.
-  static List<String> _chunkText(String text, {int maxLen = 6000}) {
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) return const [];
-    if (trimmed.length <= maxLen) return [trimmed];
-
-    final sentences = trimmed
-        .replaceAll(RegExp(r'\n\s*\n'), ' ')
-        .split(RegExp(r'(?<=[.!?])\s+'))
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty);
-    final out = <String>[];
-    final buf = StringBuffer();
-    for (final s in sentences) {
-      if (buf.isNotEmpty && buf.length + s.length > maxLen) {
-        out.add(buf.toString().trim());
-        buf.clear();
-      }
-      buf.write('$s ');
-    }
-    if (buf.isNotEmpty) out.add(buf.toString().trim());
-    return out.isEmpty ? [trimmed] : out;
   }
 }

@@ -11,8 +11,10 @@ import '../adapters/export/sleepy_codec.dart';
 import '../adapters/storage/library_paths.dart';
 import '../adapters/storage/storage_repo.dart';
 import '../adapters/tts/audio_cache.dart';
+import '../adapters/tts/narrated_chunks.dart';
 import '../adapters/tts/tts_synthesizer.dart';
 import 'models/beat.dart';
+import 'models/narration.dart';
 import 'models/series.dart';
 import 'models/story_character.dart';
 import 'models/world.dart';
@@ -29,13 +31,41 @@ class SleepyService {
   final AudioCache _cache;
   final Uuid _uuid;
 
-  static const int _formatVersion = 1;
+  /// v2 carries a chapter's narration as the *chunks* playback actually caches,
+  /// plus the narration notes needed to recompute their keys on import. v1
+  /// files (one blob per chapter, no notes) still import — see [_restoreAudio].
+  static const int _formatVersion = 2;
 
-  // Trim to match how the voice provider keys cached audio (it synthesizes the
-  // trimmed chapter text), so export finds it and import writes it where
-  // playback will look.
-  String _key(String voiceSig, String lang, String text) =>
-      audioCacheKey('$voiceSig|$lang|${text.trim()}');
+  /// A chapter's cached narration, in playback order, or null if any part of it
+  /// is missing — a half-cached chapter would export as a story that stops
+  /// mid-sentence, which is worse than telling the grown-up to download it.
+  Future<List<Uint8List>?> _chapterChunks(
+    Beat beat,
+    String voiceSignature,
+    String language,
+  ) async {
+    final keys = chapterAudioKeys(
+      voiceSignature: voiceSignature,
+      language: language,
+      text: beat.text,
+      notes: beat.narration,
+    );
+    if (keys.isEmpty) return null;
+    final parts = <Uint8List>[];
+    for (final key in keys) {
+      final bytes = await _cache.get(key);
+      if (bytes == null || bytes.isEmpty) return null;
+      parts.add(bytes);
+    }
+    return parts;
+  }
+
+  /// One chapter as a single playable file: its chunks joined, WAV headers
+  /// reconciled.
+  Uint8List _joinChapter(List<Uint8List> parts, String mimeType) =>
+      mimeType.toLowerCase().contains('wav')
+      ? _concatWav(parts)
+      : _concatBytes(parts);
 
   // ── Export ──────────────────────────────────────────────────────
   /// Bundle a story as `.sleepy` bytes. With [includeAudio] false it's a small
@@ -58,13 +88,17 @@ class SleepyService {
     final audio = <String, Uint8List>{};
     final chapters = <Map<String, dynamic>>[];
     for (final b in beats) {
-      String? audioName;
-      final bytes = includeAudio
-          ? await _cache.get(_key(voiceSignature, language, b.text))
+      // Chunks travel separately, not joined: the recipient's playback looks
+      // for one cache entry per chunk, so a joined chapter would import as
+      // audio nobody ever asks for.
+      final parts = includeAudio
+          ? await _chapterChunks(b, voiceSignature, language)
           : null;
-      if (bytes != null && bytes.isNotEmpty) {
-        audioName = 'audio/ch${b.seq}.bin';
-        audio[audioName] = bytes;
+      final names = <String>[];
+      for (var i = 0; i < (parts?.length ?? 0); i++) {
+        final name = 'audio/ch${b.seq}-${i.toString().padLeft(2, '0')}.bin';
+        audio[name] = parts![i];
+        names.add(name);
       }
       chapters.add({
         'seq': b.seq,
@@ -74,7 +108,10 @@ class SleepyService {
         'setting': b.setting,
         'intent': b.intent.name,
         'isFinal': b.isFinal,
-        'audio': audioName,
+        // The cue is part of a chunk's cache key, so the notes have to travel
+        // with the audio or the recipient can't work out where to put it.
+        'narration': b.narration.toJson(),
+        'audio': names,
       });
     }
 
@@ -142,9 +179,12 @@ class SleepyService {
   }) async {
     final beats = await _repo.loadBeats(series.id);
     final parts = <Uint8List>[];
+    var chaptersFound = 0;
     for (final b in beats) {
-      final bytes = await _cache.get(_key(voiceSignature, language, b.text));
-      if (bytes != null && bytes.isNotEmpty) parts.add(bytes);
+      final chunks = await _chapterChunks(b, voiceSignature, language);
+      if (chunks == null) continue;
+      parts.addAll(chunks); // every chunk of every chapter, in order
+      chaptersFound++;
     }
     if (parts.isEmpty) {
       throw StateError(
@@ -152,7 +192,7 @@ class SleepyService {
       );
     }
     final isWav = mimeType.toLowerCase().contains('wav');
-    final joined = isWav ? _concatWav(parts) : _concatBytes(parts);
+    final joined = _joinChapter(parts, mimeType);
     final ext = isWav ? 'wav' : 'mp3';
     final dir = await LibraryPaths.audiobooks();
     final base = _safeName(series.title);
@@ -165,7 +205,7 @@ class SleepyService {
       'source': 'Generated with SleepytimeApp',
       'language': language,
       'voice': voiceSignature,
-      'chapters': parts.length,
+      'chapters': chaptersFound,
       'format': ext,
     };
     await File(
@@ -210,12 +250,14 @@ class SleepyService {
     final beats = await _repo.loadBeats(series.id);
     final chapters = <LuniiChapter>[];
     for (final b in beats) {
-      final bytes = await _cache.get(_key(voiceSignature, language, b.text));
-      if (bytes == null || bytes.isEmpty) continue;
+      // One node per chapter on the device, so a chapter's chunks are joined
+      // into a single asset here.
+      final chunks = await _chapterChunks(b, voiceSignature, language);
+      if (chunks == null) continue;
       chapters.add(
         LuniiChapter(
           name: 'Chapter ${b.seq + 1}',
-          audio: bytes,
+          audio: _joinChapter(chunks, mimeType),
           mimeType: mimeType,
         ),
       );
@@ -303,6 +345,7 @@ class SleepyService {
     for (final c in (m['chapters'] as List? ?? const [])) {
       final cm = c as Map<String, dynamic>;
       final text = cm['text'] as String? ?? '';
+      final narration = _notesFrom(cm['narration']);
       await _repo.saveBeat(
         Beat(
           id: _uuid.v4(),
@@ -316,17 +359,54 @@ class SleepyService {
           setting: cm['setting'] as String? ?? '',
           language: lang,
           isFinal: cm['isFinal'] as bool? ?? false,
+          narration: narration,
         ),
       );
-      // Restore the chapter's audio into the cache under the voice it was made
-      // with, so it plays instantly (no API call) for a same-voice listener.
-      final audioName = cm['audio'] as String?;
-      final audioBytes = audioName == null ? null : data.audio[audioName];
-      if (audioBytes != null) {
-        await _cache.put(_key(voiceSig, lang, text), audioBytes);
-      }
+      await _restoreAudio(cm, data, text, narration, voiceSig, lang);
     }
     return series;
+  }
+
+  /// Put an imported chapter's narration back where *this* device's playback
+  /// will look for it: one cache entry per chunk, keyed from the text and the
+  /// cue. A v1 file carries a single blob for the whole chapter, which is only
+  /// placeable when the chapter is one chunk — otherwise it is dropped and the
+  /// chapter re-synthesizes on first play.
+  Future<void> _restoreAudio(
+    Map<String, dynamic> chapter,
+    SleepyArchive data,
+    String text,
+    NarrationNotes narration,
+    String voiceSig,
+    String lang,
+  ) async {
+    final raw = chapter['audio'];
+    final names = switch (raw) {
+      String name => [name],
+      List<dynamic> list => list.map((e) => e.toString()).toList(),
+      _ => const <String>[],
+    };
+    if (names.isEmpty) return;
+    final keys = chapterAudioKeys(
+      voiceSignature: voiceSig,
+      language: lang,
+      text: text,
+      notes: narration,
+    );
+    if (keys.length != names.length) return; // can't place it safely
+    for (var i = 0; i < keys.length; i++) {
+      final bytes = data.audio[names[i]];
+      if (bytes != null && bytes.isNotEmpty) await _cache.put(keys[i], bytes);
+    }
+  }
+
+  NarrationNotes _notesFrom(Object? json) {
+    if (json is! Map<String, dynamic>) return const NarrationNotes();
+    try {
+      return NarrationNotes.fromJson(json);
+    } catch (_) {
+      return const NarrationNotes(); // a bad blob just means no direction
+    }
   }
 
   T _enum<T extends Enum>(List<T> values, Object? name, T fallback) {

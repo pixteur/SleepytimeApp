@@ -15,6 +15,7 @@
 library;
 
 import '../../domain/models/narration.dart';
+import 'audio_cache_key.dart';
 
 /// One synthesis request: the text to speak and the direction to speak it in.
 class NarratedChunk {
@@ -79,3 +80,60 @@ List<NarratedChunk> narratedChunks(
   }
   return out;
 }
+
+/// Synthesize a whole chapter as ONE request when possible: a single request
+/// gives a consistent voice (volume/prosody drift between separate Gemini TTS
+/// calls is what made paragraphs sound like "a different reader"), removes
+/// inter-paragraph seams entirely, and makes far fewer API calls (one per
+/// chapter, not per paragraph) — so rate limits are hit far less often.
+///
+/// Only a very long chapter is split, and then only on sentence boundaries
+/// into large pieces, to stay within the provider's per-request limit.
+///
+/// Lives here rather than inside the provider because it is half of what
+/// decides a cache key, and [chapterAudioKeys] has to agree with playback
+/// exactly.
+List<String> sizeChunks(String text, {int maxLen = 6000}) {
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) return const [];
+  if (trimmed.length <= maxLen) return [trimmed];
+
+  final sentences = trimmed
+      .replaceAll(RegExp(r'\n\s*\n'), ' ')
+      .split(RegExp(r'(?<=[.!?])\s+'))
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty);
+  final out = <String>[];
+  final buf = StringBuffer();
+  for (final s in sentences) {
+    if (buf.isNotEmpty && buf.length + s.length > maxLen) {
+      out.add(buf.toString().trim());
+      buf.clear();
+    }
+    buf.write('$s ');
+  }
+  if (buf.isNotEmpty) out.add(buf.toString().trim());
+  return out.isEmpty ? [trimmed] : out;
+}
+
+/// **The** mapping from a chapter to the audio-cache entries that hold its
+/// narration, in playback order.
+///
+/// One home for this on purpose. Playback writes a key per chunk with the
+/// chunk's cue mixed in; anything that later goes looking for a chapter's audio
+/// — the download badge, the `.sleepy`, audiobook, and Lunii exports — has to
+/// ask the same question the same way. When these drifted apart, fully
+/// downloaded stories exported as "no narration saved yet", and only chapters
+/// written before narration cues existed still worked. See
+/// `docs/lunii-export.md` and `tool/export_keys_check.dart`.
+List<String> chapterAudioKeys({
+  required String voiceSignature,
+  required String language,
+  required String text,
+  NarrationNotes notes = const NarrationNotes(),
+}) => [
+  for (final chunk in narratedChunks(text, notes, sizeChunks))
+    audioCacheKey(
+      '$voiceSignature|$language|${chunk.text}${chunk.cacheSuffix}',
+    ),
+];

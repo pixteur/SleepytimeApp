@@ -124,8 +124,14 @@ renders it. See [docs/narration-cues.md](docs/narration-cues.md).
 **Playback is chunked, and the reader is not.** The voice provider is given a
 few sizeable chunks so one chunk's playback outlasts the next one's synthesis.
 Position is reported *per clip*, so anything mapping progress across a whole
-chapter must scale it. Cache keys are per chunk, so UI that rebuilds its own
-key will not match.
+chapter must scale it. Cache keys are per chunk **with the narration cue mixed
+in** — never build one by hand. `chapterAudioKeys` in `narrated_chunks.dart` is
+the only place that maps a chapter to its cache entries; ask it. This already
+cost us once: the exports keyed on the whole chapter text, so fully downloaded
+stories exported as "no narration saved yet", and it hid for weeks because a
+chapter *without* cues is a single chunk whose key happens to be identical —
+so the demo story and every cue-less test passed. `tool/export_keys_check.dart`
+re-checks it against the real library.
 
 **Verify against the real database or device, not just tests.** Both the
 migration bug and the download-badge bug passed every test and failed

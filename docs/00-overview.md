@@ -51,4 +51,4 @@ A warm, safe, magical nighttime ritual. A parent and child open SleepytimeApp, c
 
 - [architecture.md](architecture.md) · [safety.md](safety.md) · [data-model.md](data-model.md) · [ai-providers.md](ai-providers.md) · [voice-tts.md](voice-tts.md) · [i18n.md](i18n.md) · [ui-ux.md](ui-ux.md) · [decision-log.md](decision-log.md)
 - Exporting out of the app: [lunii-export.md](lunii-export.md) · [distribution.md](distribution.md)
-- Where the product goes next: [flam-study.md](flam-study.md) — a study of Lunii's FLAM and a spec for interactive "Adventure mode" stories.
+- Where the product goes next: [flam-study.md](flam-study.md) — a study of Lunii's FLAM and the reasoning behind interactive "Adventure mode" stories — and [todo-interactive-mode.md](todo-interactive-mode.md), the build checklist for it.
