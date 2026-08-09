@@ -24,15 +24,27 @@
 /// └── sf/000/XXXXXXXX       audio, ciphered
 /// ```
 ///
-/// The story is laid out as a straight line, the same shape the STUdio pack
-/// uses:
+/// The story is laid out as a straight line that comes back to rest:
 ///
 /// ```
-/// cover ─▶ chapter 1 ─▶ chapter 2 ─▶ … ─▶ chapter n
+/// cover ─▶ chapter 1 ─▶ … ─▶ chapter n ─▶ the end ─┐
+///   ▲                                              │
+///   └──────────── OK replays ◀────────────────────-┘
 /// ```
 ///
-/// with autoplay on each chapter, so it runs start to finish on its own and OK
-/// skips ahead.
+/// with autoplay on each chapter, so it runs start to finish on its own.
+///
+/// **The end node is not decoration.** The first pack written to real hardware
+/// gave its last chapter no onward transition, on the assumption that the
+/// device would return to the pack list when the audio ran out. It played
+/// every chapter and then threw up an error screen. `tool/lunii_node_survey.dart`
+/// explains why: across 490 nodes in nine working packs, exactly one node has
+/// no `ok` transition and it still has a `home` one — a node with autoplay set
+/// and nowhere to go does not exist on a device that works. Autoplay follows
+/// the `ok` transition, and `-1` is not a place.
+///
+/// Every node shape below is one the survey found in use, and no list entry
+/// names node 0, because none on the device does.
 library;
 
 import 'dart:math';
@@ -157,24 +169,30 @@ DevicePack buildDevicePack({
     sounds.add(chapters[i].audio);
   }
 
-  // One node for the cover, then one per chapter.
-  final nodeCount = chapters.length + 1;
+  // The cover, one node per chapter, then the end.
+  final endNode = chapters.length + 1;
+  final nodeCount = chapters.length + 2;
 
-  // A straight line needs one list entry per hop: entry i sends node i to
-  // node i+1, so the last chapter has nowhere to go and ends the story.
-  final list = Int32List(chapters.length);
-  for (var i = 0; i < chapters.length; i++) {
+  // One list entry per hop, so node i's transition is always `(i, 1, 0)`.
+  // Entry i sends node i on to node i+1, and the last sends the end node back
+  // to the first chapter, which is what OK replays.
+  final list = Int32List(nodeCount);
+  for (var i = 0; i < nodeCount - 1; i++) {
     list[i] = i + 1;
   }
+  list[nodeCount - 1] = 1;
+
+  _Transition hop(int from) => _Transition(from, 1, 0);
 
   final nodes = <_Node>[
-    // The cover. The device waits here until OK is pressed, so no autoplay —
+    // The cover: the device waits here until OK is pressed, so no autoplay,
     // and no sound, since a generated story has no title jingle to play.
+    // Flags match node 0 of all nine packs on the device.
     _Node(
       image: coverIndex,
       audio: -1,
-      okTransition: const _Transition(0, 1, 0),
-      wheel: false,
+      okTransition: hop(0),
+      wheel: true,
       ok: true,
       home: false,
       pause: false,
@@ -184,17 +202,28 @@ DevicePack buildDevicePack({
       _Node(
         image: imageIndexForChapter[i],
         audio: i,
-        // The last chapter has no onward link, so the device returns to the
-        // pack list when it finishes.
-        okTransition: i == chapters.length - 1
-            ? null
-            : _Transition(i + 1, 1, 0),
+        // Always somewhere to go. The last chapter hands on to the end node
+        // rather than dangling — see the note at the top of this file.
+        okTransition: hop(i + 1),
         wheel: false,
-        ok: i != chapters.length - 1,
+        ok: true,
         home: true,
         pause: true,
         autoplay: true,
       ),
+    // The end: the cover picture again, in silence, waiting. OK starts the
+    // story over; the device's own home button leaves, which is what an
+    // absent home transition means.
+    _Node(
+      image: coverIndex,
+      audio: -1,
+      okTransition: hop(endNode),
+      wheel: true,
+      ok: true,
+      home: false,
+      pause: false,
+      autoplay: false,
+    ),
   ];
 
   // Asset names are eight hex digits, unique inside the pack; the index entry

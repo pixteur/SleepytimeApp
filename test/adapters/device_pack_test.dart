@@ -218,11 +218,77 @@ void main() {
       ];
     }
 
+    test('no node is left with nowhere to go', () {
+      // This is the one that matters. A pack whose last chapter had no onward
+      // transition played every chapter on real hardware and then threw up an
+      // error screen: autoplay follows the ok transition, and -1 is not a
+      // place. Across 490 nodes in nine working packs, not one has neither an
+      // ok nor a home transition.
+      final pack = build(chapters: 5);
+      final ni = pack.files['ni']!;
+      final nodes = header(ni).nodes;
+      final li = ByteData.sublistView(
+        luniiDecipher(pack.files['li']!, luniiGenericKey),
+      );
+      for (var i = 0; i < nodes; i++) {
+        final n = node(ni, i);
+        final ok = n.sublist(2, 5);
+        final home = n.sublist(5, 8);
+        final autoplay = n[12] == 1;
+        expect(
+          ok[0] != -1 || home[0] != -1,
+          isTrue,
+          reason: 'node $i has neither transition',
+        );
+        if (autoplay) {
+          expect(ok[0], isNot(-1), reason: 'node $i autoplays into nothing');
+        }
+        // And wherever it points has to exist.
+        for (final t in [ok, home]) {
+          if (t[0] == -1) continue;
+          for (var o = 0; o < t[1]; o++) {
+            final target = li.getInt32((t[0] + o) * 4, Endian.little);
+            expect(target, greaterThanOrEqualTo(0));
+            expect(
+              target,
+              lessThan(nodes),
+              reason: 'node $i points off the end',
+            );
+          }
+        }
+      }
+    });
+
+    test('the story ends somewhere quiet, and OK replays it', () {
+      final pack = build(chapters: 3);
+      final ni = pack.files['ni']!;
+      final li = ByteData.sublistView(
+        luniiDecipher(pack.files['li']!, luniiGenericKey),
+      );
+      final last = header(ni).nodes - 1;
+      final end = node(ni, last);
+      expect(end[0], 0, reason: 'the end shows the cover again');
+      expect(end[1], -1, reason: 'in silence');
+      expect(end[12], 0, reason: 'and does not autoplay onward');
+      // Its OK goes back to the first chapter.
+      final t = end.sublist(2, 5);
+      expect(li.getInt32(t[0] * 4, Endian.little), 1);
+    });
+
+    test('no list entry names node 0, as none does on the device', () {
+      final pack = build(chapters: 4);
+      final li = luniiDecipher(pack.files['li']!, luniiGenericKey);
+      final view = ByteData.sublistView(li);
+      for (var i = 0; i * 4 < li.length; i++) {
+        expect(view.getInt32(i * 4, Endian.little), isNot(0));
+      }
+    });
+
     test('the counts in the header match ri, si and the file size', () {
       final pack = build(chapters: 4);
       final ni = pack.files['ni']!;
       final h = header(ni);
-      expect(h.nodes, 5, reason: 'a cover plus four chapters');
+      expect(h.nodes, 6, reason: 'a cover, four chapters and the end');
       expect(h.images, entries(pack.files['ri']!).length);
       expect(h.sounds, entries(pack.files['si']!).length);
       expect(ni.length, 0x200 + h.nodes * 0x2C);
@@ -248,7 +314,9 @@ void main() {
       expect(n[1], -1, reason: 'no audio: a generated story has no jingle');
       expect(n.sublist(2, 5), [0, 1, 0], reason: 'ok → the first list entry');
       expect(n.sublist(5, 8), [-1, -1, -1], reason: 'no home transition');
-      expect(n.sublist(8), [0, 1, 0, 0, 0], reason: 'ok only, no autoplay');
+      // wheel,ok,home,pause,autoplay — the shape node 0 has on all nine packs
+      // already on the device.
+      expect(n.sublist(8), [1, 1, 0, 0, 0]);
     });
 
     test('chapters autoplay and chain in a straight line', () {
@@ -264,30 +332,51 @@ void main() {
       }
     });
 
-    test('the last chapter has nowhere to go, so the story ends', () {
+    test('the last chapter hands on to the end rather than dangling', () {
       final ni = build(chapters: 3).files['ni']!;
-      expect(node(ni, 3).sublist(2, 5), [-1, -1, -1]);
-      expect(node(ni, 3)[9], 0, reason: 'and OK is off there');
-      // The one before it does lead on.
-      expect(node(ni, 2).sublist(2, 5), [2, 1, 0]);
+      final li = ByteData.sublistView(
+        luniiDecipher(build(chapters: 3).files['li']!, luniiGenericKey),
+      );
+      final t = node(ni, 3).sublist(2, 5);
+      expect(
+        t,
+        isNot([-1, -1, -1]),
+        reason: 'this is what errored on hardware',
+      );
+      expect(li.getInt32(t[0] * 4, Endian.little), 4, reason: 'the end node');
+      expect(node(ni, 3)[12], 1, reason: 'and it still autoplays there');
     });
 
-    test('following the list from the cover walks every chapter once', () {
-      final pack = build(chapters: 5);
-      final ni = pack.files['ni']!;
-      final li = ByteData.sublistView(
-        luniiDecipher(pack.files['li']!, luniiGenericKey),
-      );
-      final visited = <int>[];
-      var at = 0;
-      while (visited.length < 10) {
-        visited.add(at);
-        final t = node(ni, at).sublist(2, 5);
-        if (t[0] == -1) break;
-        at = li.getInt32(t[0] * 4 + t[2] * 4, Endian.little);
-      }
-      expect(visited, [0, 1, 2, 3, 4, 5]);
-    });
+    test(
+      'following the list from the cover walks the whole story, then rests',
+      () {
+        final pack = build(chapters: 5);
+        final ni = pack.files['ni']!;
+        final li = ByteData.sublistView(
+          luniiDecipher(pack.files['li']!, luniiGenericKey),
+        );
+        final visited = <int>[];
+        var at = 0;
+        // Walk until somewhere repeats — a straight line that loops home rather
+        // than one that runs off the end.
+        while (!visited.contains(at) && visited.length < 20) {
+          visited.add(at);
+          final t = node(ni, at).sublist(2, 5);
+          if (t[0] == -1) break;
+          at = li.getInt32((t[0] + t[2]) * 4, Endian.little);
+        }
+        expect(visited, [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+        ], reason: 'cover, five chapters, the end');
+        expect(at, 1, reason: 'and the end leads back to chapter one');
+      },
+    );
   });
 
   group('per-chapter pictures', () {
