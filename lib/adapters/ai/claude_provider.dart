@@ -17,7 +17,7 @@ class ClaudeProvider implements AiProvider {
   ClaudeProvider({
     required SecretStore secrets,
     http.Client? httpClient,
-    String model = 'claude-opus-4-8',
+    String model = defaultModel,
     int maxTokens = 2000,
   }) : _secrets = secrets, // ignore: prefer_initializing_formals
        _http = httpClient ?? http.Client(),
@@ -26,6 +26,9 @@ class ClaudeProvider implements AiProvider {
 
   /// The SecretStore key name under which the Claude API key is stored.
   static const String keyName = 'claude';
+
+  /// Used when the parent has not picked one in settings.
+  static const String defaultModel = 'claude-opus-4-8';
 
   static const String _endpoint = 'https://api.anthropic.com/v1/messages';
   static const String _apiVersion = '2023-06-01';

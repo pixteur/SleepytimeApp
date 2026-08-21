@@ -16,7 +16,7 @@ class OpenAiProvider implements AiProvider {
   OpenAiProvider({
     required SecretStore secrets,
     http.Client? httpClient,
-    String model = 'gpt-4o',
+    String model = defaultModel,
     int maxTokens = 2000,
   }) : _secrets = secrets, // ignore: prefer_initializing_formals
        _http = httpClient ?? http.Client(),
@@ -24,6 +24,9 @@ class OpenAiProvider implements AiProvider {
        _maxTokens = maxTokens; // ignore: prefer_initializing_formals
 
   static const String keyName = 'openai';
+
+  /// Used when the parent has not picked one in settings.
+  static const String defaultModel = 'gpt-4o';
   static const String _endpoint = 'https://api.openai.com/v1/chat/completions';
 
   final SecretStore _secrets;

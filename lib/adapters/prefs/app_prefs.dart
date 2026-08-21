@@ -41,6 +41,14 @@ class AppPrefs {
 
   static String _hintKey(String keyName) => 'key_hint_$keyName';
 
+  /// The model the story provider writes with (null or empty → the adapter's
+  /// built-in default). Per provider, because switching from Claude to Gemini
+  /// must not carry a Claude model id across.
+  String? textModel(String provider) => _prefs.getString('textmodel_$provider');
+
+  Future<void> setTextModel(String provider, String model) =>
+      _prefs.setString('textmodel_$provider', model);
+
   // ── Voice ───────────────────────────────────────────────────────
   static const _voiceEngineKey = 'voice_engine';
 

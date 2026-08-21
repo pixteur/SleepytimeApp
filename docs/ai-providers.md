@@ -56,6 +56,51 @@ If a provider returns malformed output, the adapter retries once, then surfaces 
 - Per-provider keys; the active provider is a setting.
 - A "Test connection" button calls `isReady()`.
 
+## Choosing a model
+
+Story and voice models are both picked in the grown-up settings, from a list the
+provider itself supplies — `GET /v1/models` (Anthropic, OpenAI, ElevenLabs) or
+`GET /v1beta/models` (Google). A hard-coded id is wrong twice: the day it is
+retired, and every day a better one exists that we have not shipped a release to
+reach. See [model_catalog.dart](../lib/adapters/ai/model_catalog.dart).
+
+One directory per **vendor**, not per role — a vendor's list covers both jobs,
+so the same call fills the story dropdown and the voice dropdown.
+
+**The list is a suggestion, never a gate.** No key, no network, or a refusal
+falls back to typing an id by hand, and a hand-typed value that the list does
+not carry stays selected. A brand-new model id is precisely when the list is
+behind.
+
+### What the hints may say
+
+Only what the response or the id supports:
+
+| Hint | Where it comes from |
+|------|--------------------|
+| `Speaks text aloud` | ElevenLabs' `can_do_text_to_speech`; a `tts` id elsewhere |
+| `Most capable` / `Balanced` / `Fastest` | The tier named in the id — opus/sonnet/haiku, pro/flash/flash-lite |
+| `Preview — tighter daily limits` | `preview`/`exp`/`beta` in the id |
+| ElevenLabs prose | The vendor's own `description`, clipped to a line |
+
+A note is a claim about what a model is good at, so it is computed **from the
+classification**, never beside it.
+
+### The trap this walked into
+
+Google's image, music, robotics and computer-use models all answer
+`generateContent`. Classifying on that alone offered `lyria-3-pro-preview` — a
+music generator — as a story writer, and because "pro" is in the name described
+it as *"most capable — best prose"*. Unit tests could not catch it: they parsed
+responses we wrote ourselves. `dart run tool/model_catalog_probe.dart` asks the
+real APIs with the saved keys and prints how each model is classified; the ids
+it returned are now a test case.
+
+A key can also be allowed to *use* models but not *list* them — a real
+ElevenLabs key returns 401 `models_read` while narrating perfectly well. That
+gets its own message, because "your key is wrong" would send a parent off
+replacing a key that works.
+
 ## Cost & UX considerations
 
 - **Streaming** (optional, Phase 2/3): show text as it writes and begin narration on sentence boundaries for a magical "live" feel.

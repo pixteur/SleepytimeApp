@@ -7,9 +7,11 @@ import '../../adapters/ai/gemini_provider.dart';
 import '../../adapters/ai/openai_provider.dart';
 import '../../adapters/prefs/app_prefs.dart';
 import '../../adapters/secrets/secret_store.dart';
+import '../../adapters/ai/model_catalog.dart';
 import '../../app_providers.dart';
 import '../../domain/prompt_builder.dart';
 import 'about_section.dart';
+import 'model_picker.dart';
 import 'settings_section.dart';
 import 'voice_section.dart';
 
@@ -47,6 +49,9 @@ const _providers = [
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _keyController = TextEditingController();
   ProviderId _provider = ProviderId.claude;
+
+  /// The story model for [_provider]; blank means the adapter's own default.
+  String _textModel = '';
   bool _consent = false;
   bool _hasStoredKey = false;
   bool _busy = false;
@@ -79,6 +84,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _consent = prefs.aiConsentGiven;
       _hasStoredKey = hasKey;
       _keyHint = prefs.keyHint(keyNameFor(provider) ?? '');
+      _textModel = prefs.textModel(provider.name) ?? '';
     });
   }
 
@@ -101,16 +107,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _provider = id;
       _hasStoredKey = hasKey;
       _keyHint = prefs.keyHint(keyNameFor(id) ?? '');
+      // Per-provider, so switching back and forth keeps each one's choice.
+      _textModel = prefs.textModel(id.name) ?? '';
       _status = null;
       _keyController.clear();
     });
   }
 
-  AiProvider _build(ProviderId id, SecretStore secrets) => switch (id) {
-    ProviderId.openai => OpenAiProvider(secrets: secrets),
-    ProviderId.gemini => GeminiProvider(secrets: secrets),
-    _ => ClaudeProvider(secrets: secrets),
+  /// Save the story model and rebuild the engine so the next chapter uses it.
+  Future<void> _onTextModelChanged(String model) async {
+    setState(() => _textModel = model);
+    await (await AppPrefs.open()).setTextModel(_provider.name, model);
+    await ref.read(textModelProvider.notifier).refresh();
+  }
+
+  String _defaultTextModel(ProviderId id) => switch (id) {
+    ProviderId.openai => OpenAiProvider.defaultModel,
+    ProviderId.gemini => GeminiProvider.defaultModel,
+    _ => ClaudeProvider.defaultModel,
   };
+
+  /// The provider "Save & test" exercises. Built with the *chosen* model, so a
+  /// green tick means the model that will write tonight's story actually
+  /// answered — not just that the key is valid for some other model.
+  AiProvider _build(ProviderId id, SecretStore secrets) {
+    final model = _textModel.isEmpty ? _defaultTextModel(id) : _textModel;
+    return switch (id) {
+      ProviderId.openai => OpenAiProvider(secrets: secrets, model: model),
+      ProviderId.gemini => GeminiProvider(secrets: secrets, model: model),
+      _ => ClaudeProvider(secrets: secrets, model: model),
+    };
+  }
 
   Future<void> _saveAndTest() async {
     final key = _keyController.text.trim();
@@ -311,6 +338,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ],
                     ),
                   ],
+                  const SizedBox(height: 16),
+                  // Which model writes the stories. Listed from the provider
+                  // itself, so a retired id or a newly released one both show
+                  // up without waiting for an app release.
+                  ModelPicker(
+                    directory: ref.read(
+                      modelDirectoryProvider(vendorForProvider(_provider)),
+                    ),
+                    kind: ModelKind.text,
+                    value: _textModel,
+                    defaultId: _defaultTextModel(_provider),
+                    label: 'Story model',
+                    helper:
+                        'Leave blank for the default. Bigger models write '
+                        'better stories and cost more per chapter.',
+                    onChanged: _onTextModelChanged,
+                  ),
                   const SizedBox(height: 16),
                   Row(
                     children: [

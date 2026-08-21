@@ -148,6 +148,14 @@ half-done pack was invisible and the device was unharmed. Open the file and
 append; it is also the safer semantic, since the existing pack ids are then
 never rewritten at all.
 
+**A model that answers your endpoint is not a model that does your job.**
+Google's image, music, robotics and computer-use models all respond to
+`generateContent`, so a story-model list built from that alone offered a music
+generator — and, because "pro" was in its name, called it "best prose". Mocked
+responses cannot catch this; they only contain what you already believed.
+`tool/model_catalog_probe.dart` asks the real APIs with the saved keys. Same
+shape as the others here: a plausible answer, no error, wrong.
+
 **Verify against the real database or device, not just tests.** Both the
 migration bug and the download-badge bug passed every test and failed
 immediately in the app. `tool/` holds read-only probes for exactly this.

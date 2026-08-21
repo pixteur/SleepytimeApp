@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../adapters/ai/model_catalog.dart';
+import 'model_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../adapters/prefs/app_prefs.dart';
@@ -66,6 +69,13 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
       _model.text = prefs.voiceModel(engine.name) ?? '';
       _elevenHint = prefs.keyHint(ElevenLabsTtsSynthesizer.keyName);
     });
+  }
+
+  /// The catalogue behind this engine's model list. Null for the device voice,
+  /// which has no API to ask.
+  ModelDirectory? _directoryFor(VoiceEngine e) {
+    final vendor = vendorForVoice(e);
+    return vendor == null ? null : ref.read(modelDirectoryProvider(vendor));
   }
 
   /// What this engine uses when the model field is left blank — shown as the
@@ -211,18 +221,19 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
             decoration: const InputDecoration(border: OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _model,
-            enabled: !_busy,
-            decoration: InputDecoration(
-              labelText: 'Model (advanced)',
-              hintText: _defaultModel(_engine),
-              helperText:
-                  'Leave blank for the default. Worth changing if a model is '
-                  'retired, or to move off a preview model with tighter limits.',
-              helperMaxLines: 3,
-              border: const OutlineInputBorder(),
-            ),
+          // Asks the provider what its key can reach, rather than making a
+          // grown-up know a model id. Falls back to typing one when the list
+          // can't be fetched — which is how this worked before.
+          ModelPicker(
+            directory: _directoryFor(_engine),
+            kind: ModelKind.audio,
+            value: _model.text,
+            defaultId: _defaultModel(_engine),
+            label: 'Voice model',
+            helper:
+                'Leave blank for the default. Worth changing if a model is '
+                'retired, or to move off a preview model with tighter limits.',
+            onChanged: (v) => setState(() => _model.text = v),
           ),
           const SizedBox(height: 12),
           if (_engine == VoiceEngine.elevenlabs)

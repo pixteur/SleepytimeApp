@@ -4,6 +4,7 @@ import 'adapters/ai/ai_provider.dart';
 import 'adapters/ai/claude_provider.dart';
 import 'adapters/ai/fake_ai_provider.dart';
 import 'adapters/ai/gemini_provider.dart';
+import 'adapters/ai/model_catalog.dart';
 import 'adapters/ai/openai_provider.dart';
 import 'adapters/prefs/app_prefs.dart';
 import 'adapters/secrets/dpapi_secret_store.dart';
@@ -82,14 +83,51 @@ class AiConfigController extends Notifier<ProviderId> {
   Future<void> refresh() async => state = await _resolve();
 }
 
+/// The story model chosen for the active provider — blank means "whatever the
+/// adapter ships with". Kept apart from [aiConfigProvider] so switching
+/// provider doesn't drag a Claude model id over to Gemini: the pref is keyed by
+/// provider, and this re-reads it whenever the provider changes.
+final textModelProvider = NotifierProvider<TextModelController, String>(
+  TextModelController.new,
+);
+
+class TextModelController extends Notifier<String> {
+  @override
+  String build() {
+    // Watch, not read: picking a different provider must re-resolve the model.
+    ref.watch(aiConfigProvider);
+    _hydrate();
+    return '';
+  }
+
+  Future<void> _hydrate() async => state = await _resolve();
+
+  Future<String> _resolve() async {
+    final prefs = await AppPrefs.open();
+    return prefs.textModel(prefs.selectedProvider) ?? '';
+  }
+
+  Future<void> refresh() async => state = await _resolve();
+}
+
 /// The active AI provider — the configured + consented one, else the offline
 /// [FakeAiProvider]. See `docs/ai-providers.md`.
 final aiProvider = Provider<AiProvider>((ref) {
   final secrets = ref.watch(secretStoreProvider);
+  final chosen = ref.watch(textModelProvider);
   return switch (ref.watch(aiConfigProvider)) {
-    ProviderId.claude => ClaudeProvider(secrets: secrets),
-    ProviderId.openai => OpenAiProvider(secrets: secrets),
-    ProviderId.gemini => GeminiProvider(secrets: secrets),
+    ProviderId.claude => ClaudeProvider(
+      secrets: secrets,
+      model: chosen.isEmpty ? ClaudeProvider.defaultModel : chosen,
+    ),
+    ProviderId.openai => OpenAiProvider(
+      secrets: secrets,
+      model: chosen.isEmpty ? OpenAiProvider.defaultModel : chosen,
+    ),
+    ProviderId.gemini => GeminiProvider(
+      secrets: secrets,
+      model: chosen.isEmpty ? GeminiProvider.defaultModel : chosen,
+    ),
     ProviderId.hosted || ProviderId.fake => const FakeAiProvider(),
   };
 });
@@ -147,6 +185,40 @@ class ListeningModeController extends Notifier<bool> {
     await (await AppPrefs.open()).setListeningMode(state);
   }
 }
+
+/// The vendors whose catalogues can be listed. One per API key, not one per
+/// role — OpenAI's and Google's lists cover both story and voice models.
+enum ModelVendor { anthropic, openai, google, elevenlabs }
+
+/// Looks up what a vendor's key can actually reach, so the settings screens
+/// offer real model ids instead of a hard-coded guess. See `model_catalog.dart`.
+final modelDirectoryProvider = Provider.family<ModelDirectory, ModelVendor>((
+  ref,
+  vendor,
+) {
+  final secrets = ref.watch(secretStoreProvider);
+  return switch (vendor) {
+    ModelVendor.anthropic => AnthropicModelDirectory(secrets: secrets),
+    ModelVendor.openai => OpenAiModelDirectory(secrets: secrets),
+    ModelVendor.google => GoogleModelDirectory(secrets: secrets),
+    ModelVendor.elevenlabs => ElevenLabsModelDirectory(secrets: secrets),
+  };
+});
+
+/// Which vendor serves a story provider.
+ModelVendor vendorForProvider(ProviderId id) => switch (id) {
+  ProviderId.openai => ModelVendor.openai,
+  ProviderId.gemini => ModelVendor.google,
+  _ => ModelVendor.anthropic,
+};
+
+/// Which vendor serves a voice engine (null for the offline device voice).
+ModelVendor? vendorForVoice(VoiceEngine engine) => switch (engine) {
+  VoiceEngine.openai => ModelVendor.openai,
+  VoiceEngine.gemini => ModelVendor.google,
+  VoiceEngine.elevenlabs => ModelVendor.elevenlabs,
+  VoiceEngine.device => null,
+};
 
 // ─── Voice engine ─────────────────────────────────────────────────────
 

@@ -18,7 +18,7 @@ class GeminiProvider implements AiProvider {
   GeminiProvider({
     required SecretStore secrets,
     http.Client? httpClient,
-    String model = 'gemini-2.5-flash',
+    String model = defaultModel,
     int maxTokens = 4096,
   }) : _secrets = secrets, // ignore: prefer_initializing_formals
        _http = httpClient ?? http.Client(),
@@ -26,6 +26,9 @@ class GeminiProvider implements AiProvider {
        _maxTokens = maxTokens; // ignore: prefer_initializing_formals
 
   static const String keyName = 'gemini';
+
+  /// Used when the parent has not picked one in settings.
+  static const String defaultModel = 'gemini-2.5-flash';
   static const String _base =
       'https://generativelanguage.googleapis.com/v1beta/models';
 
