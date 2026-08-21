@@ -68,6 +68,7 @@ class LuniiTransferRequest {
     required this.chapterChunks,
     required this.skipped,
     required this.motif,
+    this.titleChunks,
   });
 
   final String drive;
@@ -77,6 +78,11 @@ class LuniiTransferRequest {
   /// Per chapter, its cached chunks exactly as they sit in the audio cache —
   /// still compressed, so this stays small enough to hand across cheaply.
   final List<List<Uint8List>> chapterChunks;
+
+  /// The story's title, spoken — cached chunks like any other clip. Null when
+  /// it has not been synthesized, which leaves the cover silent as before
+  /// rather than failing the transfer over a nicety.
+  final List<Uint8List>? titleChunks;
   final int skipped;
   final LuniiCoverMotif motif;
 }
@@ -106,10 +112,14 @@ LuniiTransfer buildAndWritePack(LuniiTransferRequest request) {
     LuniiCoverMotif.nightSky => nightSkyCoverIndexed(seed: request.title),
   };
 
+  final titleChunks = request.titleChunks;
   final pack = buildDevicePack(
     chapters: chapters,
     deviceKey: device.deviceKey,
     cover: cover,
+    titleAudio: titleChunks == null || titleChunks.isEmpty
+        ? null
+        : _chapterAudio(titleChunks),
   );
   writePack(device, pack, backupDirectory: request.backupDirectory);
 

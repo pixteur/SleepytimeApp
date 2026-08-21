@@ -161,10 +161,22 @@ void main(List<String> args) {
       ? veloCoverIndexed(seed: title)
       : nightSkyCoverIndexed(seed: title);
 
+  // The spoken title, if the app has already cached it. The tool never calls a
+  // voice provider itself — it reads what is on disk — so a title that has not
+  // been synthesized just leaves the cover silent.
+  final titleMp3 = _cachedClip(title, voice, language, audioDir);
+  stdout.writeln(
+    titleMp3 == null
+        ? '\nCover: silent (no spoken title cached)'
+        : '\nCover: says the title '
+              '(${(titleMp3.length / 1024).round()} kB)',
+  );
+
   final pack = buildDevicePack(
     chapters: chapters,
     deviceKey: device.deviceKey,
     cover: cover,
+    titleAudio: titleMp3,
   );
   final plan = planWrite(device, pack);
   stdout.writeln('\nPack ${pack.directoryName}  cover: $motif');
@@ -181,6 +193,31 @@ void main(List<String> args) {
     'Wrote ${written.length} files. ${device.packIds.length} packs → '
     '${LuniiDevice.open(drive).packIds.length}',
   );
+}
+
+/// A short cue-less clip from the audio cache, encoded for the device, or null
+/// if it was never synthesized.
+Uint8List? _cachedClip(
+  String text,
+  String voice,
+  String language,
+  String audioDir,
+) {
+  final keys = chapterAudioKeys(
+    voiceSignature: voice,
+    language: language,
+    text: text,
+  );
+  final parts = <WavAudio>[];
+  for (final key in keys) {
+    final file = File('$audioDir\\$key');
+    if (!file.existsSync()) return null;
+    parts.add(
+      trimTrailingSilence(decodeWav(decompressAudio(file.readAsBytesSync()))),
+    );
+  }
+  if (parts.isEmpty) return null;
+  return encodePcmToLuniiMp3(joinWav(parts));
 }
 
 /// Narration cues, as `chapterAudioKeys` needs them — the cue is mixed into

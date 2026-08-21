@@ -234,6 +234,9 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
         voiceSignature: ref.read(ttsProvider).voiceSignature,
         motif: motif,
         drive: devices.first,
+        // Lets the cover say the story's name — the device has no screen to
+        // read, so this is how a child knows what they are standing on.
+        voice: ref.read(ttsProvider),
       );
       if (mounted) showErrorBanner(context, result.summary);
     } catch (e) {

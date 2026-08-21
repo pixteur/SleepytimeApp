@@ -245,6 +245,38 @@ announce itself — so a pack that says nothing is hard to find. That is a
 product gap, not a format one; see the open items in
 [decision-log.md](decision-log.md).
 
+## Navigating by ear
+
+The storyteller has no screen worth reading, so a pack that is silent until a
+chapter starts leaves a child with no idea which story they are standing on.
+The cover node therefore speaks the story's name.
+
+Mechanically it is one more sound asset. The spoken title is **sound 0**, which
+shifts every chapter along by one — that shift is the thing to be careful
+about, and `device_pack_test.dart` pins it: a pack whose chapter 1 plays the
+title and whose last chapter plays nothing is the bug to avoid. The end node
+says the title again, so the story audibly comes to rest where it began.
+
+The clip is synthesized by the app's own voice and cached like any narration —
+so it costs one short request per story, once. It is **best effort**: a voice
+that refuses (no key, quota spent) leaves the cover silent, which is how every
+pack written before this behaved. A nicety must not fail a transfer.
+`tool/lunii_write.dart` never calls a provider itself; it reports
+`Cover: silent (no spoken title cached)` when the clip is not on disk.
+
+### Still to build: a spoken chapter menu
+
+The cover already has `wheel: true`, but its transition has `count: 1`, so
+turning the wheel does nothing. A real menu needs a transition spanning N list
+entries and one short "announce" node per chapter — *"Chapter two: The Moon
+Silk Mystery"* — that the wheel scrolls, with OK dropping into the chapter.
+
+Before building it, run `tool/lunii_node_survey.dart` against an attached
+device and copy the shape off the packs that work. The history in
+`device_pack.dart` is the argument: the first pack written to hardware guessed
+what a story's last node should look like, played every chapter, and then threw
+an error screen.
+
 ## Writing safely
 
 The nine packs already on a device are purchased content, and a botched `.pi`

@@ -14,6 +14,7 @@ import '../adapters/storage/library_paths.dart';
 import '../adapters/storage/storage_repo.dart';
 import '../adapters/tts/audio_cache.dart';
 import '../adapters/tts/narrated_chunks.dart';
+import '../adapters/tts/tts_provider.dart';
 import '../adapters/tts/tts_synthesizer.dart';
 import 'models/beat.dart';
 import 'models/narration.dart';
@@ -38,19 +39,23 @@ class SleepyService {
   /// files (one blob per chapter, no notes) still import — see [_restoreAudio].
   static const int _formatVersion = 2;
 
-  /// A chapter's cached narration, in playback order, or null if any part of it
-  /// is missing — a half-cached chapter would export as a story that stops
+  /// Cached narration for a piece of text, in playback order, or null if any
+  /// part of it is missing — half a chapter would export as a story that stops
   /// mid-sentence, which is worse than telling the grown-up to download it.
-  Future<List<Uint8List>?> _chapterChunks(
-    Beat beat,
+  ///
+  /// Goes through `chapterAudioKeys` rather than building a key by hand; that
+  /// is the whole point of that function existing.
+  Future<List<Uint8List>?> _clipChunks(
+    String text,
     String voiceSignature,
-    String language,
-  ) async {
+    String language, {
+    NarrationNotes notes = const NarrationNotes(),
+  }) async {
     final keys = chapterAudioKeys(
       voiceSignature: voiceSignature,
       language: language,
-      text: beat.text,
-      notes: beat.narration,
+      text: text,
+      notes: notes,
     );
     if (keys.isEmpty) return null;
     final parts = <Uint8List>[];
@@ -61,6 +66,12 @@ class SleepyService {
     }
     return parts;
   }
+
+  Future<List<Uint8List>?> _chapterChunks(
+    Beat beat,
+    String voiceSignature,
+    String language,
+  ) => _clipChunks(beat.text, voiceSignature, language, notes: beat.narration);
 
   /// One chapter as a single playable file: its chunks joined, WAV headers
   /// reconciled.
@@ -292,6 +303,11 @@ class SleepyService {
   /// A chapter whose narration is not fully downloaded is left out rather than
   /// sent half-finished, and the count comes back so the caller can say so.
   /// The heavy part runs off the UI isolate; see `lunii_transfer.dart`.
+  /// What the storyteller says when a child lands on the pack. Short on
+  /// purpose: the wheel is how they browse, so this has to be over before they
+  /// have moved on.
+  static String spokenTitleFor(Series series) => series.title.trim();
+
   Future<LuniiTransfer> sendToLunii(
     Series series, {
     required String language,
@@ -299,6 +315,7 @@ class SleepyService {
     LuniiCoverMotif motif = LuniiCoverMotif.nightSky,
     String? drive,
     String? backupDirectory,
+    TtsProvider? voice,
   }) async {
     final devices = attachedLuniiDevices();
     final target = drive ?? (devices.isEmpty ? null : devices.first);
@@ -326,6 +343,23 @@ class SleepyService {
       );
     }
 
+    // The device navigates by ear, so the cover says the story's name. Best
+    // effort: a voice that refuses (no key, quota spent) leaves the cover
+    // silent, which is how every pack we have written so far behaves — not a
+    // reason to refuse the transfer.
+    List<Uint8List>? titleChunks;
+    if (voice != null) {
+      final title = spokenTitleFor(series);
+      if (title.isNotEmpty) {
+        try {
+          await voice.preload(title, language: language);
+          titleChunks = await _clipChunks(title, voiceSignature, language);
+        } catch (_) {
+          titleChunks = null;
+        }
+      }
+    }
+
     // Injectable so a test can point it at a temp folder; the app always uses
     // the library, which needs platform channels a unit test does not have.
     final backup = backupDirectory ?? (await LibraryPaths.deviceBackups()).path;
@@ -335,6 +369,7 @@ class SleepyService {
         backupDirectory: backup,
         title: series.title,
         chapterChunks: chapterChunks,
+        titleChunks: titleChunks,
         skipped: skipped,
         motif: motif,
       ),

@@ -177,8 +177,10 @@ Beyond the phase docs, these are live and verified on hardware:
   **Confirmed end to end on real hardware**: a six-chapter story writes,
   passes `lunii_manifest` (nothing else touched) and `lunii_probe`, and plays
   start to finish on the device. "Send to the Lunii" is in the parent-only
-  share menu. The device navigates by ear and our packs are silent on the
-  cover — spoken menus are the next thing it needs.
+  share menu. The device navigates by ear, so the cover speaks the story's
+  title — sound 0, which shifts every chapter along one. A spoken chapter menu
+  is the next thing it needs, and wants a `lunii_node_survey` against an
+  attached device first rather than a guess at the shape.
   [docs/lunii-sync.md](docs/lunii-sync.md)
 - **Deferred** — [docs/plan-competing-llms.md](docs/plan-competing-llms.md)
 

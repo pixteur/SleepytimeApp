@@ -132,6 +132,7 @@ DevicePack buildDevicePack({
   required List<DevicePackChapter> chapters,
   required List<int> deviceKey,
   IndexedImage? cover,
+  Uint8List? titleAudio,
   Uint8List? uuid,
   Random? rng,
 }) {
@@ -162,12 +163,23 @@ DevicePack buildDevicePack({
   }
 
   final coverIndex = cover == null ? -1 : addImage(cover);
+
+  // The spoken title goes first so it is sound 0, which shifts every chapter
+  // along by one. The device navigates by ear: without this the pack is
+  // silent until a chapter starts, and a child on the cover has no way to
+  // know which story they are standing on.
+  if (titleAudio != null) _checkAudio(titleAudio, -1);
+  final titleIndex = titleAudio == null
+      ? -1
+      : (sounds..add(titleAudio)).length - 1;
+
   for (var i = 0; i < chapters.length; i++) {
     final own = chapters[i].image;
     imageIndexForChapter.add(own == null ? coverIndex : addImage(own));
     _checkAudio(chapters[i].audio, i);
     sounds.add(chapters[i].audio);
   }
+  final firstChapterSound = titleIndex + 1;
 
   // The cover, one node per chapter, then the end.
   final endNode = chapters.length + 1;
@@ -190,7 +202,7 @@ DevicePack buildDevicePack({
     // Flags match node 0 of all nine packs on the device.
     _Node(
       image: coverIndex,
-      audio: -1,
+      audio: titleIndex,
       okTransition: hop(0),
       wheel: true,
       ok: true,
@@ -201,7 +213,7 @@ DevicePack buildDevicePack({
     for (var i = 0; i < chapters.length; i++)
       _Node(
         image: imageIndexForChapter[i],
-        audio: i,
+        audio: firstChapterSound + i,
         // Always somewhere to go. The last chapter hands on to the end node
         // rather than dangling — see the note at the top of this file.
         okTransition: hop(i + 1),
@@ -211,12 +223,13 @@ DevicePack buildDevicePack({
         pause: true,
         autoplay: true,
       ),
-    // The end: the cover picture again, in silence, waiting. OK starts the
-    // story over; the device's own home button leaves, which is what an
-    // absent home transition means.
+    // The end: the cover picture again, waiting. It says the title once more,
+    // which is the device's way of saying the story is over and you are back
+    // where you started. OK starts it again; the device's own home button
+    // leaves, which is what an absent home transition means.
     _Node(
       image: coverIndex,
-      audio: -1,
+      audio: titleIndex,
       okTransition: hop(endNode),
       wheel: true,
       ok: true,
@@ -292,19 +305,19 @@ void _checkImage(IndexedImage image, int at) {
 /// Last chance to catch audio in the wrong format. Past here it is ciphered,
 /// on a device, and silent.
 void _checkAudio(Uint8List audio, int chapter) {
+  // -1 is the spoken title, which is a clip like any other but is not a
+  // chapter and must not be reported as "Chapter 0".
+  final what = chapter < 0 ? 'The spoken title' : 'Chapter ${chapter + 1}';
   final header = Mp3FrameHeader.parse(audio);
   if (header == null) {
-    throw DevicePackException(
-      'Chapter ${chapter + 1} does not begin with an MP3 frame',
-    );
+    throw DevicePackException('$what does not begin with an MP3 frame');
   }
   if (header.version != MpegVersion.mpeg1 ||
       header.layer != 3 ||
       header.sampleRate != 44100 ||
       header.mode != ChannelMode.mono) {
     throw DevicePackException(
-      'Chapter ${chapter + 1} is ${header.summary}; the device plays '
-      'MPEG1 L3 44100Hz mono',
+      '$what is ${header.summary}; the device plays MPEG1 L3 44100Hz mono',
     );
   }
 }

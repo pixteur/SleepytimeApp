@@ -112,6 +112,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _status = null;
       _keyController.clear();
     });
+    // Re-resolve immediately, or the status line goes on naming the provider
+    // that was selected a moment ago — the chips said ChatGPT while the status
+    // still read "Gemini (online)". It reports the offline placeholder for a
+    // provider with no key yet, which is the truth.
+    await ref.read(aiConfigProvider.notifier).refresh();
+    await ref.read(textModelProvider.notifier).refresh();
   }
 
   /// Save the story model and rebuild the engine so the next chapter uses it.
@@ -251,7 +257,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               SettingsSection(
                 icon: Icons.auto_stories_outlined,
-                title: 'Story AI',
+                title: 'Story AI provider & key',
                 children: [
                   Card(
                     color: theme.colorScheme.surfaceContainerHighest,
@@ -339,23 +345,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ],
                   const SizedBox(height: 16),
-                  // Which model writes the stories. Listed from the provider
-                  // itself, so a retired id or a newly released one both show
-                  // up without waiting for an app release.
-                  ModelPicker(
-                    directory: ref.read(
-                      modelDirectoryProvider(vendorForProvider(_provider)),
-                    ),
-                    kind: ModelKind.text,
-                    value: _textModel,
-                    defaultId: _defaultTextModel(_provider),
-                    label: 'Story model',
-                    helper:
-                        'Leave blank for the default. Bigger models write '
-                        'better stories and cost more per chapter.',
-                    onChanged: _onTextModelChanged,
-                  ),
-                  const SizedBox(height: 16),
                   Row(
                     children: [
                       FilledButton.icon(
@@ -390,6 +379,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ),
                   ],
+                ],
+              ),
+
+              const Divider(height: 40),
+
+              // Its own section: the block above is about *which key this
+              // device holds*, and this one is about *what writes the story*.
+              // Reading as one run of settings, the model looked like part of
+              // adding a key, and a grown-up changing providers could not tell
+              // which of the two the chips were driving.
+              SettingsSection(
+                icon: Icons.edit_note_outlined,
+                title: 'Story model',
+                children: [
+                  Text(
+                    'Which ${_meta.label} model writes the chapters.',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  // Listed from the provider itself, so a retired id and a
+                  // newly released one both show up without an app release.
+                  ModelPicker(
+                    directory: ref.read(
+                      modelDirectoryProvider(vendorForProvider(_provider)),
+                    ),
+                    kind: ModelKind.text,
+                    value: _textModel,
+                    defaultId: _defaultTextModel(_provider),
+                    label: '${_meta.label} model',
+                    helper:
+                        'Leave blank for the default. Bigger models write '
+                        'better stories and cost more per chapter.',
+                    onChanged: _onTextModelChanged,
+                  ),
                 ],
               ),
 

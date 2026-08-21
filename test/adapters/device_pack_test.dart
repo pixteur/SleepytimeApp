@@ -218,6 +218,58 @@ void main() {
       ];
     }
 
+    test('the cover is silent when no spoken title is given', () {
+      final ni = build(chapters: 3).files['ni']!;
+      expect(node(ni, 0)[1], -1, reason: 'no sound on the cover');
+      // Chapter i is sound i when nothing precedes it.
+      for (var i = 0; i < 3; i++) {
+        expect(node(ni, i + 1)[1], i);
+      }
+      expect(header(ni).sounds, 3);
+    });
+
+    test('a spoken title becomes sound 0 and shifts the chapters', () {
+      // The device has no screen, so the cover saying the story's name is the
+      // only way a child knows which pack they are standing on. It goes first,
+      // which moves every chapter along one — the bug this guards is a pack
+      // whose chapter 1 plays the title and whose last chapter plays nothing.
+      final pack = buildDevicePack(
+        chapters: [
+          for (var i = 0; i < 3; i++)
+            DevicePackChapter(audio: mp3(frames: i + 2)),
+        ],
+        deviceKey: deviceKey,
+        cover: picture(),
+        titleAudio: mp3(frames: 1),
+        rng: Random(7),
+      );
+      final ni = pack.files['ni']!;
+      expect(header(ni).sounds, 4, reason: 'title + three chapters');
+      expect(node(ni, 0)[1], 0, reason: 'the cover says the title');
+      for (var i = 0; i < 3; i++) {
+        expect(node(ni, i + 1)[1], i + 1, reason: 'chapter ${i + 1} shifted');
+      }
+      // The end node says it again, so the story audibly comes to rest.
+      expect(node(ni, 4)[1], 0);
+    });
+
+    test('a title in the wrong format is named as the title', () {
+      expect(
+        () => buildDevicePack(
+          chapters: [DevicePackChapter(audio: mp3())],
+          deviceKey: deviceKey,
+          titleAudio: Uint8List(64), // not an MP3 frame
+        ),
+        throwsA(
+          isA<DevicePackException>().having(
+            (e) => e.toString(),
+            'message',
+            allOf(contains('spoken title'), isNot(contains('Chapter 0'))),
+          ),
+        ),
+      );
+    });
+
     test('no node is left with nowhere to go', () {
       // This is the one that matters. A pack whose last chapter had no onward
       // transition played every chapter on real hardware and then threw up an
