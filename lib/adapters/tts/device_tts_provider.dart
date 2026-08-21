@@ -92,6 +92,7 @@ class DeviceTtsProvider implements TtsProvider {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
     NarrationNotes notes = const NarrationNotes(),
+    void Function(int done, int total)? onProgress,
   }) async {
     // Device TTS synthesizes instantly on speak; nothing to warm.
   }

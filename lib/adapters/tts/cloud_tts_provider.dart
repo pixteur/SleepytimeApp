@@ -183,6 +183,7 @@ class CloudTtsProvider implements TtsProvider {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
     NarrationNotes notes = const NarrationNotes(),
+    void Function(int done, int total)? onProgress,
   }) async {
     if (_cache == null) return;
     // Warm exactly what playback will ask for, cue and all — otherwise the
@@ -190,8 +191,11 @@ class CloudTtsProvider implements TtsProvider {
     _notes = notes;
     // Let errors propagate — callers that want best-effort warming already catch
     // them; an explicit "download this chapter" needs to know if it failed.
-    for (final chunk in narratedChunks(text, notes, sizeChunks)) {
-      await _cachedSynthesize(chunk, language, voice);
+    final chunks = narratedChunks(text, notes, sizeChunks);
+    onProgress?.call(0, chunks.length);
+    for (var i = 0; i < chunks.length; i++) {
+      await _cachedSynthesize(chunks[i], language, voice);
+      onProgress?.call(i + 1, chunks.length);
     }
   }
 

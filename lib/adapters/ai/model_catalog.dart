@@ -81,6 +81,40 @@ bool isPreviewId(String id) {
       lower.contains('beta');
 }
 
+/// Newest first, which is what a chooser wants: the model you are most likely
+/// to be reaching for is the one that just came out.
+///
+/// Vendors disagree on how to tell. Anthropic returns its list newest first and
+/// OpenAI stamps every entry with `created`, so those are taken at their word.
+/// Google offers neither, so the version in the id has to do the work —
+/// `gemini-3.7-flash` above `gemini-3.5-flash`, and both above `gemini-2.5-*`.
+///
+/// Families are kept apart before versions are compared: `gemma-4` is not newer
+/// than `gemini-3.7`, and one numeric order across both would say it is.
+int compareByFamilyThenVersionDesc(String a, String b) {
+  final familyA = _family(a);
+  final familyB = _family(b);
+  if (familyA != familyB) return familyA.compareTo(familyB);
+  final versionA = _version(a);
+  final versionB = _version(b);
+  if (versionA != versionB) return versionB.compareTo(versionA);
+  return a.compareTo(b);
+}
+
+/// The leading word of an id: `gemini-3.7-flash` -> `gemini`.
+String _family(String id) {
+  final match = RegExp(r'^[a-z]+').firstMatch(id.toLowerCase());
+  return match?.group(0) ?? id.toLowerCase();
+}
+
+/// The first version number in an id, or -1 for the `-latest` aliases and
+/// anything undated — they sort after the numbered releases rather than
+/// claiming to be the newest thing on offer.
+double _version(String id) {
+  final match = RegExp(r'[-_](\d+(?:\.\d+)?)').firstMatch(id.toLowerCase());
+  return match == null ? -1 : (double.tryParse(match.group(1)!) ?? -1);
+}
+
 /// Anthropic — `GET /v1/models`. Text only; there is no Anthropic voice.
 class AnthropicModelDirectory implements ModelDirectory {
   AnthropicModelDirectory({
@@ -169,13 +203,18 @@ class OpenAiModelDirectory implements ModelDirectory {
       );
     }
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final models = <AiModel>[
+    // `created` is a unix timestamp on every entry, which beats guessing at
+    // versions buried in names like "gpt-4o" and "o3".
+    final dated = <(int, AiModel)>[
       for (final m in (decoded['data'] as List<dynamic>? ?? const []))
         if (m is Map<String, dynamic> && m['id'] is String)
-          _classify(m['id'] as String),
+          ((m['created'] as int?) ?? 0, _classify(m['id'] as String)),
     ];
-    models.sort((a, b) => a.id.compareTo(b.id));
-    return models;
+    dated.sort((a, b) {
+      final byDate = b.$1.compareTo(a.$1);
+      return byDate != 0 ? byDate : a.$2.id.compareTo(b.$2.id);
+    });
+    return [for (final entry in dated) entry.$2];
   }
 
   /// OpenAI's list is everything at once — chat models beside embeddings,
@@ -275,6 +314,7 @@ class GoogleModelDirectory implements ModelDirectory {
         ),
       );
     }
+    out.sort((a, b) => compareByFamilyThenVersionDesc(a.id, b.id));
     return out;
   }
 

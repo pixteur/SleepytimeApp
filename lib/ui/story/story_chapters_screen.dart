@@ -45,6 +45,11 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
   /// How many chapters that run has got through, for the progress label.
   int _downloaded = 0;
 
+  /// Chunks saved / to save within the chapter being worked on. A chapter can
+  /// be a dozen voice requests, so chapter-level counting alone leaves the
+  /// label unchanged for minutes and reads as hung.
+  (int, int) _chapterParts = (0, 0);
+
   @override
   void initState() {
     super.initState();
@@ -255,6 +260,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
     setState(() {
       _downloading = true;
       _downloaded = 0;
+      _chapterParts = (0, 0);
     });
     var failed = 0;
     try {
@@ -263,7 +269,14 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
         var saved = false;
         for (var attempt = 0; attempt < 2 && !saved; attempt++) {
           try {
-            await tts.preload(beat.text, language: lang, notes: beat.narration);
+            await tts.preload(
+              beat.text,
+              language: lang,
+              notes: beat.narration,
+              onProgress: (done, total) {
+                if (mounted) setState(() => _chapterParts = (done, total));
+              },
+            );
             saved = true;
           } catch (_) {
             if (attempt == 0) {
@@ -552,7 +565,8 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                     : const Icon(Icons.download_for_offline_outlined),
                 label: Text(
                   _downloading
-                      ? 'Saving chapter ${_downloaded + 1} of ${beats.length}…'
+                      ? 'Saving chapter ${_downloaded + 1} of ${beats.length}'
+                            '${_chapterParts.$2 > 1 ? " — part ${_chapterParts.$1 + 1} of ${_chapterParts.$2}" : ""}…'
                       : 'Save the whole story for offline',
                 ),
               ),

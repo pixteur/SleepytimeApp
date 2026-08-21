@@ -207,6 +207,56 @@ void main() {
     });
   });
 
+  test('Google lists newest first, families apart', () async {
+    final models = await GoogleModelDirectory(
+      secrets: _Keys(),
+      httpClient: _json({
+        'models': [
+          for (final id in [
+            'gemini-2.5-flash',
+            'gemini-3.7-flash',
+            'gemma-4-31b-it',
+            'gemini-3.5-flash',
+            'gemini-flash-latest',
+            'gemini-3.1-pro-preview',
+          ])
+            {
+              'name': 'models/$id',
+              'displayName': id,
+              'supportedGenerationMethods': ['generateContent'],
+            },
+        ],
+      }),
+    ).list();
+
+    expect(models.map((m) => m.id), [
+      'gemini-3.7-flash',
+      'gemini-3.5-flash',
+      'gemini-3.1-pro-preview',
+      'gemini-2.5-flash',
+      // An alias claims no version, so it sits below the numbered releases
+      // rather than above them.
+      'gemini-flash-latest',
+      // gemma-4 is not newer than gemini-3.7; one numeric order would say so.
+      'gemma-4-31b-it',
+    ]);
+  });
+
+  test('OpenAI lists newest first by the timestamp it supplies', () async {
+    final models = await OpenAiModelDirectory(
+      secrets: _Keys(),
+      httpClient: _json({
+        'data': [
+          {'id': 'gpt-4o', 'created': 1000},
+          {'id': 'gpt-5', 'created': 3000},
+          {'id': 'gpt-4o-mini', 'created': 2000},
+        ],
+      }),
+    ).list();
+
+    expect(models.map((m) => m.id), ['gpt-5', 'gpt-4o-mini', 'gpt-4o']);
+  });
+
   test('preview ids are flagged wherever they come from', () {
     expect(isPreviewId('gemini-2.5-flash-preview-tts'), isTrue);
     expect(isPreviewId('gemini-2.0-flash-exp'), isTrue);

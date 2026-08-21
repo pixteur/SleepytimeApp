@@ -43,6 +43,11 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   // and trigger a rapid jump through chapters.
   bool _autoAdvance = false;
 
+  // The player's own last word. Kept because "loading" is only true when we
+  // have asked for narration AND the player has not started — a flag on its
+  // own can miss the transition and leave the popup up over playing audio.
+  TtsState _state = TtsState.idle;
+
   // True while the cloud voice is synthesizing, before any audio plays. Drives
   // the child-friendly "story is coming" popup and disables the Listen button.
   bool _buffering = false;
@@ -90,7 +95,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   String? get _seriesId => ref.read(activeSeriesProvider)?.id;
 
   Future<void> _speak() async {
-    if (_buffering) return; // ignore double taps while a synth is in flight
+    if (_loading) return; // ignore double taps while a synth is in flight
     // Stay put until narration actually starts (the "speaking" state), so a
     // failed synth (which lands on "idle") can't be mistaken for "finished".
     _autoAdvance = false;
@@ -114,7 +119,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
   /// from the top. Starting over is a separate, confirmed action, because
   /// losing your place ten minutes into a chapter at bedtime is miserable.
   void _togglePlay(TtsState state) {
-    if (_buffering) return;
+    if (_loading) return;
     switch (state) {
       case TtsState.speaking:
         _tts.pause();
@@ -169,7 +174,12 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     }
   }
 
+  /// Whether to say "loading". Audio that is actually playing never counts,
+  /// whatever the flag says: the player is the authority on that.
+  bool get _loading => _buffering && _state != TtsState.speaking;
+
   void _onTtsState(TtsState s) {
+    if (mounted && _state != s) setState(() => _state = s);
     if (s == TtsState.speaking) {
       // Real audio is now playing: hide the buffering popup and arm auto-advance
       // so the chapter advances (via onDone) only when it genuinely finishes.
@@ -529,7 +539,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
           initialData: _tts.state,
           builder: (context, snap) => _ListenBar(
             state: snap.data ?? TtsState.idle,
-            buffering: _buffering,
+            buffering: _loading,
             onToggle: _togglePlay,
             onStartOver: _startOver,
           ),
@@ -585,7 +595,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                         ),
                       ),
                     ),
-                  if (_buffering) const _BufferingPopup(),
+                  if (_loading) const _BufferingPopup(),
                 ],
               ),
             ),

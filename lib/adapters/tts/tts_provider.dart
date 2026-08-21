@@ -66,11 +66,15 @@ abstract class TtsProvider {
 
   /// Warm the cache for [text] (e.g. the next chapter) WITHOUT playing it, so a
   /// page turn has no synthesis pause. No-op for engines that don't cache.
+  /// [onProgress] reports `(done, total)` chunks as they are saved. A chapter
+  /// can be a dozen requests, so without it a "saving…" label sits unchanged
+  /// for minutes and reads as hung.
   Future<void> preload(
     String text, {
     String language = 'en',
     TtsVoicePref voice = const TtsVoicePref(),
     NarrationNotes notes = const NarrationNotes(),
+    void Function(int done, int total)? onProgress,
   }) async {}
 
   /// Whether [text] is already saved and would play without a network call.
