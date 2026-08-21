@@ -93,8 +93,13 @@ Future<void> main(List<String> args) async {
           );
         }
       }
-      final dropped = models.where((m) => m.kind == ModelKind.other).length;
-      stdout.writeln('   not offered: $dropped');
+      final dropped = models.where((m) => m.kind == ModelKind.other).toList();
+      stdout.writeln('   not offered: ${dropped.length}');
+      // Printed so a filter that is too eager shows up here rather than as a
+      // model quietly missing from the dropdown.
+      for (final m in dropped) {
+        stdout.writeln('     ${m.id}');
+      }
     } on ProviderNotConfigured catch (e) {
       stdout.writeln('   ${e.message}');
     } on ProviderRequestException catch (e) {
