@@ -2846,6 +2846,17 @@ class $SeriesTableTable extends SeriesTable
         type: DriftSqlType.int,
         requiredDuringInsert: true,
       ).withConverter<SeriesStatus>($SeriesTableTable.$converterstatus);
+  static const VerificationMeta _baseLanguageMeta = const VerificationMeta(
+    'baseLanguage',
+  );
+  @override
+  late final GeneratedColumn<String> baseLanguage = GeneratedColumn<String>(
+    'base_language',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _lastReadSeqMeta = const VerificationMeta(
     'lastReadSeq',
   );
@@ -2911,6 +2922,7 @@ class $SeriesTableTable extends SeriesTable
     storyBible,
     branchedFromBeatId,
     status,
+    baseLanguage,
     lastReadSeq,
     lastReadAt,
     createdAt,
@@ -3024,6 +3036,15 @@ class $SeriesTableTable extends SeriesTable
         branchedFromBeatId.isAcceptableOrUnknown(
           data['branched_from_beat_id']!,
           _branchedFromBeatIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('base_language')) {
+      context.handle(
+        _baseLanguageMeta,
+        baseLanguage.isAcceptableOrUnknown(
+          data['base_language']!,
+          _baseLanguageMeta,
         ),
       );
     }
@@ -3142,6 +3163,10 @@ class $SeriesTableTable extends SeriesTable
           data['${effectivePrefix}status'],
         )!,
       ),
+      baseLanguage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}base_language'],
+      ),
       lastReadSeq: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}last_read_seq'],
@@ -3203,6 +3228,11 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
   final String? branchedFromBeatId;
   final SeriesStatus status;
 
+  /// The language this story is told in, overriding the child's own. Null
+  /// means "whatever the child is set to" — the case for every story written
+  /// before a bilingual household needed two.
+  final String? baseLanguage;
+
   /// Reading position: the chapter last opened and when, so the bookshelf can
   /// offer "Continue — Chapter 4".
   final int? lastReadSeq;
@@ -3227,6 +3257,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     required this.storyBible,
     this.branchedFromBeatId,
     required this.status,
+    this.baseLanguage,
     this.lastReadSeq,
     this.lastReadAt,
     required this.createdAt,
@@ -3278,6 +3309,9 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
         $SeriesTableTable.$converterstatus.toSql(status),
       );
     }
+    if (!nullToAbsent || baseLanguage != null) {
+      map['base_language'] = Variable<String>(baseLanguage);
+    }
     if (!nullToAbsent || lastReadSeq != null) {
       map['last_read_seq'] = Variable<int>(lastReadSeq);
     }
@@ -3320,6 +3354,9 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           ? const Value.absent()
           : Value(branchedFromBeatId),
       status: Value(status),
+      baseLanguage: baseLanguage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(baseLanguage),
       lastReadSeq: lastReadSeq == null && nullToAbsent
           ? const Value.absent()
           : Value(lastReadSeq),
@@ -3366,6 +3403,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
       status: $SeriesTableTable.$converterstatus.fromJson(
         serializer.fromJson<int>(json['status']),
       ),
+      baseLanguage: serializer.fromJson<String?>(json['baseLanguage']),
       lastReadSeq: serializer.fromJson<int?>(json['lastReadSeq']),
       lastReadAt: serializer.fromJson<DateTime?>(json['lastReadAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -3401,6 +3439,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
       'status': serializer.toJson<int>(
         $SeriesTableTable.$converterstatus.toJson(status),
       ),
+      'baseLanguage': serializer.toJson<String?>(baseLanguage),
       'lastReadSeq': serializer.toJson<int?>(lastReadSeq),
       'lastReadAt': serializer.toJson<DateTime?>(lastReadAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -3426,6 +3465,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     String? storyBible,
     Value<String?> branchedFromBeatId = const Value.absent(),
     SeriesStatus? status,
+    Value<String?> baseLanguage = const Value.absent(),
     Value<int?> lastReadSeq = const Value.absent(),
     Value<DateTime?> lastReadAt = const Value.absent(),
     DateTime? createdAt,
@@ -3454,6 +3494,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
         ? branchedFromBeatId.value
         : this.branchedFromBeatId,
     status: status ?? this.status,
+    baseLanguage: baseLanguage.present ? baseLanguage.value : this.baseLanguage,
     lastReadSeq: lastReadSeq.present ? lastReadSeq.value : this.lastReadSeq,
     lastReadAt: lastReadAt.present ? lastReadAt.value : this.lastReadAt,
     createdAt: createdAt ?? this.createdAt,
@@ -3494,6 +3535,9 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           ? data.branchedFromBeatId.value
           : this.branchedFromBeatId,
       status: data.status.present ? data.status.value : this.status,
+      baseLanguage: data.baseLanguage.present
+          ? data.baseLanguage.value
+          : this.baseLanguage,
       lastReadSeq: data.lastReadSeq.present
           ? data.lastReadSeq.value
           : this.lastReadSeq,
@@ -3525,6 +3569,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           ..write('storyBible: $storyBible, ')
           ..write('branchedFromBeatId: $branchedFromBeatId, ')
           ..write('status: $status, ')
+          ..write('baseLanguage: $baseLanguage, ')
           ..write('lastReadSeq: $lastReadSeq, ')
           ..write('lastReadAt: $lastReadAt, ')
           ..write('createdAt: $createdAt, ')
@@ -3552,6 +3597,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
     storyBible,
     branchedFromBeatId,
     status,
+    baseLanguage,
     lastReadSeq,
     lastReadAt,
     createdAt,
@@ -3578,6 +3624,7 @@ class SeriesRow extends DataClass implements Insertable<SeriesRow> {
           other.storyBible == this.storyBible &&
           other.branchedFromBeatId == this.branchedFromBeatId &&
           other.status == this.status &&
+          other.baseLanguage == this.baseLanguage &&
           other.lastReadSeq == this.lastReadSeq &&
           other.lastReadAt == this.lastReadAt &&
           other.createdAt == this.createdAt &&
@@ -3602,6 +3649,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
   final Value<String> storyBible;
   final Value<String?> branchedFromBeatId;
   final Value<SeriesStatus> status;
+  final Value<String?> baseLanguage;
   final Value<int?> lastReadSeq;
   final Value<DateTime?> lastReadAt;
   final Value<DateTime> createdAt;
@@ -3625,6 +3673,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     this.storyBible = const Value.absent(),
     this.branchedFromBeatId = const Value.absent(),
     this.status = const Value.absent(),
+    this.baseLanguage = const Value.absent(),
     this.lastReadSeq = const Value.absent(),
     this.lastReadAt = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -3649,6 +3698,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     this.storyBible = const Value.absent(),
     this.branchedFromBeatId = const Value.absent(),
     required SeriesStatus status,
+    this.baseLanguage = const Value.absent(),
     this.lastReadSeq = const Value.absent(),
     this.lastReadAt = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -3678,6 +3728,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     Expression<String>? storyBible,
     Expression<String>? branchedFromBeatId,
     Expression<int>? status,
+    Expression<String>? baseLanguage,
     Expression<int>? lastReadSeq,
     Expression<DateTime>? lastReadAt,
     Expression<DateTime>? createdAt,
@@ -3703,6 +3754,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
       if (branchedFromBeatId != null)
         'branched_from_beat_id': branchedFromBeatId,
       if (status != null) 'status': status,
+      if (baseLanguage != null) 'base_language': baseLanguage,
       if (lastReadSeq != null) 'last_read_seq': lastReadSeq,
       if (lastReadAt != null) 'last_read_at': lastReadAt,
       if (createdAt != null) 'created_at': createdAt,
@@ -3729,6 +3781,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
     Value<String>? storyBible,
     Value<String?>? branchedFromBeatId,
     Value<SeriesStatus>? status,
+    Value<String?>? baseLanguage,
     Value<int?>? lastReadSeq,
     Value<DateTime?>? lastReadAt,
     Value<DateTime>? createdAt,
@@ -3753,6 +3806,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
       storyBible: storyBible ?? this.storyBible,
       branchedFromBeatId: branchedFromBeatId ?? this.branchedFromBeatId,
       status: status ?? this.status,
+      baseLanguage: baseLanguage ?? this.baseLanguage,
       lastReadSeq: lastReadSeq ?? this.lastReadSeq,
       lastReadAt: lastReadAt ?? this.lastReadAt,
       createdAt: createdAt ?? this.createdAt,
@@ -3823,6 +3877,9 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
         $SeriesTableTable.$converterstatus.toSql(status.value),
       );
     }
+    if (baseLanguage.present) {
+      map['base_language'] = Variable<String>(baseLanguage.value);
+    }
     if (lastReadSeq.present) {
       map['last_read_seq'] = Variable<int>(lastReadSeq.value);
     }
@@ -3861,6 +3918,7 @@ class SeriesTableCompanion extends UpdateCompanion<SeriesRow> {
           ..write('storyBible: $storyBible, ')
           ..write('branchedFromBeatId: $branchedFromBeatId, ')
           ..write('status: $status, ')
+          ..write('baseLanguage: $baseLanguage, ')
           ..write('lastReadSeq: $lastReadSeq, ')
           ..write('lastReadAt: $lastReadAt, ')
           ..write('createdAt: $createdAt, ')
@@ -7633,6 +7691,7 @@ typedef $$SeriesTableTableCreateCompanionBuilder =
       Value<String> storyBible,
       Value<String?> branchedFromBeatId,
       required SeriesStatus status,
+      Value<String?> baseLanguage,
       Value<int?> lastReadSeq,
       Value<DateTime?> lastReadAt,
       Value<DateTime> createdAt,
@@ -7658,6 +7717,7 @@ typedef $$SeriesTableTableUpdateCompanionBuilder =
       Value<String> storyBible,
       Value<String?> branchedFromBeatId,
       Value<SeriesStatus> status,
+      Value<String?> baseLanguage,
       Value<int?> lastReadSeq,
       Value<DateTime?> lastReadAt,
       Value<DateTime> createdAt,
@@ -7810,6 +7870,11 @@ class $$SeriesTableTableFilterComposer
         column: $table.status,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
+
+  ColumnFilters<String> get baseLanguage => $composableBuilder(
+    column: $table.baseLanguage,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get lastReadSeq => $composableBuilder(
     column: $table.lastReadSeq,
@@ -7987,6 +8052,11 @@ class $$SeriesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get baseLanguage => $composableBuilder(
+    column: $table.baseLanguage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get lastReadSeq => $composableBuilder(
     column: $table.lastReadSeq,
     builder: (column) => ColumnOrderings(column),
@@ -8125,6 +8195,11 @@ class $$SeriesTableTableAnnotationComposer
   GeneratedColumnWithTypeConverter<SeriesStatus, int> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
+  GeneratedColumn<String> get baseLanguage => $composableBuilder(
+    column: $table.baseLanguage,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get lastReadSeq => $composableBuilder(
     column: $table.lastReadSeq,
     builder: (column) => column,
@@ -8258,6 +8333,7 @@ class $$SeriesTableTableTableManager
                 Value<String> storyBible = const Value.absent(),
                 Value<String?> branchedFromBeatId = const Value.absent(),
                 Value<SeriesStatus> status = const Value.absent(),
+                Value<String?> baseLanguage = const Value.absent(),
                 Value<int?> lastReadSeq = const Value.absent(),
                 Value<DateTime?> lastReadAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -8281,6 +8357,7 @@ class $$SeriesTableTableTableManager
                 storyBible: storyBible,
                 branchedFromBeatId: branchedFromBeatId,
                 status: status,
+                baseLanguage: baseLanguage,
                 lastReadSeq: lastReadSeq,
                 lastReadAt: lastReadAt,
                 createdAt: createdAt,
@@ -8306,6 +8383,7 @@ class $$SeriesTableTableTableManager
                 Value<String> storyBible = const Value.absent(),
                 Value<String?> branchedFromBeatId = const Value.absent(),
                 required SeriesStatus status,
+                Value<String?> baseLanguage = const Value.absent(),
                 Value<int?> lastReadSeq = const Value.absent(),
                 Value<DateTime?> lastReadAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -8329,6 +8407,7 @@ class $$SeriesTableTableTableManager
                 storyBible: storyBible,
                 branchedFromBeatId: branchedFromBeatId,
                 status: status,
+                baseLanguage: baseLanguage,
                 lastReadSeq: lastReadSeq,
                 lastReadAt: lastReadAt,
                 createdAt: createdAt,

@@ -12,6 +12,7 @@ class Series {
     this.customTheme,
     this.heroMode = HeroMode.surprise,
     this.heroName,
+    this.baseLanguage,
     this.bilingualEnabled = false,
     this.secondaryLanguage,
     this.bilingualBlend,
@@ -51,7 +52,15 @@ class Series {
   final HeroMode heroMode;
   final String? heroName;
 
-  /// Bilingual mode is a modifier, independent of [theme] — any story can use it.
+  /// The language this story is told in. Null means the child's own — which is
+  /// every story written before a household needed one child to have stories
+  /// in two languages. Resolve it with [languageFor], never by reading the
+  /// child directly, or half the app will disagree with the other half about
+  /// what language a story is in.
+  final String? baseLanguage;
+
+  /// Bilingual mode is a modifier, independent of [theme] — any story can use
+  /// it. [secondaryLanguage] is woven into [baseLanguage], not the reverse.
   final bool bilingualEnabled;
   final String? secondaryLanguage;
   final BilingualBlend? bilingualBlend;
@@ -96,6 +105,7 @@ class Series {
       customTheme: customTheme,
       heroMode: heroMode,
       heroName: heroName,
+      baseLanguage: baseLanguage,
       bilingualEnabled: bilingualEnabled,
       secondaryLanguage: secondaryLanguage,
       bilingualBlend: bilingualBlend,
@@ -137,3 +147,14 @@ enum HeroMode { childAsHero, namedHero, surprise }
 enum BilingualBlend { sprinkle, phrases, alternating }
 
 enum SeriesStatus { active, archived }
+
+/// The language a story is actually told in.
+///
+/// One place, because the answer is needed by the prompt, the voice, the audio
+/// cache key and every export — and if any of them disagreed, a story would be
+/// written in one language and spoken in another, or narration cached under a
+/// key nothing later looks up.
+String languageFor(Series? series, String? childLanguage) =>
+    series?.baseLanguage?.trim().isNotEmpty == true
+    ? series!.baseLanguage!.trim()
+    : (childLanguage?.trim().isNotEmpty == true ? childLanguage!.trim() : 'en');

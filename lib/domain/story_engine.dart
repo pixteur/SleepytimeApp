@@ -225,7 +225,7 @@ class StoryEngine {
       setting: safe.setting,
       characters: safe.characters,
       openThreads: isFinal ? const [] : safe.openThreads,
-      language: child.language,
+      language: languageFor(series, child.language),
       isFinal: isFinal,
       narration: safe.narration,
     );

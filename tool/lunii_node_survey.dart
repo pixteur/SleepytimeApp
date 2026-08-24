@@ -38,6 +38,11 @@ void main(List<String> args) {
   final flagCounts = <String, int>{};
   final lastNodes = <String, String>{};
 
+  // A menu is a transition whose count is greater than one: the wheel scrolls
+  // that many list entries, and each one is a node with its own prompt. This
+  // is the shape a spoken chapter menu has to copy.
+  final menus = <String, List<String>>{};
+
   for (final pack in packs) {
     // `ni` is plaintext.
     final ni = File('$root\\.content\\$pack\\ni').readAsBytesSync();
@@ -52,6 +57,9 @@ void main(List<String> args) {
       if (n.autoplay && !n.hasOk) autoplayNoOk++;
       flagCounts[n.flagSummary] = (flagCounts[n.flagSummary] ?? 0) + 1;
       if (i == count - 1) lastNodes[pack] = n.describe(i);
+      if (n.ok[1] > 1 || n.home[1] > 1) {
+        (menus[pack] ??= []).add(n.describe(i));
+      }
     }
   }
 
@@ -70,6 +78,20 @@ void main(List<String> args) {
   stdout.writeln('\n── the highest-numbered node of each pack ──');
   for (final e in lastNodes.entries) {
     stdout.writeln('  ${e.key}  ${e.value}');
+  }
+
+  // The menus themselves, with what the wheel scrolls through. `ok` reads
+  // (listIndex, count, offset): count is how many entries the wheel offers and
+  // offset is which one it starts on.
+  stdout.writeln('\n── nodes offering a choice (count > 1) ──');
+  if (menus.isEmpty) {
+    stdout.writeln('  none');
+  }
+  for (final e in menus.entries) {
+    stdout.writeln('  ${e.key}  ${e.value.length} such node(s)');
+    for (final line in e.value.take(4)) {
+      stdout.writeln('    $line');
+    }
   }
 
   // Where a transition can legally point. Node 0 is the pack's square-one

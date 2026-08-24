@@ -122,7 +122,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
   /// `.sleepy` file in the app's exports folder.
   Future<void> _export(Series series) async {
     final child = ref.read(activeChildProvider);
-    final lang = child?.language ?? 'en';
+    final lang = languageFor(series, child?.language);
     final voiceSig = ref.read(ttsProvider).voiceSignature;
     try {
       final path = await ref
@@ -138,7 +138,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
   /// rebuilds narration with their own preferred voice on import.
   Future<void> _exportText(Series series) async {
     final child = ref.read(activeChildProvider);
-    final lang = child?.language ?? 'en';
+    final lang = languageFor(series, child?.language);
     final voiceSig = ref.read(ttsProvider).voiceSignature;
     try {
       final path = await ref
@@ -164,7 +164,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
   /// (upload to Dropbox / iCloud / Drive from there).
   Future<void> _exportAudiobook(Series series) async {
     final child = ref.read(activeChildProvider);
-    final lang = child?.language ?? 'en';
+    final lang = languageFor(series, child?.language);
     final tts = ref.read(ttsProvider);
     try {
       final path = await ref
@@ -230,7 +230,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
       final child = ref.read(activeChildProvider);
       final result = await service.sendToLunii(
         series,
-        language: child?.language ?? 'en',
+        language: languageFor(series, child?.language),
         voiceSignature: ref.read(ttsProvider).voiceSignature,
         motif: motif,
         drive: devices.first,
@@ -258,7 +258,10 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
   /// continues either way — one missing chapter should not stop the download.
   Future<void> _downloadAll(List<Beat> beats) async {
     if (_downloading) return;
-    final lang = ref.read(activeChildProvider)?.language ?? 'en';
+    final lang = languageFor(
+      ref.read(activeSeriesProvider),
+      ref.read(activeChildProvider)?.language,
+    );
     final tts = ref.read(ttsProvider);
     setState(() {
       _downloading = true;
@@ -333,7 +336,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
   /// grown-up opens it in STUdio and transfers it to the device.
   Future<void> _exportLunii(Series series) async {
     final child = ref.read(activeChildProvider);
-    final lang = child?.language ?? 'en';
+    final lang = languageFor(series, child?.language);
     final tts = ref.read(ttsProvider);
     try {
       final path = await ref
@@ -463,7 +466,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
         const <Beat>[];
     final ended = beats.isNotEmpty && beats.last.isFinal;
     final parentMode = ref.watch(parentModeProvider);
-    final lang = ref.watch(activeChildProvider)?.language ?? 'en';
+    final lang = languageFor(series, ref.watch(activeChildProvider)?.language);
     final voiceSig = ref.watch(ttsProvider).voiceSignature;
 
     return Scaffold(

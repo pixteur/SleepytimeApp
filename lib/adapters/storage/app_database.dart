@@ -142,6 +142,11 @@ class SeriesTable extends Table {
   TextColumn get branchedFromBeatId => text().nullable()();
   IntColumn get status => intEnum<SeriesStatus>()();
 
+  /// The language this story is told in, overriding the child's own. Null
+  /// means "whatever the child is set to" — the case for every story written
+  /// before a bilingual household needed two.
+  TextColumn get baseLanguage => text().nullable()();
+
   /// Reading position: the chapter last opened and when, so the bookshelf can
   /// offer "Continue — Chapter 4".
   IntColumn get lastReadSeq => integer().nullable()();
@@ -228,7 +233,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.memory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   /// Opens the on-device database file (app documents dir). Foreign keys on.
   static AppDatabase open() {
@@ -305,6 +310,16 @@ class AppDatabase extends _$AppDatabase {
           () => m.addColumn(beats, beats.narrationJson),
         );
       }
+      // v8 → v9: a story can be told in a language other than the child's, so
+      // one child can have stories in both of theirs.
+      if (from < 9) {
+        await _addColumnIfMissing(
+          // The SQL table is `series`; `seriesTable` is only the Dart name.
+          'series',
+          'base_language',
+          () => m.addColumn(seriesTable, seriesTable.baseLanguage),
+        );
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -334,6 +349,12 @@ class AppDatabase extends _$AppDatabase {
         'beats',
         'narration_json',
         "TEXT NOT NULL DEFAULT '{}'",
+      );
+      await _ensureColumn(
+        // The SQL table is `series`; `seriesTable` is only the Dart name.
+        'series',
+        'base_language',
+        'TEXT',
       );
     },
   );

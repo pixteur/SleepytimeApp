@@ -36,7 +36,7 @@ class PromptBuilder {
         '${bannedThemes.join(', ')}.',
       )
       ..writeln(_themeGuidance(req.series))
-      ..writeln('Write the story in ${_languageName(req.child.language)}.')
+      ..writeln('Write the story in ${_languageName(_baseLanguage(req))}.')
       // A voice reads this text, so markup is not skipped over — it is spoken.
       // Emphasis around a foreign word is the common case: *vélo* comes out as
       // "asterisk vélo asterisk".
@@ -171,7 +171,7 @@ class PromptBuilder {
     final words = _wordCount(draft.storyText);
     final low = (words * 0.9).round();
     final high = (words * 1.1).round();
-    final language = _languageName(req.child.language);
+    final language = _languageName(_baseLanguage(req));
 
     final system = StringBuffer()
       ..writeln(
@@ -289,7 +289,7 @@ class PromptBuilder {
         '- "is_final" stays ${draft.isFinal}. Do not resolve a story that '
         'was left open, and do not reopen one that was closed.',
       )
-      ..writeln('- Stay in $language. Do not translate any part of it.')
+      ..writeln(_refinementLanguageRule(req, language))
       ..writeln(
         '- Keep the audience band "${band.name}" and return "rating" as '
         '"${band.name}".',
@@ -408,6 +408,33 @@ class PromptBuilder {
     return trimmed.split(RegExp(r'\s+')).length;
   }
 
+  /// The language this story is told in — the series' own where it has one,
+  /// else the child's. A bilingual household can have one child with stories
+  /// in both of their languages.
+  String _baseLanguage(StoryRequest req) =>
+      languageFor(req.series, req.child.language);
+
+  /// What the second pass may do to the language of a chapter.
+  ///
+  /// This line used to read "Stay in $language. Do not translate any part of
+  /// it." unconditionally — which quietly undid bilingual mode. The drafting
+  /// pass would write half the chapter in Spanish exactly as asked, and the
+  /// editor, told to stay in English, would hand back a chapter with the
+  /// Spanish translated away. The story arrived in one language and the
+  /// setting looked broken when it was working.
+  String _refinementLanguageRule(StoryRequest req, String language) {
+    final second = req.series.secondaryLanguage;
+    if (!req.series.bilingualEnabled || second == null) {
+      return '- Stay in $language. Do not translate any part of it.';
+    }
+    final other = _languageName(second);
+    return '- This chapter is deliberately bilingual: $language and $other. '
+        'Keep every $other word and passage in $other. Do not translate them, '
+        'do not replace them with $language, and do not add a translation '
+        'after them. Preserve the balance the draft already has — correct '
+        'errors within each language, and leave the switches where they are.';
+  }
+
   /// How much of a second language to weave in, and how.
   ///
   /// Each level is a different teaching contract, not the same instruction at
@@ -419,7 +446,7 @@ class PromptBuilder {
   void _writeLanguageMode(StringBuffer user, StoryRequest req) {
     final second = req.series.secondaryLanguage;
     if (!req.series.bilingualEnabled || second == null) return;
-    final main = _languageName(req.child.language);
+    final main = _languageName(_baseLanguage(req));
     final other = _languageName(second);
 
     switch (req.series.bilingualBlend ?? BilingualBlend.sprinkle) {

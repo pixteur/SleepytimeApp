@@ -7,6 +7,7 @@ import '../../adapters/ai/provider_exceptions.dart';
 import '../../adapters/tts/tts_provider.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
+import '../../domain/models/series.dart';
 import '../common/error_banner.dart';
 import '../common/marquee_text.dart';
 import 'sleep_timer.dart';
@@ -91,7 +92,10 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     super.dispose();
   }
 
-  String get _lang => ref.read(activeChildProvider)?.language ?? 'en';
+  String get _lang => languageFor(
+    ref.read(activeSeriesProvider),
+    ref.read(activeChildProvider)?.language,
+  );
   String? get _seriesId => ref.read(activeSeriesProvider)?.id;
 
   Future<void> _speak() async {

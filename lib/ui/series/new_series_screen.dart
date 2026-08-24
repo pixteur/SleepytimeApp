@@ -73,7 +73,18 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
   /// The language woven in when [_language] isn't [_LanguageMode.one].
   String _secondLanguage = 'es';
 
+  /// The language this story is told in. Empty means the child's own — the
+  /// answer for most homes. A bilingual household needs one child to be able
+  /// to have stories in both, which a single setting on the profile can't do.
+  String _baseLanguage = '';
+
   bool _creating = false;
+
+  /// The language the story is actually told in, for keeping the second
+  /// language distinct from it.
+  String get _mainLanguage => _baseLanguage.isNotEmpty
+      ? _baseLanguage
+      : (ref.read(activeChildProvider)?.language ?? 'en');
 
   @override
   void dispose() {
@@ -152,6 +163,7 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
               ? _heroName.text.trim()
               : null,
           seedSummary: quiz?.seedSummary ?? '',
+          baseLanguage: _baseLanguage.isEmpty ? null : _baseLanguage,
           bilingualEnabled: _language != _LanguageMode.one,
           secondaryLanguage: _language == _LanguageMode.one
               ? null
@@ -327,6 +339,34 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
           const SizedBox(height: 24),
           Text('Languages', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _baseLanguage,
+            decoration: const InputDecoration(
+              labelText: 'Told in',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              DropdownMenuItem(
+                value: '',
+                child: Text(
+                  'Same as the child'
+                  ' (${_secondLanguageChoices[child?.language ?? 'en'] ?? 'English'})',
+                ),
+              ),
+              for (final entry in _secondLanguageChoices.entries)
+                DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+            ],
+            onChanged: _creating
+                ? null
+                : (v) => setState(() {
+                    _baseLanguage = v ?? '';
+                    // Never offer the same language twice.
+                    if (_secondLanguage == _mainLanguage) {
+                      _secondLanguage = _mainLanguage == 'es' ? 'fr' : 'es';
+                    }
+                  }),
+          ),
+          const SizedBox(height: 12),
           SegmentedButton<_LanguageMode>(
             segments: const [
               ButtonSegment(value: _LanguageMode.one, label: Text('One')),
@@ -344,9 +384,8 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
             onSelectionChanged: (s) => setState(() {
               _language = s.first;
               // Never offer the language the story is already told in.
-              final main = ref.read(activeChildProvider)?.language ?? 'en';
-              if (_secondLanguage == main) {
-                _secondLanguage = main == 'es' ? 'fr' : 'es';
+              if (_secondLanguage == _mainLanguage) {
+                _secondLanguage = _mainLanguage == 'es' ? 'fr' : 'es';
               }
             }),
           ),
@@ -360,8 +399,7 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
               ),
               items: [
                 for (final entry in _secondLanguageChoices.entries)
-                  if (entry.key !=
-                      (ref.watch(activeChildProvider)?.language ?? 'en'))
+                  if (entry.key != _mainLanguage)
                     DropdownMenuItem(
                       value: entry.key,
                       child: Text(entry.value),
