@@ -375,6 +375,17 @@ class PromptBuilder {
         'another language — those are read out character by character. '
         'Accents within a word stay; they are spelling, not emphasis.',
       )
+      // The drafting model keeps returning "Chapter One" for early chapters,
+      // where it has not yet decided what the chapter is about. The editor has
+      // the finished prose in front of it and is the right one to name it, but
+      // "keep it unless it misnames what happens" reads as "keep it".
+      ..writeln(
+        'One exception to keeping it: if "chapter_title" is empty, or is only '
+        'a number — "Chapter One", "Chapter 4", "Chapitre 2" — then it is not '
+        'a title at all. Replace it with a real one: 2–5 words naming the one '
+        'thing that happens in this chapter, with no number in it, since the '
+        'number is already shown beside it.',
+      )
       ..writeln()
       ..writeln('DIRECTION FOR THE NARRATOR.')
       ..writeln(
