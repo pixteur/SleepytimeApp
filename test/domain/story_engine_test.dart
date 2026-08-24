@@ -53,6 +53,26 @@ class _NeverEndsProvider implements AiProvider {
 }
 
 /// Returns a safe segment marked as the final chapter.
+/// Remembers the prompt it was handed, so a test can assert on what the
+/// engine actually asked for.
+class _RecordingProvider implements AiProvider {
+  StoryPrompt? prompt;
+
+  @override
+  ProviderId get id => ProviderId.fake;
+  @override
+  Future<bool> isReady() async => true;
+  @override
+  Future<StorySegment> generate(StoryPrompt p) async {
+    prompt ??= p; // the draft, not the editorial pass that follows it
+    return const StorySegment(
+      storyText: 'A lantern glowed in the willow tree, soft and low.',
+      summary: 'A lantern in a willow.',
+      rating: AgeRating.tiny,
+    );
+  }
+}
+
 class _FinalProvider implements AiProvider {
   @override
   ProviderId get id => ProviderId.fake;
@@ -241,7 +261,12 @@ void main() {
   });
 
   test('persists the final-chapter flag from the segment', () async {
-    final engine = StoryEngine(ai: _FinalProvider(), repo: repo);
+    // Past the floor, the model's own is_final is honoured.
+    final engine = StoryEngine(
+      ai: _FinalProvider(),
+      repo: repo,
+      minChapters: 1,
+    );
     final beat = await engine.takeTurn(
       child: child,
       series: series,
@@ -250,6 +275,44 @@ void main() {
     expect(beat.isFinal, isTrue);
     final saved = await repo.loadBeats(series.id);
     expect(saved.last.isFinal, isTrue);
+  });
+
+  test('a long story owes all six chapters, a short one three', () async {
+    // "Long" has to mean long: asking for long stories and getting two
+    // chapters is being told one thing and given another.
+    Future<String> promptFor(DetailLevel level) async {
+      final ai = _RecordingProvider();
+      await StoryEngine(ai: ai, repo: repo).takeTurn(
+        child: child.copyWith(detailLevel: level),
+        series: series,
+        intent: StoryIntent.dice,
+      );
+      return ai.prompt!.system;
+    }
+
+    expect(await promptFor(DetailLevel.long), contains('of at least 6'));
+    expect(await promptFor(DetailLevel.medium), contains('of at least 4'));
+    expect(await promptFor(DetailLevel.short), contains('of at least 3'));
+  });
+
+  test('a story is not allowed to end in chapter one', () async {
+    // A model told "about 3 to 6 chapters" ended one in two. Asking again is
+    // not enough on its own, so an early is_final is overruled and the story
+    // carries on.
+    final engine = StoryEngine(ai: _FinalProvider(), repo: repo);
+    final first = await engine.takeTurn(
+      child: child,
+      series: series,
+      intent: StoryIntent.dice,
+    );
+    expect(first.isFinal, isFalse, reason: 'too early to end');
+    // And the next turn is still allowed to happen.
+    final second = await engine.takeTurn(
+      child: child,
+      series: series,
+      intent: StoryIntent.continued,
+    );
+    expect(second.seq, 1);
   });
 
   test(

@@ -1,4 +1,10 @@
+import 'dart:io';
+
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import 'adapters/ai/ai_provider.dart';
 import 'adapters/ai/claude_provider.dart';
@@ -339,7 +345,16 @@ final ttsProvider = Provider<TtsProvider>((ref) {
 
 /// The on-device Drift database. Opened lazily; closed when disposed.
 final databaseProvider = Provider<AppDatabase>((ref) {
-  final db = AppDatabase.open();
+  // path_provider lives here, on the Flutter side, so the database itself
+  // stays reachable from a plain `dart run`.
+  final db = AppDatabase(
+    LazyDatabase(() async {
+      final dir = await getApplicationDocumentsDirectory();
+      return NativeDatabase.createInBackground(
+        File(p.join(dir.path, AppDatabase.fileName)),
+      );
+    }),
+  );
   ref.onDispose(db.close);
   return db;
 });

@@ -17,6 +17,7 @@ class StoryRequest {
     this.chosenTwist,
     this.chapterNumber = 1,
     this.maxChapters = 6,
+    this.minChapters = 4,
     this.worldPremise = '',
     this.cast = const [],
     this.castChanges = CastChanges.none,
@@ -40,8 +41,22 @@ class StoryRequest {
   /// through API quota generating endlessly when the model won't conclude).
   final int maxChapters;
 
+  /// The story may not end before this chapter.
+  ///
+  /// A model handed "about 3 to 6 chapters" will happily resolve everything in
+  /// two, which is a fine short story and not what a child settling down was
+  /// promised. Held as a floor rather than a suggestion because asking did not
+  /// work — see [mayNotEndYet].
+  final int minChapters;
+
   /// True on/after the last allowed chapter — the model must wrap up now.
   bool get mustConclude => chapterNumber >= maxChapters;
+
+  /// True while the story is still too young to end.
+  bool get mayNotEndYet => chapterNumber < minChapters && !mustConclude;
+
+  /// How many more chapters are still owed, at least.
+  int get chaptersRemaining => minChapters - chapterNumber;
 
   /// The world/universe premise this episode belongs to (empty for standalone).
   final String worldPremise;

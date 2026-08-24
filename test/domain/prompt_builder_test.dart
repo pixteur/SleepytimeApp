@@ -44,8 +44,23 @@ void main() {
   test('a mid-story chapter leaves room to continue', () {
     final p = builder.build(req(chapterNumber: 2, maxChapters: 6));
     expect(p.system, contains('chapter 2'));
-    expect(p.system, contains('about 3–6'));
+    expect(p.system, contains('4–6'));
     expect(p.system, isNot(contains('FINAL chapter of the story')));
+  });
+
+  test('an early chapter is told how much story is still owed', () {
+    // Asked for "about 3 to 6 chapters", a model wrapped the whole story up in
+    // chapter 2. Being told the floor, and how far off it is, is the half of
+    // the fix that keeps the pacing deliberate rather than merely overruled.
+    final p = builder.build(req(chapterNumber: 2, maxChapters: 6));
+    expect(p.system, contains('at least 2 more to come'));
+    expect(p.system, contains('do NOT'));
+  });
+
+  test('once past the floor the model may end when it is ready', () {
+    final p = builder.build(req(chapterNumber: 5, maxChapters: 6));
+    expect(p.system, isNot(contains('more to come')));
+    expect(p.system, contains('warm, satisfying resolution'));
   });
 
   test('the capped chapter is forced to conclude', () {

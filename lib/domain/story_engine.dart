@@ -32,6 +32,7 @@ class StoryEngine {
     List<String> bannedThemes = BannedThemes.defaults,
     int maxRetries = 2,
     int maxChapters = 6,
+    int? minChapters,
     bool refinePass = true,
     Uuid? uuid,
   }) : _ai = ai, // ignore: prefer_initializing_formals
@@ -42,6 +43,7 @@ class StoryEngine {
        _banned = bannedThemes,
        _maxRetries = maxRetries, // ignore: prefer_initializing_formals
        _maxChapters = maxChapters, // ignore: prefer_initializing_formals
+       _minChapters = minChapters, // ignore: prefer_initializing_formals
        _refinePass = refinePass, // ignore: prefer_initializing_formals
        _uuid = uuid ?? const Uuid();
 
@@ -53,6 +55,24 @@ class StoryEngine {
   final List<String> _banned;
   final int _maxRetries;
   final int _maxChapters;
+
+  /// Overrides the floor a story's length would set. Null — the normal case —
+  /// derives it from the child's chosen chapter length; tests pin it.
+  final int? _minChapters;
+
+  /// How many chapters a story of this length owes before it may end.
+  ///
+  /// "Long" means long: a child who asked for long stories and got two
+  /// chapters was told one thing and given another, and the model will
+  /// happily resolve everything early if nothing stops it. So a long story
+  /// runs the full six, and a short one is allowed to be short.
+  int _floorFor(DetailLevel level) =>
+      _minChapters ??
+      switch (level) {
+        DetailLevel.short => 3,
+        DetailLevel.medium => 4,
+        DetailLevel.long => _maxChapters,
+      };
 
   /// Whether a generated chapter gets a second, editorial pass before it is
   /// saved. Costs one extra call per chapter, so tests turn it off.
@@ -170,6 +190,7 @@ class StoryEngine {
       chosenTwist: chosenTwist,
       chapterNumber: ctx.nextSeq + 1,
       maxChapters: _maxChapters,
+      minChapters: _floorFor(child.detailLevel),
       worldPremise: world?.premise ?? '',
       cast: cast,
       castChanges: castChanges,
@@ -207,9 +228,14 @@ class StoryEngine {
       if (_refinePass) safe = await _refine(request, safe) ?? safe;
     }
 
-    // Enforce the cap: even if the model won't end the story, the last allowed
-    // chapter is always final. Stops runaway generation (and quota burn).
-    final isFinal = safe.isFinal || request.mustConclude;
+    // Enforce both bounds. The cap stops runaway generation (and quota burn):
+    // the last allowed chapter is always final, whatever the model says. The
+    // floor is the other half — a model asked for "about 3 to 6 chapters" will
+    // wrap the whole story up in two, so an early is_final is overruled and
+    // the next turn carries on. The prompt asks as well, but asking alone
+    // produced two-chapter stories.
+    final isFinal =
+        (safe.isFinal && !request.mayNotEndYet) || request.mustConclude;
 
     final beat = Beat(
       id: _uuid.v4(),

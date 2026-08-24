@@ -47,6 +47,17 @@ class PromptBuilder {
         'is in another language. This chapter is read aloud, so anything like '
         'that is spoken to the child character by character.',
       )
+      // The rule above cost us the accents. Told to strip formatting and to
+      // write symbols out as words, a model reads an acute accent as one more
+      // symbol and hands back "les petites etoiles" — which a French voice
+      // then mispronounces, because the accent is what tells it how to say
+      // the word.
+      ..writeln(
+        'Accents and other marks inside words are letters, not formatting. '
+        'Spell every word the way its own language spells it, accents and '
+        'all — é, è, ê, ç, ñ, ü, and so on. They change how a word is '
+        'pronounced, so a voice reading the story needs them.',
+      )
       ..writeln(
         'Target length per chapter: ${_lengthFor(req.child.detailLevel)}.',
       )
@@ -56,13 +67,21 @@ class PromptBuilder {
                   'story. Bring everything to a warm, satisfying close now, tie '
                   'off the open threads, end peacefully and ready for sleep, and '
                   'set "is_final" to true.'
-            : 'Tell ONE complete bedtime story across about 3–${req.maxChapters} '
-                  'short chapters. This is chapter ${req.chapterNumber}. Each '
-                  'chapter should end on a gentle, calm note. When the story '
-                  'reaches a warm, satisfying resolution, set "is_final" to true; '
-                  'otherwise leave a soft hook for the next chapter and set '
-                  '"is_final" to false. Always end the FINAL chapter peacefully, '
-                  'ready for sleep.',
+            : 'Tell ONE complete bedtime story across '
+                  '${req.minChapters}–${req.maxChapters} short chapters. This '
+                  'is chapter ${req.chapterNumber} of at least '
+                  '${req.minChapters}. Each chapter should end on a gentle, '
+                  'calm note.'
+                  '${req.mayNotEndYet ? " There are at least "
+                            "${req.chaptersRemaining} more to come, so do NOT "
+                            "resolve the story here: pace it so the ending has "
+                            "somewhere to arrive. Leave the main problem open, "
+                            "move it along, and set \"is_final\" to false." : " "
+                            "If the story has reached a warm, satisfying "
+                            "resolution, set \"is_final\" to true; otherwise "
+                            "leave a soft hook for the next chapter and set it "
+                            "false."}'
+                  ' Always end the FINAL chapter peacefully, ready for sleep.',
       )
       ..writeln(
         'The audience band is "${band.name}". Write strictly within it and set '
@@ -227,7 +246,9 @@ class PromptBuilder {
         '   - Strip anything that only works on the page: parentheses, '
         'asterisks, emoji, ALL-CAPS, bullet points, headings, stage '
         'directions, footnotes, tables. Write numbers, dates, symbols and '
-        'abbreviations out as words.',
+        'abbreviations out as words. Accented letters are NOT symbols: keep '
+        'every accent exactly as that language spells it, because '
+        'they tell the voice how to pronounce it.',
       )
       ..writeln(
         '   - Use no em dashes and no semicolons. A speech engine reads '
@@ -326,7 +347,8 @@ class PromptBuilder {
         'misname what actually happens. The one thing to fix even when '
         'passing them through: strip any asterisks, underscores or other '
         'formatting out of them, including emphasis around a word in '
-        'another language — those are read out character by character.',
+        'another language — those are read out character by character. '
+        'Accents within a word stay; they are spelling, not emphasis.',
       )
       ..writeln()
       ..writeln('DIRECTION FOR THE NARRATOR.')

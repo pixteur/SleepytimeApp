@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import '../../domain/models/beat.dart';
 import '../../domain/models/child_profile.dart';
@@ -235,13 +234,20 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 9;
 
-  /// Opens the on-device database file (app documents dir). Foreign keys on.
-  static AppDatabase open() {
-    final executor = LazyDatabase(() async {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File(p.join(dir.path, 'sleepytime.sqlite'));
-      return NativeDatabase.createInBackground(file);
-    });
+  /// The library's file name, under the user's documents folder.
+  static const String fileName = 'sleepytime.sqlite';
+
+  /// Opens the on-device database file. Foreign keys on.
+  ///
+  /// [directory] is the documents folder. The app passes it from
+  /// path_provider; the read-only probes in `tool/` pass it themselves, which
+  /// is the point — asking a Flutter plugin for it here would put all of
+  /// Flutter behind a plain `dart run`.
+  static AppDatabase openIn(String directory) {
+    final executor = LazyDatabase(
+      () async =>
+          NativeDatabase.createInBackground(File(p.join(directory, fileName))),
+    );
     return AppDatabase(executor);
   }
 
