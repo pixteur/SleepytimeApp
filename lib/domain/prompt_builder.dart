@@ -528,22 +528,62 @@ class PromptBuilder {
           'so nothing needs translating.',
         );
       case BilingualBlend.alternating:
+        // Told to switch "where the story gives you a reason to — crossing
+        // into somewhere the other language is spoken", a model invents a
+        // border: a French-speaking sector of the lake, a sign at a trench,
+        // turtles who only speak French. That is a translated story with a
+        // customs post in the middle, not a bilingual one. In a bilingual
+        // house nobody crosses anything; the language moves with the feeling
+        // and nobody remarks on it.
         user.writeln(
-          'Bilingual mode — half and half. About half of this chapter is in '
-          '$main and about half in $other. Switch only where the story gives '
-          'you a reason to: moving to a new place, crossing into somewhere '
-          '$other is spoken, a character who speaks it joining the scene, or '
-          'a change of who is telling it. Never switch in the middle of a '
-          'sentence, and never simply alternate paragraph by paragraph — that '
-          'reads as a drill rather than a story. Every switch should feel like '
-          'part of the chapter\'s movement, and each language should carry a '
-          'real stretch of the action rather than a decorative line.',
+          'Bilingual mode — the way a bilingual family actually talks. Roughly '
+          'half this chapter is in $main and half in $other, mixed all the way '
+          'through rather than split into two halves. The switching is a way '
+          'of telling the story, not an event in it.',
         );
         user.writeln(
-          'A child who understands only $main must still be able to follow '
-          'every event. Around each $other passage, let the action itself, a '
-          'phrase already established, or another character\'s reply carry the '
-          'meaning forward.',
+          'Nobody ever crosses into "the $other part" of anywhere. Do not '
+          'invent a place, a border, a sign, or a character who only speaks '
+          '$other as an excuse to change language. Nobody comments on the '
+          'change, translates for anyone, or is congratulated for it. It is '
+          'simply how these people talk.',
+        );
+        user.writeln(
+          'Switch the way people really do: a character who thinks in one '
+          'language and jokes in the other; comfort, counting and pet names in '
+          'the one someone grew up with; an exclamation that only comes out '
+          'right in $other; a question asked in $main and answered in $other '
+          'with nobody noticing; a phrase repeated in both because the speaker '
+          'is excited. Switch between sentences, and inside a sentence where '
+          'that is how it would really fall. Never alternate paragraph by '
+          'paragraph — that is a drill, not a family.',
+        );
+        user.writeln(
+          'Both languages must carry real events. Do not leave $other holding '
+          'only greetings and scenery while $main does the plot.',
+        );
+        // First attempt at this put every French word inside quotation marks:
+        // the characters were bilingual and the narrator was not, which caps
+        // the second language at whatever share the dialogue happens to be —
+        // it came out at 29%, not half.
+        user.writeln(
+          'The narration switches too, not only the dialogue. Describe what '
+          'happens, what a place looks like and what someone is feeling in '
+          '$other as readily as in $main. If every $other word in this chapter '
+          'sits inside quotation marks, it is not half and half — go back and '
+          'tell some of the story itself in $other.',
+        );
+        user.writeln(
+          'Count as you finish: roughly half the sentences should be $other. '
+          'If one language is carrying most of them, rewrite some of the '
+          'narration in the other before you return the chapter.',
+        );
+        user.writeln(
+          'A child who understands only $main must still follow every event. '
+          'Carry the meaning with the action itself, a reply that answers what '
+          'was asked, or a phrase already established earlier — never with a '
+          'translation. If a $other line matters to the plot, let what happens '
+          'next make it plain.',
         );
     }
 

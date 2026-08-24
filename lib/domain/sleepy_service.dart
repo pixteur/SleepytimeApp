@@ -383,6 +383,11 @@ class SleepyService {
         chapterChunks: chapterChunks,
         titleChunks: titleChunks,
         announceChunks: announceChunks,
+        // An episode wears its world's picture, so a shelf of packs from one
+        // world reads as one place.
+        worldName: series.worldId == null
+            ? null
+            : (await _repo.loadWorldById(series.worldId!))?.name,
         skipped: skipped,
         motif: motif,
       ),

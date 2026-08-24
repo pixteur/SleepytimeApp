@@ -20,6 +20,7 @@ import '../audio/mp3_encoder.dart';
 import '../audio/mp3_decoder.dart';
 import '../audio/wav.dart';
 import '../export/cover_image.dart';
+import '../export/world_cover.dart';
 
 import '../tts/audio_compression.dart';
 import 'device_pack.dart';
@@ -70,6 +71,7 @@ class LuniiTransferRequest {
     required this.motif,
     this.titleChunks,
     this.announceChunks,
+    this.worldName,
   });
 
   final String drive;
@@ -90,6 +92,11 @@ class LuniiTransferRequest {
   /// some options is worse than none.
   final List<List<Uint8List>?>? announceChunks;
   final int skipped;
+
+  /// The world this story belongs to, if any. A world gets a picture of its
+  /// own — every episode of it arrives on the device looking like the same
+  /// place — and [motif] is only consulted for a standalone story.
+  final String? worldName;
   final LuniiCoverMotif motif;
 }
 
@@ -120,10 +127,13 @@ LuniiTransfer buildAndWritePack(LuniiTransferRequest request) {
     );
   }
 
-  final cover = switch (request.motif) {
-    LuniiCoverMotif.velo => veloCoverIndexed(seed: request.title),
-    LuniiCoverMotif.nightSky => nightSkyCoverIndexed(seed: request.title),
-  };
+  final world = request.worldName?.trim();
+  final cover = world != null && world.isNotEmpty
+      ? worldCoverIndexed(seed: world)
+      : switch (request.motif) {
+          LuniiCoverMotif.velo => veloCoverIndexed(seed: request.title),
+          LuniiCoverMotif.nightSky => nightSkyCoverIndexed(seed: request.title),
+        };
 
   final titleChunks = request.titleChunks;
   final pack = buildDevicePack(

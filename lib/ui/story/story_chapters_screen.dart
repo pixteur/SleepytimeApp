@@ -208,29 +208,66 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
       return;
     }
 
-    final motif = await showDialog<LuniiCoverMotif>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Send to the Lunii'),
-        content: Text(
-          '"${series.title}" will be added to the storyteller on '
-          '${devices.first}. Nothing already on it is changed.\n\n'
-          'Which picture should it show?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+    // An episode wears its world's picture, so there is nothing to choose:
+    // every episode of a world should look like the same place on a shelf of
+    // packs. Only a standalone story gets asked.
+    final world = series.worldId == null
+        ? null
+        : await ref.read(storageRepoProvider).loadWorldById(series.worldId!);
+    if (!mounted) return;
+
+    final LuniiCoverMotif? motif;
+    if (world != null) {
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Send to the Lunii'),
+          content: Text(
+            '"${series.title}" will be added to the storyteller on '
+            '${devices.first}. Nothing already on it is changed.\n\n'
+            'It will show the picture for “${world.name}”, the same as every '
+            'other episode of that world.',
           ),
-          for (final option in LuniiCoverMotif.values)
+          actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, option),
-              child: Text(option.label),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
-        ],
-      ),
-    );
-    if (motif == null || !mounted) return;
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Send'),
+            ),
+          ],
+        ),
+      );
+      if (go != true || !mounted) return;
+      // Ignored: the world supplies the art.
+      motif = LuniiCoverMotif.nightSky;
+    } else {
+      motif = await showDialog<LuniiCoverMotif>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Send to the Lunii'),
+          content: Text(
+            '"${series.title}" will be added to the storyteller on '
+            '${devices.first}. Nothing already on it is changed.\n\n'
+            'Which picture should it show?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            for (final option in LuniiCoverMotif.values)
+              TextButton(
+                onPressed: () => Navigator.pop(context, option),
+                child: Text(option.label),
+              ),
+          ],
+        ),
+      );
+      if (motif == null || !mounted) return;
+    }
 
     setState(() => _sending = true);
     showErrorBanner(context, 'Sending to the Lunii — this takes a minute…');

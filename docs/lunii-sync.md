@@ -264,6 +264,24 @@ pack written before this behaved. A nicety must not fail a transfer.
 `tool/lunii_write.dart` never calls a provider itself; it reports
 `Cover: silent (no spoken title cached)` when the clip is not on disk.
 
+### A world's own picture
+
+The night-sky cover varies only where its stars fall, so two worlds arrived on
+the device looking identical — same indigo, same moon in the same corner. On a
+device with no screen worth reading, the picture is half of how a child tells
+one pack from another.
+
+[world_cover.dart](../lib/adapters/export/world_cover.dart) derives everything
+from the world's **name**: one of eight palettes, one of six horizons, one of
+five things in the sky. So every episode of a world shows the same place, two
+worlds are near-certain to look nothing alike, and a world's picture never
+changes as long as it is called what it is called — the name is hashed with
+FNV-1a rather than `String.hashCode`, which is not stable across runs.
+
+Sixteen colours cannot make a smooth sky, so the gradient is ordered-dithered;
+without it the sky is ten visible stripes. Only a **standalone** story still
+asks which picture to use.
+
 ### Still to build: a spoken chapter menu
 
 The cover already has `wheel: true`, but its transition has `count: 1`, so

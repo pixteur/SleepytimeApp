@@ -29,6 +29,7 @@ import 'dart:typed_data';
 import 'package:sleepytime/adapters/audio/mp3_encoder.dart';
 import 'package:sleepytime/adapters/audio/wav.dart';
 import 'package:sleepytime/adapters/export/cover_image.dart';
+import 'package:sleepytime/adapters/export/world_cover.dart';
 import 'package:sleepytime/adapters/image/bmp_rle4.dart';
 import 'package:sleepytime/adapters/lunii/device_pack.dart';
 import 'package:sleepytime/adapters/lunii/device_writer.dart';
@@ -171,6 +172,15 @@ void main(List<String> args) {
       '${(mp3.length / 1024).round()} kB',
     );
   }
+  // A world has a picture of its own, derived from its name, so every episode
+  // of it looks like the same place. --cover only applies to a standalone
+  // story, which has no world to take a look from.
+  final worldName = series.first['world_id'] == null
+      ? null
+      : db.select('select name from worlds where id = ?', [
+              series.first['world_id'],
+            ]).firstOrNull?['name']
+            as String?;
   db.close();
 
   if (chapters.isEmpty) {
@@ -180,9 +190,18 @@ void main(List<String> args) {
   }
 
   final motif = _option(args, '--cover') ?? 'nightsky';
-  final IndexedImage cover = motif == 'velo'
-      ? veloCoverIndexed(seed: title)
-      : nightSkyCoverIndexed(seed: title);
+  final IndexedImage cover;
+  if (worldName != null && worldName.trim().isNotEmpty) {
+    cover = worldCoverIndexed(seed: worldName);
+    stdout.writeln(
+      'Cover art: "$worldName" — ${worldCoverDescription(worldName)}',
+    );
+  } else {
+    cover = motif == 'velo'
+        ? veloCoverIndexed(seed: title)
+        : nightSkyCoverIndexed(seed: title);
+    stdout.writeln('Cover art: $motif (standalone story)');
+  }
 
   // The spoken title, if the app has already cached it. The tool never calls a
   // voice provider itself — it reads what is on disk — so a title that has not

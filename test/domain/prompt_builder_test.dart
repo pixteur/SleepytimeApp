@@ -16,6 +16,7 @@ void main() {
     StoryIntent intent = StoryIntent.dice,
     String? twist,
     bool bilingual = false,
+    BilingualBlend blend = BilingualBlend.sprinkle,
     List<Interest> interests = const [],
     int chapterNumber = 1,
     int maxChapters = 6,
@@ -29,6 +30,7 @@ void main() {
       seedSummary: 'A gentle garden among the stars.',
       bilingualEnabled: bilingual,
       secondaryLanguage: bilingual ? 'es' : null,
+      bilingualBlend: bilingual ? blend : null,
     );
     return StoryRequest(
       child: child,
@@ -112,6 +114,50 @@ void main() {
       builder.build(req(bilingual: true)).user,
       contains('Bilingual mode'),
     );
+  });
+
+  group('half and half', () {
+    String brief() => builder
+        .build(req(bilingual: true, blend: BilingualBlend.alternating))
+        .user;
+
+    test('asks for switching the way a bilingual family talks', () {
+      final text = brief();
+      expect(text, contains('bilingual family'));
+      expect(text, contains('inside a sentence'));
+      // Both languages must carry the plot, not one holding the scenery.
+      expect(text.toLowerCase(), contains('both languages must carry'));
+    });
+
+    test('forbids inventing a border to justify the switch', () {
+      // Told to switch "where the story gives you a reason to — crossing into
+      // somewhere the other language is spoken", the model wrote a
+      // French-speaking sector of a lake with a signpost at the trench. That
+      // is a translated story with a customs post in it.
+      final text = brief().toLowerCase();
+      expect(text, contains('do not invent a place'));
+      expect(text, contains('nobody ever crosses'));
+      expect(
+        text,
+        isNot(contains('crossing into somewhere')),
+        reason: 'the instruction that produced the border is gone',
+      );
+    });
+
+    test('the narration switches too, not only the dialogue', () {
+      // The first attempt put every French word inside quotation marks: the
+      // characters were bilingual and the narrator was not, which capped the
+      // second language at 29% of the story.
+      final text = brief();
+      expect(text, contains('narration switches too'));
+      expect(text, contains('quotation marks'));
+      expect(text, contains('roughly half the sentences'));
+    });
+
+    test('still guarantees a monolingual child follows the story', () {
+      expect(brief(), contains('must still follow every event'));
+      expect(brief(), contains('never with a translation'));
+    });
   });
 
   test('world premise + cast are injected for an episode', () {
