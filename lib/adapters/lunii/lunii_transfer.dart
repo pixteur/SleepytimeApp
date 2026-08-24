@@ -69,6 +69,7 @@ class LuniiTransferRequest {
     required this.skipped,
     required this.motif,
     this.titleChunks,
+    this.announceChunks,
   });
 
   final String drive;
@@ -83,6 +84,11 @@ class LuniiTransferRequest {
   /// it has not been synthesized, which leaves the cover silent as before
   /// rather than failing the transfer over a nicety.
   final List<Uint8List>? titleChunks;
+
+  /// Per chapter, its name spoken — the wheel's menu. Null, or short of a
+  /// chapter, and the pack stays a straight line: a menu that is silent on
+  /// some options is worse than none.
+  final List<List<Uint8List>?>? announceChunks;
   final int skipped;
   final LuniiCoverMotif motif;
 }
@@ -102,9 +108,16 @@ LuniiTransfer buildAndWritePack(LuniiTransferRequest request) {
   }
   final device = LuniiDevice.open(request.drive);
 
+  final announce = request.announceChunks;
   final chapters = <DevicePackChapter>[];
-  for (final chunks in request.chapterChunks) {
-    chapters.add(DevicePackChapter(audio: _chapterAudio(chunks)));
+  for (var i = 0; i < request.chapterChunks.length; i++) {
+    final named = announce != null && i < announce.length ? announce[i] : null;
+    chapters.add(
+      DevicePackChapter(
+        audio: _chapterAudio(request.chapterChunks[i]),
+        announce: named == null || named.isEmpty ? null : _chapterAudio(named),
+      ),
+    );
   }
 
   final cover = switch (request.motif) {

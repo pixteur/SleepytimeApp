@@ -83,7 +83,7 @@ class DevicePackException implements Exception {
 
 /// One chapter: what plays, and what is shown while it plays.
 class DevicePackChapter {
-  const DevicePackChapter({required this.audio, this.image});
+  const DevicePackChapter({required this.audio, this.image, this.announce});
 
   /// MP3 the device will play — 44.1 kHz mono, as
   /// `lib/adapters/audio/mp3_encoder.dart` produces.
@@ -91,6 +91,11 @@ class DevicePackChapter {
 
   /// Shown for this chapter. Null falls back to the pack's cover.
   final IndexedImage? image;
+
+  /// The chapter's name, spoken — a second or two, played as the wheel passes
+  /// over it in the menu. Null on any chapter means no menu is built and the
+  /// pack stays the straight line it was.
+  final Uint8List? announce;
 }
 
 /// A built pack, ready to be written wherever the caller decides.
@@ -173,50 +178,94 @@ DevicePack buildDevicePack({
       ? -1
       : (sounds..add(titleAudio)).length - 1;
 
+  // A menu is only offered when every chapter can announce itself — a wheel
+  // that speaks some options and is silent on others is worse than none.
+  final menu = chapters.every((c) => c.announce != null);
+  final announceSound = <int>[];
+  if (menu) {
+    for (var i = 0; i < chapters.length; i++) {
+      _checkAudio(chapters[i].announce!, i);
+      sounds.add(chapters[i].announce!);
+      announceSound.add(sounds.length - 1);
+    }
+  }
+
   for (var i = 0; i < chapters.length; i++) {
     final own = chapters[i].image;
     imageIndexForChapter.add(own == null ? coverIndex : addImage(own));
     _checkAudio(chapters[i].audio, i);
     sounds.add(chapters[i].audio);
   }
-  final firstChapterSound = titleIndex + 1;
+  final firstChapterSound = sounds.length - chapters.length;
 
-  // The cover, one node per chapter, then the end.
-  final endNode = chapters.length + 1;
-  final nodeCount = chapters.length + 2;
+  // The cover, one node per chapter, then the end — plus, when there is a
+  // menu, one announce node per chapter in between.
+  final n = chapters.length;
+  final endNode = menu ? 2 * n + 1 : n + 1;
+  final nodeCount = menu ? 2 * n + 2 : n + 2;
 
   // One list entry per hop, so node i's transition is always `(i, 1, 0)`.
   // Entry i sends node i on to node i+1, and the last sends the end node back
   // to the first chapter, which is what OK replays.
-  final list = Int32List(nodeCount);
-  for (var i = 0; i < nodeCount - 1; i++) {
-    list[i] = i + 1;
+  final list = Int32List(menu ? 3 * n + 1 : nodeCount);
+  if (menu) {
+    // list[0 … n-1]    the menu the cover's wheel scrolls (the announce nodes)
+    // list[n … 2n-1]   announce i → chapter i
+    // list[2n … 3n-1]  chapter i → the next chapter, or the end
+    // list[3n]         the end → back to the menu, never to node 0
+    for (var i = 0; i < n; i++) {
+      list[i] = 1 + i; // announce nodes start at 1
+      list[n + i] = n + 1 + i; // chapter nodes start at n+1
+      list[2 * n + i] = i + 1 < n ? n + 2 + i : endNode;
+    }
+    list[3 * n] = 1;
+  } else {
+    for (var i = 0; i < nodeCount - 1; i++) {
+      list[i] = i + 1;
+    }
+    list[nodeCount - 1] = 1;
   }
-  list[nodeCount - 1] = 1;
 
   _Transition hop(int from) => _Transition(from, 1, 0);
 
   final nodes = <_Node>[
-    // The cover: the device waits here until OK is pressed, so no autoplay,
-    // and no sound, since a generated story has no title jingle to play.
-    // Flags match node 0 of all nine packs on the device.
+    // The cover: the device waits here until OK is pressed, so no autoplay.
+    // Flags match node 0 of all nine packs on the device. With a menu its
+    // transition spans every chapter — a *count* above one is what makes the
+    // wheel a chooser, and node 0 of one purchased pack is exactly this shape:
+    // audio set, ok = (0, 2, 0). See `tool/lunii_node_survey.dart`.
     _Node(
       image: coverIndex,
       audio: titleIndex,
-      okTransition: hop(0),
+      okTransition: menu ? _Transition(0, n, 0) : hop(0),
       wheel: true,
       ok: true,
       home: false,
       pause: false,
       autoplay: false,
     ),
+    // One announce node per chapter, each saying its own name as the wheel
+    // passes over it. The wheel stays live so a child can keep browsing from
+    // here, which is what the device's own menu nodes do.
+    if (menu)
+      for (var i = 0; i < n; i++)
+        _Node(
+          image: coverIndex,
+          audio: announceSound[i],
+          okTransition: hop(n + i),
+          wheel: true,
+          ok: true,
+          home: true,
+          pause: false,
+          autoplay: false,
+        ),
     for (var i = 0; i < chapters.length; i++)
       _Node(
         image: imageIndexForChapter[i],
         audio: firstChapterSound + i,
         // Always somewhere to go. The last chapter hands on to the end node
         // rather than dangling — see the note at the top of this file.
-        okTransition: hop(i + 1),
+        okTransition: hop(menu ? 2 * n + i : i + 1),
         wheel: false,
         ok: true,
         home: true,
@@ -230,7 +279,7 @@ DevicePack buildDevicePack({
     _Node(
       image: coverIndex,
       audio: titleIndex,
-      okTransition: hop(endNode),
+      okTransition: hop(menu ? 3 * n : endNode),
       wheel: true,
       ok: true,
       home: false,

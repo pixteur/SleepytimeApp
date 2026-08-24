@@ -270,6 +270,85 @@ void main() {
       );
     });
 
+    test('announcing chapters turns the cover into a menu', () {
+      // The shape comes from `tool/lunii_node_survey.dart` over a real device:
+      // a menu is a transition whose count is above one, its options are the
+      // list entries from there on, and each option is a node with its own
+      // short prompt. Walked here the way the device walks it.
+      final pack = buildDevicePack(
+        chapters: [
+          for (var i = 0; i < 3; i++)
+            DevicePackChapter(
+              audio: mp3(frames: i + 2),
+              announce: mp3(frames: 1),
+            ),
+        ],
+        deviceKey: deviceKey,
+        cover: picture(),
+        titleAudio: mp3(frames: 1),
+        rng: Random(7),
+      );
+      final ni = pack.files['ni']!;
+      final li = ByteData.sublistView(
+        luniiDecipher(pack.files['li']!, luniiGenericKey),
+      );
+      int entry(int i) => li.getInt32(i * 4, Endian.little);
+
+      // cover + 3 announce + 3 chapters + end
+      expect(header(ni).nodes, 8);
+      // title + 3 announce + 3 chapters
+      expect(header(ni).sounds, 7);
+
+      final cover = node(ni, 0);
+      expect(cover[3], 3, reason: 'the wheel offers all three chapters');
+      expect(cover[8], 1, reason: 'wheel on');
+
+      // Every option speaks, and OK on it lands on a distinct chapter that
+      // plays a different sound from the announcement.
+      final chapterNodes = <int>{};
+      for (var option = 0; option < 3; option++) {
+        final announce = entry(cover[2] + option);
+        final a = node(ni, announce);
+        expect(a[1], isNot(-1), reason: 'option $option says its name');
+        expect(a[12], 0, reason: 'an announcement does not autoplay');
+        final chapter = entry(a[2]);
+        chapterNodes.add(chapter);
+        final c = node(ni, chapter);
+        expect(c[12], 1, reason: 'the chapter itself autoplays');
+        expect(c[1], isNot(a[1]), reason: 'chapter audio, not the name again');
+      }
+      expect(chapterNodes, hasLength(3), reason: 'three distinct chapters');
+
+      // Chapters still run on into each other, ending at the end node.
+      final first = chapterNodes.reduce((a, b) => a < b ? a : b);
+      var at = first;
+      final played = <int>[];
+      for (var i = 0; i < 3; i++) {
+        played.add(at);
+        at = entry(node(ni, at)[2]);
+      }
+      expect(played.toSet(), chapterNodes);
+      expect(at, header(ni).nodes - 1, reason: 'the last leads to the end');
+    });
+
+    test('one chapter without a name leaves the pack a straight line', () {
+      // Half a menu is worse than none: a wheel that speaks some options and
+      // is silent on others gives a child no way to tell where they are.
+      final pack = buildDevicePack(
+        chapters: [
+          DevicePackChapter(audio: mp3(), announce: mp3()),
+          DevicePackChapter(audio: mp3()),
+        ],
+        deviceKey: deviceKey,
+        cover: picture(),
+        rng: Random(7),
+      );
+      final ni = pack.files['ni']!;
+      expect(header(ni).nodes, 4, reason: 'cover + 2 chapters + end');
+      expect(node(ni, 0)[3], 1, reason: 'no choice offered');
+      expect(header(ni).sounds, 2, reason: 'the announcement is not shipped');
+    });
+
     test('no node is left with nowhere to go', () {
       // This is the one that matters. A pack whose last chapter had no onward
       // transition played every chapter on real hardware and then threw up an

@@ -34,7 +34,9 @@ import 'package:sleepytime/adapters/lunii/device_pack.dart';
 import 'package:sleepytime/adapters/lunii/device_writer.dart';
 import 'package:sleepytime/adapters/tts/audio_compression.dart';
 import 'package:sleepytime/adapters/tts/narrated_chunks.dart';
+import 'package:sleepytime/domain/models/beat.dart';
 import 'package:sleepytime/domain/models/narration.dart';
+import 'package:sleepytime/domain/spoken_labels.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 void main(List<String> args) {
@@ -141,7 +143,28 @@ void main(List<String> args) {
     }
     final joined = joinWav(parts);
     final mp3 = encodePcmToLuniiMp3(joined);
-    chapters.add(DevicePackChapter(audio: mp3));
+    // The spoken chapter name, if the app has cached one. All chapters need
+    // one or the builder drops the menu, which is the intended behaviour.
+    final spoken = _cachedClip(
+      spokenChapterFor(
+        Beat(
+          id: '',
+          seriesId: '',
+          childId: '',
+          seq: beat['seq'] as int,
+          intent: StoryIntent.dice,
+          text: '',
+          summary: '',
+          title: (beat['chapter_title'] as String?) ?? '',
+          rating: AgeRating.tiny,
+        ),
+        language,
+      ),
+      voice,
+      language,
+      audioDir,
+    );
+    chapters.add(DevicePackChapter(audio: mp3, announce: spoken));
     stdout.writeln(
       '  ${chapters.length.toString().padLeft(2)}. $label — '
       '${keys.length} chunks, ${joined.duration.inSeconds}s, '
@@ -170,6 +193,14 @@ void main(List<String> args) {
         ? '\nCover: silent (no spoken title cached)'
         : '\nCover: says the title '
               '(${(titleMp3.length / 1024).round()} kB)',
+  );
+
+  final named = chapters.where((c) => c.announce != null).length;
+  stdout.writeln(
+    named == chapters.length
+        ? 'Menu: the wheel offers all $named chapters by name'
+        : 'Menu: none ($named of ${chapters.length} chapters have a spoken '
+              'name cached)',
   );
 
   final pack = buildDevicePack(

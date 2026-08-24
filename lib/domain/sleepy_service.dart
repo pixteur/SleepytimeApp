@@ -19,6 +19,7 @@ import '../adapters/tts/tts_synthesizer.dart';
 import 'models/beat.dart';
 import 'models/narration.dart';
 import 'models/series.dart';
+import 'spoken_labels.dart';
 import 'models/story_character.dart';
 import 'models/world.dart';
 
@@ -303,11 +304,6 @@ class SleepyService {
   /// A chapter whose narration is not fully downloaded is left out rather than
   /// sent half-finished, and the count comes back so the caller can say so.
   /// The heavy part runs off the UI isolate; see `lunii_transfer.dart`.
-  /// What the storyteller says when a child lands on the pack. Short on
-  /// purpose: the wheel is how they browse, so this has to be over before they
-  /// have moved on.
-  static String spokenTitleFor(Series series) => series.title.trim();
-
   Future<LuniiTransfer> sendToLunii(
     Series series, {
     required String language,
@@ -328,6 +324,7 @@ class SleepyService {
 
     final beats = await _repo.loadBeats(series.id);
     final chapterChunks = <List<Uint8List>>[];
+    final included = <Beat>[];
     var skipped = 0;
     for (final beat in beats) {
       final chunks = await _chapterChunks(beat, voiceSignature, language);
@@ -336,6 +333,7 @@ class SleepyService {
         continue;
       }
       chapterChunks.add(chunks);
+      included.add(beat);
     }
     if (chapterChunks.isEmpty) {
       throw StateError(
@@ -348,6 +346,7 @@ class SleepyService {
     // silent, which is how every pack we have written so far behaves — not a
     // reason to refuse the transfer.
     List<Uint8List>? titleChunks;
+    List<List<Uint8List>?>? announceChunks;
     if (voice != null) {
       final title = spokenTitleFor(series);
       if (title.isNotEmpty) {
@@ -357,6 +356,19 @@ class SleepyService {
         } catch (_) {
           titleChunks = null;
         }
+      }
+      // And one clip per chapter, so the wheel can be browsed by ear. All or
+      // nothing: the pack builder drops the menu unless every chapter has one.
+      try {
+        final spoken = <List<Uint8List>?>[];
+        for (final beat in included) {
+          final line = spokenChapterFor(beat, language);
+          await voice.preload(line, language: language);
+          spoken.add(await _clipChunks(line, voiceSignature, language));
+        }
+        announceChunks = spoken;
+      } catch (_) {
+        announceChunks = null;
       }
     }
 
@@ -370,6 +382,7 @@ class SleepyService {
         title: series.title,
         chapterChunks: chapterChunks,
         titleChunks: titleChunks,
+        announceChunks: announceChunks,
         skipped: skipped,
         motif: motif,
       ),
