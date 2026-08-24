@@ -73,6 +73,24 @@ class _RecordingProvider implements AiProvider {
   }
 }
 
+/// Returns whatever chapter title it was built with.
+class _TitledProvider implements AiProvider {
+  _TitledProvider(this.title);
+  final String title;
+
+  @override
+  ProviderId get id => ProviderId.fake;
+  @override
+  Future<bool> isReady() async => true;
+  @override
+  Future<StorySegment> generate(StoryPrompt prompt) async => StorySegment(
+    storyText: 'A lantern glowed in the willow tree, soft and low.',
+    summary: 'A lantern in a willow.',
+    rating: AgeRating.tiny,
+    chapterTitle: title,
+  );
+}
+
 class _FinalProvider implements AiProvider {
   @override
   ProviderId get id => ProviderId.fake;
@@ -293,6 +311,62 @@ void main() {
     expect(await promptFor(DetailLevel.long), contains('of at least 6'));
     expect(await promptFor(DetailLevel.medium), contains('of at least 4'));
     expect(await promptFor(DetailLevel.short), contains('of at least 3'));
+  });
+
+  test('a chapter title that is only a number is dropped', () async {
+    // The list already prints the number, so "Chapter One" came out as
+    // "Chapter 1 · Chapter One". An absent title renders as the plain
+    // number, which is what the model meant anyway.
+    for (final placeholder in [
+      'Chapter One',
+      'Chapter 4',
+      'chapter three',
+      'Chapitre 2',
+      'Capítulo 5',
+      'Chapter',
+    ]) {
+      final beat = await StoryEngine(
+        ai: _TitledProvider(placeholder),
+        repo: repo,
+      ).takeTurn(child: child, series: series, intent: StoryIntent.dice);
+      expect(beat.title, isEmpty, reason: '"$placeholder" is not a title');
+    }
+  });
+
+  test('a chapter cannot reuse the title of the one before it', () async {
+    // Two chapters running came back as "The Whispering Nebula", which tells a
+    // child nothing about either. The prompt now lists the titles already
+    // used; this is the backstop for when it is ignored anyway.
+    final engine = StoryEngine(
+      ai: _TitledProvider('The Whispering Nebula'),
+      repo: repo,
+    );
+    final first = await engine.takeTurn(
+      child: child,
+      series: series,
+      intent: StoryIntent.dice,
+    );
+    expect(first.title, 'The Whispering Nebula');
+    final second = await engine.takeTurn(
+      child: child,
+      series: series,
+      intent: StoryIntent.continued,
+    );
+    expect(second.title, isEmpty, reason: 'not the same name twice');
+  });
+
+  test('a real chapter title survives, numbers in it and all', () async {
+    for (final real in [
+      'The Lost Mitten',
+      'Three Little Bells',
+      'Part of It',
+    ]) {
+      final beat = await StoryEngine(
+        ai: _TitledProvider(real),
+        repo: repo,
+      ).takeTurn(child: child, series: series, intent: StoryIntent.dice);
+      expect(beat.title, real);
+    }
   });
 
   test('a story is not allowed to end in chapter one', () async {

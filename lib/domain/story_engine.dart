@@ -246,7 +246,7 @@ class StoryEngine {
       chosenTwist: chosenTwist,
       text: safe.storyText,
       summary: safe.summary,
-      title: _cleanTitle(safe.chapterTitle) ?? '',
+      title: _chapterTitle(safe.chapterTitle, ctx.recentBeats),
       rating: safe.rating,
       setting: safe.setting,
       characters: safe.characters,
@@ -438,6 +438,36 @@ class StoryEngine {
         .replaceAll(RegExp(r'^["“”\x27]+|["“”\x27.]+$'), '')
         .trim();
     if (t.length > 60) t = t.substring(0, 60).trim();
-    return t.isEmpty ? null : t;
+    if (t.isEmpty || _isJustANumbering(t)) return null;
+    return t;
   }
+
+  /// This chapter's title, or empty when there isn't a usable one.
+  ///
+  /// A title already used by a recent chapter is dropped rather than shown
+  /// twice: two chapters running called "The Whispering Nebula" tells a child
+  /// nothing about either. The prompt lists the used titles as well, so this
+  /// is a backstop, not the whole answer.
+  static String _chapterTitle(String raw, List<Beat> earlier) {
+    final cleaned = _cleanTitle(raw);
+    if (cleaned == null) return '';
+    final taken = earlier.map((b) => b.title.trim().toLowerCase());
+    return taken.contains(cleaned.toLowerCase()) ? '' : cleaned;
+  }
+
+  /// True for a "title" that only restates the chapter number.
+  ///
+  /// The chapter list already prints the number, so "Chapter One" renders as
+  /// "Chapter 1 · Chapter One". Asking the model not to do it is not enough on
+  /// its own — it fills the field with a label whenever nothing better comes
+  /// to mind — and an absent title renders as the plain number, which is what
+  /// it meant anyway.
+  static bool _isJustANumbering(String title) => RegExp(
+    r'^(chapter|chapitre|cap[íi]tulo|kapitel|capitolo|part)\s*'
+    r'[-–—:.]?\s*'
+    r'(\d+|one|two|three|four|five|six|seven|eight|nine|ten|'
+    r'une?|deux|trois|quatre|cinq|sept|huit|neuf|dix|'
+    r'dos|tres|cuatro|cinco|seis)?$',
+    caseSensitive: false,
+  ).hasMatch(title.trim());
 }

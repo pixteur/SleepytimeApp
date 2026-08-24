@@ -100,11 +100,13 @@ class PromptBuilder {
       )
       ..writeln(
         'And return "chapter_title": a title for THIS chapter only (2–5 words, '
-        'no quotes, no "Chapter N" prefix, no ending punctuation) naming the '
-        'one thing that happens in it. It is shown beside the chapter number, '
-        'so make it concrete and inviting rather than abstract — "The Lost '
-        'Mitten", not "A New Beginning". Never give away the ending, and never '
-        'reuse an earlier chapter\'s title.',
+        'no quotes, no ending punctuation) naming the one thing that happens '
+        'in it. The number is already shown beside it, so this is the part '
+        'that comes AFTER it: never "Chapter One", "Chapter 4", "Chapitre 2" '
+        'or any numbering, which renders as "Chapter 4 · Chapter 4". Make it '
+        'concrete and inviting rather than abstract — "The Lost Mitten", not '
+        '"A New Beginning". Never give away the ending, and never reuse an '
+        'earlier chapter\'s title.',
       )
       ..writeln(
         'Finally, "narration_style": one line describing the voice this whole '
@@ -156,7 +158,21 @@ class PromptBuilder {
     if (req.recentBeats.isNotEmpty) {
       user.writeln('Recent chapters:');
       for (final b in req.recentBeats) {
-        user.writeln('- ${b.summary}');
+        final named = b.title.trim();
+        user.writeln('- ${named.isEmpty ? "" : "\"$named\" — "}${b.summary}');
+      }
+      // Two chapters in a row came back both called "The Whispering Nebula".
+      // The rule not to reuse a title was already there; what was missing was
+      // the list of titles it must not reuse.
+      final used = [
+        for (final b in req.recentBeats)
+          if (b.title.trim().isNotEmpty) '"${b.title.trim()}"',
+      ];
+      if (used.isNotEmpty) {
+        user.writeln(
+          'Chapter titles already used, which this chapter must not repeat or '
+          'lightly reword: ${used.join(', ')}.',
+        );
       }
     }
 
@@ -246,9 +262,7 @@ class PromptBuilder {
         '   - Strip anything that only works on the page: parentheses, '
         'asterisks, emoji, ALL-CAPS, bullet points, headings, stage '
         'directions, footnotes, tables. Write numbers, dates, symbols and '
-        'abbreviations out as words. Accented letters are NOT symbols: keep '
-        'every accent exactly as that language spells it, because '
-        'they tell the voice how to pronounce it.',
+        'abbreviations out as words.',
       )
       ..writeln(
         '   - Use no em dashes and no semicolons. A speech engine reads '
@@ -299,6 +313,17 @@ class PromptBuilder {
       ..writeln(
         '- LENGTH: the draft is $words words. Return between $low and '
         '$high words. Do not compress it into a summary and do not pad it.',
+      )
+      // Buried in the "strip anything that only works on the page" list, this
+      // read as one more thing to remove, and the accents kept disappearing.
+      // A rule about keeping something has to sit where the model is looking
+      // for things it must not touch.
+      ..writeln(
+        '- KEEP EVERY ACCENT. Accented letters are spelling — not formatting, '
+        'not symbols: é, è, ê, ë, à, â, ç, ô, û, ù, î, ï, ñ, ü. Never replace '
+        'one with its unaccented letter. They tell the voice how to say the '
+        'word, so "etoiles" for "étoiles" is a mispronunciation, and a '
+        'chapter that comes back stripped of them is unusable.',
       )
       ..writeln(
         '- DO NOT CHANGE WHAT HAPPENS. No new named characters, no new '
