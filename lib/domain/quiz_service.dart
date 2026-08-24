@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:uuid/uuid.dart';
 
 import '../adapters/storage/storage_repo.dart';
@@ -5,6 +7,7 @@ import 'models/child_profile.dart';
 import 'models/interest.dart';
 import 'models/quiz_question.dart';
 import 'models/quiz_result.dart';
+import 'quiz_bank.dart';
 
 /// Outcome of submitting a quiz: the saved [result] plus derived effects the
 /// caller applies to the profile (detail level) — interests are persisted here.
@@ -29,119 +32,70 @@ class QuizService {
   final StorageRepo _repo;
   final Uuid _uuid;
 
-  /// The full first-run quiz. Stable ids are referenced by [deriveSeed].
-  static const List<QuizQuestion> fullQuiz = [
-    QuizQuestion(
-      id: 'creature',
-      prompt: 'What kind of creature do you like best?',
-      type: QuizAnswerType.choice,
-      options: ['Dragon', 'Puppy', 'Robot', 'Something else'],
-    ),
-    QuizQuestion(
-      id: 'realVsMagical',
-      prompt: 'Real-world adventures or magical ones?',
-      type: QuizAnswerType.choice,
-      options: ['Real-world', 'Magical'],
-    ),
-    QuizQuestion(
-      id: 'funnyVsExciting',
-      prompt: 'Funny stories or exciting ones?',
-      type: QuizAnswerType.choice,
-      options: ['Funny', 'Exciting'],
-    ),
-    QuizQuestion(
-      id: 'lovedStories',
-      prompt: 'Are there stories, books, or shows you already love?',
-      type: QuizAnswerType.freeText,
-      seedsInterest: true,
-    ),
-    QuizQuestion(
-      id: 'favoriteCharacter',
-      prompt: 'Do you have a favourite character?',
-      type: QuizAnswerType.freeText,
-      seedsInterest: true,
-    ),
-    QuizQuestion(
-      id: 'place',
-      prompt: 'Where should the stories happen?',
-      type: QuizAnswerType.choice,
-      options: ['Space', 'Ocean', 'Forest', 'Castle', 'City'],
-    ),
-    QuizQuestion(
-      id: 'companion',
-      prompt: 'Who comes along on the adventure?',
-      type: QuizAnswerType.choice,
-      options: ['An animal sidekick', 'A robot', 'A fairy', 'No-one'],
-    ),
-    QuizQuestion(
-      id: 'mood',
-      prompt: 'Bright daytime stories or cozy night-time ones?',
-      type: QuizAnswerType.choice,
-      options: ['Bright', 'Cozy'],
-    ),
-    QuizQuestion(
-      id: 'loves',
-      prompt: 'What is something you love right now?',
-      type: QuizAnswerType.freeText,
-      seedsInterest: true,
-    ),
-    QuizQuestion(
-      id: 'length',
-      prompt: 'How long should stories be?',
-      type: QuizAnswerType.choice,
-      options: ['Short', 'Medium', 'Long'],
-      setsDetailLevel: true,
-    ),
-    QuizQuestion(
-      id: 'avoid',
-      prompt: "Anything a little scary you'd rather NOT hear about?",
-      type: QuizAnswerType.freeText,
-      isSoftSafetyHint: true,
-    ),
-  ];
+  /// A fresh draw of the quiz — one question per dimension. See `quiz_bank.dart`.
+  static List<QuizQuestion> draw([Random? rng]) => drawQuiz(rng);
 
-  /// Pure: distil answers (+ optional parent brief) into a story premise.
-  /// Deterministic and unit-tested — no I/O. See tests.
+  /// Pure: distil answers into a story premise. Deterministic and unit-tested.
+  ///
+  /// Reads answers by **dimension**, not by question id, because which
+  /// question was asked is a coin toss — "the locked box" and "find out how"
+  /// are different questions about the same thing, and the premise should not
+  /// depend on which one a child happened to be shown.
   static String deriveSeed(Map<String, String> answers, {String? parentBrief}) {
-    String? a(String id) {
-      final v = answers[id]?.trim();
-      return (v == null || v.isEmpty) ? null : v;
+    /// What the child said for [dimension], as its trait, or null.
+    String? traitFor(QuizDimension dimension) {
+      for (final entry in answers.entries) {
+        final question = questionById(entry.key);
+        if (question == null || question.dimension != dimension) continue;
+        final answer = entry.value.trim();
+        if (answer.isEmpty) continue;
+        for (final choice in question.choices) {
+          if (choice.label.toLowerCase() == answer.toLowerCase()) {
+            return choice.trait;
+          }
+        }
+      }
+      return null;
+    }
+
+    /// The child's own words for [dimension], or null.
+    String? textFor(QuizDimension dimension) {
+      for (final entry in answers.entries) {
+        final question = questionById(entry.key);
+        if (question?.dimension != dimension) continue;
+        final answer = entry.value.trim();
+        if (answer.isNotEmpty) return answer;
+      }
+      return null;
     }
 
     final sentences = <String>[];
 
-    final tone = a('funnyVsExciting')?.toLowerCase();
-    final realm = a('realVsMagical')?.toLowerCase();
-    final realmPhrase = switch (realm) {
-      'magical' => 'a magical',
-      'real-world' => 'a real-world',
-      _ => 'a',
-    };
-    var opener = 'A ${tone ?? 'gentle'} bedtime story in $realmPhrase world';
-    final creature = a('creature');
-    if (creature != null && creature.toLowerCase() != 'something else') {
-      opener += ', featuring a ${creature.toLowerCase()}';
-    }
-    final place = a('place');
-    if (place != null) opener += ', set in the ${place.toLowerCase()}';
-    final companion = a('companion');
-    if (companion != null && companion.toLowerCase() != 'no-one') {
-      opener += ', with ${companion.toLowerCase()} along for the ride';
-    }
-    sentences.add('$opener.');
-
-    final loves = <String>[
-      for (final id in ['lovedStories', 'favoriteCharacter', 'loves'])
-        if (a(id) != null) a(id)!,
+    // What this child is like, in the order it matters for steering a story.
+    final about = <String>[
+      for (final dimension in [
+        QuizDimension.curiosity,
+        QuizDimension.company,
+        QuizDimension.humour,
+        QuizDimension.intensity,
+      ])
+        if (traitFor(dimension) != null) traitFor(dimension)!,
     ];
-    if (loves.isNotEmpty) {
-      sentences.add('The child currently loves ${loves.join(', ')}.');
+    sentences.add(
+      about.isEmpty
+          ? 'A gentle bedtime story.'
+          : 'This child ${_joinWithAnd(about)}.',
+    );
+
+    final loves = textFor(QuizDimension.fascination);
+    if (loves != null) sentences.add('Right now they are taken with $loves.');
+
+    final comfort = traitFor(QuizDimension.comfort);
+    if (comfort != null) {
+      sentences.add('At the end of the day they are $comfort.');
     }
 
-    final mood = a('mood')?.toLowerCase();
-    if (mood != null) sentences.add('Keep the mood $mood.');
-
-    final avoid = a('avoid');
+    final avoid = textFor(QuizDimension.avoid);
     if (avoid != null) sentences.add('Gently avoid: $avoid.');
 
     final brief = parentBrief?.trim();
@@ -152,6 +106,13 @@ class QuizService {
     return sentences.join(' ');
   }
 
+  /// "a, b and c" — the premise is read by a model, but it is also read by a
+  /// parent in Settings, so it should be a sentence.
+  static String _joinWithAnd(List<String> parts) {
+    if (parts.length == 1) return parts.first;
+    return '${parts.take(parts.length - 1).join(', ')} and ${parts.last}';
+  }
+
   /// Map the length answer to a [DetailLevel].
   static DetailLevel detailLevelFor(Map<String, String> answers) {
     return switch (answers['length']?.toLowerCase()) {
@@ -159,6 +120,15 @@ class QuizService {
       'long' => DetailLevel.long,
       _ => DetailLevel.medium,
     };
+  }
+
+  /// Every question in the bank that seeds an interest.
+  static Iterable<QuizQuestion> get _interestQuestions sync* {
+    for (final questions in quizBank.values) {
+      for (final q in questions) {
+        if (q.seedsInterest) yield q;
+      }
+    }
   }
 
   /// Persist a quiz result and any seeded interests; return derived effects.
@@ -179,7 +149,7 @@ class QuizService {
     await _repo.saveQuizResult(result);
 
     final seeded = <Interest>[];
-    for (final q in fullQuiz.where((q) => q.seedsInterest)) {
+    for (final q in _interestQuestions) {
       final value = answers[q.id]?.trim();
       if (value == null || value.isEmpty) continue;
       final interest = Interest(

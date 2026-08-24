@@ -313,6 +313,55 @@ void main() {
     expect(await promptFor(DetailLevel.short), contains('of at least 3'));
   });
 
+  test('naming the story also names the world it was created with', () async {
+    // A world made alongside an unnamed story takes the story's placeholder,
+    // because there is nothing else to call it yet. It should not still be
+    // called "Naming it…" once the story has a real name.
+    const placeholder = 'Naming it…';
+    const world = World(id: 'w1', childId: 'kid', name: placeholder);
+    await repo.saveWorld(world);
+    final unnamed = Series(
+      id: 's-auto',
+      childId: child.id,
+      title: placeholder,
+      theme: StoryTheme.cozy,
+      autoTitle: true,
+      worldId: world.id,
+    );
+    await repo.saveSeries(unnamed);
+
+    await StoryEngine(
+      ai: _TitlingProvider(),
+      repo: repo,
+    ).takeTurn(child: child, series: unnamed, intent: StoryIntent.dice);
+
+    final named = await repo.loadSeriesById('s-auto');
+    expect(named!.title, isNot(placeholder));
+    expect(named.autoTitle, isFalse);
+    expect((await repo.loadWorldById('w1'))!.name, named.title);
+  });
+
+  test('a world the grown-up named keeps its name', () async {
+    const world = World(id: 'w2', childId: 'kid', name: 'Splat the Cat');
+    await repo.saveWorld(world);
+    final unnamed = Series(
+      id: 's-auto2',
+      childId: child.id,
+      title: 'Naming it…',
+      theme: StoryTheme.cozy,
+      autoTitle: true,
+      worldId: world.id,
+    );
+    await repo.saveSeries(unnamed);
+
+    await StoryEngine(
+      ai: _TitlingProvider(),
+      repo: repo,
+    ).takeTurn(child: child, series: unnamed, intent: StoryIntent.dice);
+
+    expect((await repo.loadWorldById('w2'))!.name, 'Splat the Cat');
+  });
+
   test('a chapter title that is only a number is dropped', () async {
     // The list already prints the number, so "Chapter One" came out as
     // "Chapter 1 · Chapter One". An absent title renders as the plain

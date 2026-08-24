@@ -20,7 +20,9 @@ class QuizScreen extends ConsumerStatefulWidget {
 }
 
 class _QuizScreenState extends ConsumerState<QuizScreen> {
-  static const _questions = QuizService.fullQuiz;
+  /// Drawn once when the screen opens, so the questions don't reshuffle
+  /// under the child between taps.
+  final _questions = QuizService.draw();
 
   final _answers = <String, String>{};
   final _textController = TextEditingController();

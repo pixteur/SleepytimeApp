@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app_providers.dart';
 import '../../domain/models/child_profile.dart';
+import '../common/hold_to_delete.dart';
 import '../common/parent_gate.dart';
 import '../home/home_screen.dart';
 import '../settings/settings_screen.dart';
@@ -122,6 +123,9 @@ class _ProfileCard extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const HomeScreen()),
             );
           },
+          // Grown-ups only, and only by holding: a child's whole library goes
+          // with them, so this must never be one tap away.
+          onLongPress: () => _confirmDelete(context, ref),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 12),
             child: Column(
@@ -150,6 +154,36 @@ class _ProfileCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final stories =
+        (await ref.read(seriesServiceProvider).forChild(child.id)).length;
+    if (!context.mounted) return;
+    final deleted = await holdToDelete(
+      context,
+      enabled: ref.read(parentModeProvider),
+      what: child.displayName,
+      icon: '🧒',
+      warning:
+          'This removes ${child.displayName} and everything of theirs: '
+          '${stories == 0 ? "no stories yet" : "$stories "
+                    "${stories == 1 ? "story" : "stories"}"}, their worlds, '
+          'characters and saved narration.',
+      onDelete: () async {
+        await ref.read(profileServiceProvider).delete(child.id);
+        // Whoever was selected may be the one that just went.
+        if (ref.read(activeChildProvider)?.id == child.id) {
+          ref.read(activeChildProvider.notifier).select(null);
+        }
+        ref.invalidate(profilesProvider);
+      },
+    );
+    if (deleted && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${child.displayName} was removed.')),
+      );
+    }
   }
 }
 

@@ -427,6 +427,21 @@ class StoryEngine {
         autoTitle: title == null ? null : false,
       ),
     );
+    if (title != null) await _nameWorldAfterStory(series, title);
+  }
+
+  /// A world created alongside an unnamed story is itself unnamed — it took
+  /// the story's placeholder, because there was nothing else to call it. Once
+  /// the story has a real name, the world takes it too.
+  ///
+  /// Guarded on the names still matching: a world the grown-up named, or one
+  /// that already holds other episodes, is left alone.
+  Future<void> _nameWorldAfterStory(Series series, String title) async {
+    final worldId = series.worldId;
+    if (worldId == null) return;
+    final world = await _repo.loadWorldById(worldId);
+    if (world == null || world.name.trim() != series.title.trim()) return;
+    await _repo.saveWorld(world.copyWith(name: title));
   }
 
   /// Tidy the model's title suggestion: strip wrapping quotes and trailing

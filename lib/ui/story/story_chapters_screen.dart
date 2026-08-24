@@ -68,8 +68,9 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
   /// the reader.
   Future<void> _build() async {
     final child = ref.read(activeChildProvider);
-    final series = ref.read(activeSeriesProvider);
-    if (child == null || series == null) return;
+    final active = ref.read(activeSeriesProvider);
+    if (child == null || active == null) return;
+    var series = active;
     final repo = ref.read(storageRepoProvider);
     final engine = ref.read(storyEngineProvider);
 
@@ -92,6 +93,13 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
         );
         first = false;
         if (!_active || !mounted) return;
+        // Read the story back rather than reusing the copy we started with.
+        // The first chapter names an untitled story, and that name is written
+        // to the database, not to this object — so a stale copy left the
+        // placeholder on screen for the whole session and told every later
+        // chapter the story still needed naming, renaming it each time.
+        series = await repo.loadSeriesById(series.id) ?? series;
+        ref.read(activeSeriesProvider.notifier).select(series);
         ref.invalidate(beatsForSeriesProvider(series.id));
         ref.invalidate(seriesForChildProvider(child.id));
         _warn(engine.lastFallbackReason);

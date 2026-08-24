@@ -11,6 +11,7 @@ import '../../domain/models/world.dart';
 import '../common/confirm_destructive.dart';
 import '../story/story_chapters_screen.dart';
 import 'new_series_screen.dart';
+import '../common/hold_to_delete.dart';
 import 'theme_catalog.dart';
 import 'world_detail_screen.dart';
 import 'world_edit_screen.dart';
@@ -273,9 +274,31 @@ class _WorldCard extends ConsumerWidget {
             MaterialPageRoute(builder: (_) => const WorldDetailScreen()),
           );
         },
+        onLongPress: () => _holdToDelete(context, ref, episodes),
       ),
     );
   }
+}
+
+extension on _WorldCard {
+  Future<void> _holdToDelete(
+    BuildContext context,
+    WidgetRef ref,
+    int episodes,
+  ) => holdToDelete(
+    context,
+    enabled: ref.read(parentModeProvider),
+    what: world.name,
+    icon: metaFor(world.theme).emoji,
+    warning:
+        'This deletes the world "${world.name}", its characters, and the '
+        '$episodes ${episodes == 1 ? "episode" : "episodes"} inside it.',
+    onDelete: () async {
+      await ref.read(worldServiceProvider).delete(world.id);
+      ref.invalidate(worldsForChildProvider(world.childId));
+      ref.invalidate(seriesForChildProvider(world.childId));
+    },
+  );
 }
 
 class _StoryCard extends ConsumerWidget {
@@ -319,6 +342,10 @@ class _StoryCard extends ConsumerWidget {
             MaterialPageRoute(builder: (_) => const StoryChaptersScreen()),
           );
         },
+        // The same gesture as deleting an app, for the same reason: it is
+        // reachable without hunting for a menu, and impossible to hit by
+        // accident. Parent mode only.
+        onLongPress: () => _holdToDelete(context, ref),
       ),
     );
   }
@@ -375,6 +402,25 @@ class _StoryCard extends ConsumerWidget {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => WorldEditScreen(world: world)),
+    );
+  }
+
+  Future<void> _holdToDelete(BuildContext context, WidgetRef ref) async {
+    final chapters =
+        (await ref.read(storageRepoProvider).loadBeats(series.id)).length;
+    if (!context.mounted) return;
+    await holdToDelete(
+      context,
+      enabled: ref.read(parentModeProvider),
+      what: series.title,
+      icon: metaFor(series.theme).emoji,
+      warning:
+          'This deletes "${series.title}" and its '
+          '$chapters ${chapters == 1 ? "chapter" : "chapters"}.',
+      onDelete: () async {
+        await ref.read(seriesServiceProvider).delete(series.id);
+        ref.invalidate(seriesForChildProvider(series.childId));
+      },
     );
   }
 
