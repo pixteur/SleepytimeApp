@@ -261,20 +261,24 @@ class _WorldCard extends ConsumerWidget {
                 const <Series>[])
             .where((s) => s.worldId == world.id)
             .length;
-    return Card(
-      child: ListTile(
-        leading: Text(meta.emoji, style: const TextStyle(fontSize: 28)),
-        title: Text(world.name),
-        subtitle: Text('$episodes ${episodes == 1 ? 'episode' : 'episodes'}'),
-        trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: () {
-          ref.read(activeWorldProvider.notifier).select(world);
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const WorldDetailScreen()),
-          );
-        },
-        onLongPress: () => _holdToDelete(context, ref, episodes),
+    // ListTile has no right-click of its own, so the card carries it.
+    return GestureDetector(
+      onSecondaryTap: () => _holdToDelete(context, ref, episodes),
+      child: Card(
+        child: ListTile(
+          leading: Text(meta.emoji, style: const TextStyle(fontSize: 28)),
+          title: Text(world.name),
+          subtitle: Text('$episodes ${episodes == 1 ? 'episode' : 'episodes'}'),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () {
+            ref.read(activeWorldProvider.notifier).select(world);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const WorldDetailScreen()),
+            );
+          },
+          onLongPress: () => _holdToDelete(context, ref, episodes),
+        ),
       ),
     );
   }
@@ -310,42 +314,46 @@ class _StoryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final meta = metaFor(series.theme);
     final parentMode = ref.watch(parentModeProvider);
-    return Card(
-      child: ListTile(
-        leading: Text(meta.emoji, style: const TextStyle(fontSize: 28)),
-        title: Text(series.title),
-        subtitle: Text(
-          series.isInProgress
-              ? 'Continue — chapter ${series.lastReadSeq! + 1}'
-              : meta.label,
+    // ListTile has no right-click of its own, so the card carries it.
+    return GestureDetector(
+      onSecondaryTap: () => _holdToDelete(context, ref),
+      child: Card(
+        child: ListTile(
+          leading: Text(meta.emoji, style: const TextStyle(fontSize: 28)),
+          title: Text(series.title),
+          subtitle: Text(
+            series.isInProgress
+                ? 'Continue — chapter ${series.lastReadSeq! + 1}'
+                : meta.label,
+          ),
+          trailing: parentMode
+              ? PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: 'world',
+                      child: Text('Make this a world'),
+                    ),
+                    PopupMenuItem(value: 'delete', child: Text('Delete story')),
+                  ],
+                  onSelected: (v) {
+                    if (v == 'delete') _confirmDelete(context, ref);
+                    if (v == 'world') _convertToWorld(context, ref);
+                  },
+                )
+              : null,
+          onTap: () {
+            ref.read(activeSeriesProvider.notifier).select(series);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StoryChaptersScreen()),
+            );
+          },
+          // The same gesture as deleting an app, for the same reason: it is
+          // reachable without hunting for a menu, and impossible to hit by
+          // accident. Parent mode only.
+          onLongPress: () => _holdToDelete(context, ref),
         ),
-        trailing: parentMode
-            ? PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(
-                    value: 'world',
-                    child: Text('Make this a world'),
-                  ),
-                  PopupMenuItem(value: 'delete', child: Text('Delete story')),
-                ],
-                onSelected: (v) {
-                  if (v == 'delete') _confirmDelete(context, ref);
-                  if (v == 'world') _convertToWorld(context, ref);
-                },
-              )
-            : null,
-        onTap: () {
-          ref.read(activeSeriesProvider.notifier).select(series);
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const StoryChaptersScreen()),
-          );
-        },
-        // The same gesture as deleting an app, for the same reason: it is
-        // reachable without hunting for a menu, and impossible to hit by
-        // accident. Parent mode only.
-        onLongPress: () => _holdToDelete(context, ref),
       ),
     );
   }

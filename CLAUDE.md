@@ -156,6 +156,16 @@ responses cannot catch this; they only contain what you already believed.
 `tool/model_catalog_probe.dart` asks the real APIs with the saved keys. Same
 shape as the others here: a plausible answer, no error, wrong.
 
+**Narration is keyed by the voice that spoke it, so changing voice looks
+exactly like data loss.** Nothing is deleted — 600 MB of it sat on disk — but
+the app stops asking for it, every download badge reverts to a cloud, and a
+grown-up reports the audio as missing. Anything that only needs *a* recording
+(the badge, the exports, the storyteller) goes through
+`domain/saved_narration.dart`, which tries the current voice and then every
+voice this device has used. Playback is the exception: a story is read in the
+voice that was chosen. `tool/narration_voices.dart` shows which voice actually
+holds each story.
+
 **Verify against the real database or device, not just tests.** Both the
 migration bug and the download-badge bug passed every test and failed
 immediately in the app. `tool/` holds read-only probes for exactly this.

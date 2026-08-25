@@ -33,6 +33,7 @@ import 'domain/models/story_character.dart';
 import 'domain/models/world.dart';
 import 'domain/profile_service.dart';
 import 'domain/quiz_service.dart';
+import 'domain/saved_narration.dart';
 import 'domain/series_service.dart';
 import 'domain/sleepy_service.dart';
 import 'domain/story_engine.dart';
@@ -290,6 +291,57 @@ class VoiceConfigController extends Notifier<VoiceConfig> {
   Future<void> refresh() async => state = await _resolve();
 }
 
+/// Every voice signature that might hold a recording on this device.
+///
+/// The remembered list only starts filling from the build that added it, so it
+/// is unioned with what the stored settings imply: for each engine, the voice
+/// currently selected paired with both the chosen model and the adapter's
+/// default. That covers the case this exists for — a grown-up changed voice or
+/// model, and 600 MB of narration stopped being asked for.
+final knownVoicesProvider = FutureProvider<List<String>>((ref) async {
+  // Rebuild whenever the voice changes, so a newly used voice is included.
+  ref.watch(voiceConfigProvider);
+  final prefs = await AppPrefs.open();
+  final out = <String>{...prefs.knownVoiceSignatures};
+
+  void consider(
+    String engine,
+    String? model,
+    String defaultModel,
+    String voice,
+  ) {
+    final chosen = (model == null || model.isEmpty) ? defaultModel : model;
+    out.add('$engine/$chosen/$voice');
+    out.add('$engine/$defaultModel/$voice');
+  }
+
+  consider(
+    'gemini',
+    prefs.voiceModel('gemini'),
+    GeminiTtsSynthesizer.defaultModel,
+    prefs.voiceName('gemini') ?? 'Kore',
+  );
+  consider(
+    'openai',
+    prefs.voiceModel('openai'),
+    OpenAiTtsSynthesizer.defaultModel,
+    prefs.voiceName('openai') ?? 'nova',
+  );
+  consider(
+    'elevenlabs',
+    prefs.voiceModel('elevenlabs'),
+    ElevenLabsTtsSynthesizer.defaultModel,
+    prefs.voiceName('elevenlabs') ?? '21m00Tcm4TlvDq8ikWAM',
+  );
+  return out.toList();
+});
+
+/// Finds a chapter's narration in whichever voice it was saved with, so a
+/// change of voice does not read as "the audio is gone".
+final savedNarrationProvider = Provider<SavedNarration>(
+  (ref) => SavedNarration(ref.watch(audioCacheProvider)),
+);
+
 /// On-disk cache of synthesized narration, so replays/re-opens are instant and
 /// gap-free and don't re-hit the cloud. Shared across voice-provider rebuilds.
 final audioCacheProvider = Provider<AudioCache>((ref) => FileAudioCache());
@@ -338,6 +390,14 @@ final ttsProvider = Provider<TtsProvider>((ref) {
     VoiceEngine.device => DeviceTtsProvider(),
   };
   ref.onDispose(provider.dispose);
+  // Note the voice so a later cache lookup can still find what it recorded.
+  // Fire-and-forget: this only ever adds to a list, and being a moment late
+  // costs nothing — audio cannot be cached before the provider exists.
+  if (cfg.engine != VoiceEngine.device) {
+    AppPrefs.open().then(
+      (p) => p.rememberVoiceSignature(provider.voiceSignature),
+    );
+  }
   return provider;
 });
 

@@ -68,11 +68,31 @@ class SleepyService {
     return parts;
   }
 
+  /// A chapter's narration, in the asked-for voice if it has one and in any
+  /// [alsoTry] voice if it does not.
+  ///
+  /// Narration is keyed by voice, so changing voice makes every downloaded
+  /// chapter look undownloaded. Nothing is deleted — the app just stops asking
+  /// for it — and an export that refused on those grounds would be telling a
+  /// grown-up their audio is gone when it is on the disk in front of them.
   Future<List<Uint8List>?> _chapterChunks(
     Beat beat,
     String voiceSignature,
-    String language,
-  ) => _clipChunks(beat.text, voiceSignature, language, notes: beat.narration);
+    String language, {
+    List<String> alsoTry = const [],
+  }) async {
+    for (final voice in [voiceSignature, ...alsoTry]) {
+      if (voice.trim().isEmpty) continue;
+      final chunks = await _clipChunks(
+        beat.text,
+        voice,
+        language,
+        notes: beat.narration,
+      );
+      if (chunks != null) return chunks;
+    }
+    return null;
+  }
 
   /// One chapter as a single playable file: its chunks joined, WAV headers
   /// reconciled.
@@ -89,6 +109,7 @@ class SleepyService {
     Series series, {
     required String language,
     required String voiceSignature,
+    List<String> alsoTryVoices = const [],
     bool includeAudio = true,
   }) async {
     final beats = await _repo.loadBeats(series.id);
@@ -106,7 +127,12 @@ class SleepyService {
       // for one cache entry per chunk, so a joined chapter would import as
       // audio nobody ever asks for.
       final parts = includeAudio
-          ? await _chapterChunks(b, voiceSignature, language)
+          ? await _chapterChunks(
+              b,
+              voiceSignature,
+              language,
+              alsoTry: alsoTryVoices,
+            )
           : null;
       final names = <String>[];
       for (var i = 0; i < (parts?.length ?? 0); i++) {
@@ -163,12 +189,14 @@ class SleepyService {
     Series series, {
     required String language,
     required String voiceSignature,
+    List<String> alsoTryVoices = const [],
     bool includeAudio = true,
   }) async {
     final bytes = await exportBytes(
       series,
       language: language,
       voiceSignature: voiceSignature,
+      alsoTryVoices: alsoTryVoices,
       includeAudio: includeAudio,
     );
     final dir = await exportsDir();
@@ -190,12 +218,18 @@ class SleepyService {
     required String voiceSignature,
     required String mimeType,
     required String author,
+    List<String> alsoTryVoices = const [],
   }) async {
     final beats = await _repo.loadBeats(series.id);
     final parts = <Uint8List>[];
     var chaptersFound = 0;
     for (final b in beats) {
-      final chunks = await _chapterChunks(b, voiceSignature, language);
+      final chunks = await _chapterChunks(
+        b,
+        voiceSignature,
+        language,
+        alsoTry: alsoTryVoices,
+      );
       if (chunks == null) continue;
       parts.addAll(chunks); // every chunk of every chapter, in order
       chaptersFound++;
@@ -260,13 +294,19 @@ class SleepyService {
     required String language,
     required String voiceSignature,
     required String mimeType,
+    List<String> alsoTryVoices = const [],
   }) async {
     final beats = await _repo.loadBeats(series.id);
     final chapters = <LuniiChapter>[];
     for (final b in beats) {
       // One node per chapter on the device, so a chapter's chunks are joined
       // into a single asset here.
-      final chunks = await _chapterChunks(b, voiceSignature, language);
+      final chunks = await _chapterChunks(
+        b,
+        voiceSignature,
+        language,
+        alsoTry: alsoTryVoices,
+      );
       if (chunks == null) continue;
       chapters.add(
         LuniiChapter(
@@ -312,6 +352,7 @@ class SleepyService {
     String? drive,
     String? backupDirectory,
     TtsProvider? voice,
+    List<String> alsoTryVoices = const [],
   }) async {
     final devices = attachedLuniiDevices();
     final target = drive ?? (devices.isEmpty ? null : devices.first);
@@ -327,7 +368,12 @@ class SleepyService {
     final included = <Beat>[];
     var skipped = 0;
     for (final beat in beats) {
-      final chunks = await _chapterChunks(beat, voiceSignature, language);
+      final chunks = await _chapterChunks(
+        beat,
+        voiceSignature,
+        language,
+        alsoTry: alsoTryVoices,
+      );
       if (chunks == null) {
         skipped++;
         continue;

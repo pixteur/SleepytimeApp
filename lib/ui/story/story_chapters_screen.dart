@@ -120,6 +120,11 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
     // on demand (Listen, or tapping a chapter's cloud badge) and then cached.
   }
 
+  /// Voices this device has recorded with, so an export can still find audio
+  /// saved before the grown-up changed voice.
+  List<String> get _knownVoices =>
+      ref.read(knownVoicesProvider).asData?.value ?? const [];
+
   void _warn(String? reason) {
     if (reason != null && mounted) {
       showErrorBanner(context, 'Story AI used a placeholder. ($reason)');
@@ -135,7 +140,12 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
     try {
       final path = await ref
           .read(sleepyServiceProvider)
-          .exportToFile(series, language: lang, voiceSignature: voiceSig);
+          .exportToFile(
+            series,
+            language: lang,
+            voiceSignature: voiceSig,
+            alsoTryVoices: _knownVoices,
+          );
       if (mounted) showErrorBanner(context, 'Saved story file: $path');
     } catch (e) {
       if (mounted) showErrorBanner(context, 'Export failed: $e');
@@ -183,6 +193,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
             voiceSignature: tts.voiceSignature,
             mimeType: tts.audioMimeType,
             author: child?.displayName ?? 'SleepytimeApp',
+            alsoTryVoices: _knownVoices,
           );
       if (mounted) showErrorBanner(context, 'Audiobook saved: $path');
     } catch (e) {
@@ -279,6 +290,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
         voiceSignature: ref.read(ttsProvider).voiceSignature,
         motif: motif,
         drive: devices.first,
+        alsoTryVoices: _knownVoices,
         // Lets the cover say the story's name — the device has no screen to
         // read, so this is how a child knows what they are standing on.
         voice: ref.read(ttsProvider),
@@ -391,6 +403,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
             language: lang,
             voiceSignature: tts.voiceSignature,
             mimeType: tts.audioMimeType,
+            alsoTryVoices: _knownVoices,
           );
       if (mounted) {
         showErrorBanner(
@@ -656,12 +669,24 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                               if (parentMode)
                                 _DownloadIcon(
                                   signature: '$voiceSig|$lang|${b.id}',
+                                  // Asks across every voice this device has
+                                  // recorded with, not only the current one:
+                                  // a chapter downloaded last week in another
+                                  // voice is still downloaded.
                                   isCached: () => ref
-                                      .read(ttsProvider)
-                                      .isCached(
-                                        b.text,
+                                      .read(savedNarrationProvider)
+                                      .isSavedAnywhere(
+                                        b,
                                         language: lang,
-                                        notes: b.narration,
+                                        preferred: ref
+                                            .read(ttsProvider)
+                                            .voiceSignature,
+                                        alternatives:
+                                            ref
+                                                .read(knownVoicesProvider)
+                                                .asData
+                                                ?.value ??
+                                            const [],
                                       ),
                                   onDownload: () => ref
                                       .read(ttsProvider)

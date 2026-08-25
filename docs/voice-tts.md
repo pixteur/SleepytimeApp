@@ -67,6 +67,37 @@ When a series has **Bilingual mode** enabled (a modifier on any theme), a single
 
 Big, simple controls: ▶️ play/pause, ⏹ stop, 🔁 replay, a calm progress bar, and a sleep-friendly auto-dim. Touch-first sizing so it ports straight to iOS. Auto-lower volume / soften toward the end of a bedtime story.
 
+## Downloaded narration belongs to a voice
+
+The audio cache is keyed by `voiceSignature|language|chunk text + cue`, which is
+correct — a different voice is a different recording, and replaying the old one
+after a deliberate change would be wrong.
+
+It has one consequence worth designing around: **changing voice or model makes
+every downloaded chapter look undownloaded.** Nothing is deleted, but nothing
+asks for it either, so every badge reverts to a cloud and a grown-up reasonably
+reports that their audio is missing. It happened here with 600 MB on disk.
+
+So anything that only needs *a* recording asks
+[saved_narration.dart](../lib/domain/saved_narration.dart), which tries the
+current voice and then every voice this device has used:
+
+| Path | Voice used |
+|------|-----------|
+| Playback | The chosen voice only — a story is read in the voice that was picked |
+| Download badge | Any saved voice; a chapter downloaded last week is still downloaded |
+| `.sleepy`, audiobook, Lunii | Any saved voice, so an export never refuses over a setting |
+
+The list of voices comes from `AppPrefs.knownVoiceSignatures`, appended
+whenever a cloud voice is activated, unioned with what the stored settings
+imply per engine — the remembered list only starts filling from the build that
+added it. `tool/narration_voices.dart` reports which voice actually holds each
+story.
+
+Nothing in the app ever deletes cached audio. The only thing that does is
+`tool/audio_cache_audit.dart --delete`, which is opt-in and exists to clear
+recordings a provider got wrong.
+
 ## Failure handling
 
 | Failure | Response |

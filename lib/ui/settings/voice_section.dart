@@ -235,6 +235,32 @@ class _VoiceSectionState extends ConsumerState<VoiceSection> {
                 'retired, or to move off a preview model with tighter limits.',
             onChanged: (v) => setState(() => _model.text = v),
           ),
+          const SizedBox(height: 8),
+          // Said plainly because its absence read as data loss: a grown-up who
+          // switched voice saw every download turn back into a cloud icon and
+          // reported the audio as missing. It was all still on disk.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline,
+                size: 16,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Downloaded narration belongs to the voice that recorded it. '
+                  'Changing voice or model keeps every recording — stories stay '
+                  'marked as saved, and they come back as they were if you '
+                  'switch back. New chapters are read in the new voice.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
           if (_engine == VoiceEngine.elevenlabs)
             TextField(

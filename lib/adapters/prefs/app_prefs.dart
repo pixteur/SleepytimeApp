@@ -75,6 +75,30 @@ class AppPrefs {
   Future<void> setVoiceModel(String engine, String model) =>
       _prefs.setString('voicemodel_$engine', model);
 
+  // ── Voices this device has recorded with ────────────────────────
+  static const _knownVoicesKey = 'known_voice_signatures';
+
+  /// Every voice signature narration has ever been cached under here.
+  ///
+  /// Audio is keyed by voice, so changing voice makes every downloaded chapter
+  /// look undownloaded — nothing is deleted, but nothing looks for it either.
+  /// Keeping the list means the app can still find a recording it already
+  /// paid for. See `domain/saved_narration.dart`.
+  List<String> get knownVoiceSignatures =>
+      _prefs.getStringList(_knownVoicesKey) ?? const [];
+
+  /// Note a voice, newest first, so the most recent alternatives are tried
+  /// first. Capped: a list that grew without bound would turn one cache miss
+  /// into a hundred file checks.
+  Future<void> rememberVoiceSignature(String signature) async {
+    final trimmed = signature.trim();
+    if (trimmed.isEmpty) return;
+    final known = [...knownVoiceSignatures];
+    known.remove(trimmed);
+    known.insert(0, trimmed);
+    await _prefs.setStringList(_knownVoicesKey, known.take(12).toList());
+  }
+
   // ── Parent mode ─────────────────────────────────────────────────
   static const _parentModeKey = 'parent_mode';
 

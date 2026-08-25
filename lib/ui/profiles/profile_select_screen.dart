@@ -126,6 +126,9 @@ class _ProfileCard extends ConsumerWidget {
           // Grown-ups only, and only by holding: a child's whole library goes
           // with them, so this must never be one tap away.
           onLongPress: () => _confirmDelete(context, ref),
+          // A mouse has no long press. Right-click is the same gesture on a
+          // desktop, and this app is used on one far more than on a phone.
+          onSecondaryTap: () => _confirmDelete(context, ref),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 12),
             child: Column(
