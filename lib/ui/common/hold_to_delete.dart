@@ -13,6 +13,10 @@ import 'confirm_destructive.dart';
 /// [enabled] is the parent-mode switch. Off, holding does nothing at all —
 /// not a disabled menu, not a locked dialog. There is nothing to find.
 ///
+/// [extras] are offered above Delete, for the things a grown-up might reach
+/// for by the same gesture — redoing a child's quiz, say. Picking one closes
+/// the sheet and runs it; the return value stays "was something deleted".
+///
 /// Returns true only if something was actually deleted. See `docs/ui-ux.md`.
 Future<bool> holdToDelete(
   BuildContext context, {
@@ -20,11 +24,12 @@ Future<bool> holdToDelete(
   required String what,
   required String warning,
   required Future<void> Function() onDelete,
+  List<HoldAction> extras = const [],
   String? icon,
 }) async {
   if (!enabled) return false;
 
-  final chosen = await showModalBottomSheet<bool>(
+  final chosen = await showModalBottomSheet<Object?>(
     context: context,
     showDragHandle: true,
     builder: (sheetContext) {
@@ -43,6 +48,13 @@ Future<bool> holdToDelete(
               ),
             ),
             const Divider(height: 1),
+            for (final extra in extras)
+              ListTile(
+                leading: Icon(extra.icon),
+                title: Text(extra.label),
+                subtitle: extra.subtitle == null ? null : Text(extra.subtitle!),
+                onTap: () => Navigator.pop(sheetContext, extra),
+              ),
             ListTile(
               leading: Icon(Icons.delete_outline, color: scheme.error),
               title: Text('Delete', style: TextStyle(color: scheme.error)),
@@ -59,6 +71,12 @@ Future<bool> holdToDelete(
       );
     },
   );
+  if (chosen is HoldAction) {
+    // Not destructive, so no gate and no double check — the parent-mode
+    // switch is already the gate on the gesture itself.
+    await chosen.onTap();
+    return false;
+  }
   if (chosen != true || !context.mounted) return false;
 
   // The gate and the two questions live here, so every hold-to-delete asks
@@ -73,4 +91,19 @@ Future<bool> holdToDelete(
   if (!sure) return false;
   await onDelete();
   return true;
+}
+
+/// One non-destructive thing the hold sheet can also offer.
+class HoldAction {
+  const HoldAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.subtitle,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? subtitle;
+  final Future<void> Function() onTap;
 }
