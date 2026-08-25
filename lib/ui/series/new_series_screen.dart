@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide HeroMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app_providers.dart';
+import '../common/language_choices.dart';
 import '../../domain/models/beat.dart';
 import '../../domain/models/child_profile.dart';
 import '../../domain/models/series.dart';
@@ -16,14 +17,6 @@ import 'theme_picker.dart';
 /// at bedtime, and the model's `phrases` level stays reachable for stories
 /// already saved with it.
 enum _LanguageMode { one, sprinkle, halfAndHalf }
-
-/// Languages a story can be woven with, keyed by the code the prompt uses.
-const Map<String, String> _secondLanguageChoices = {
-  'es': 'Spanish',
-  'fr': 'French',
-  'en': 'English',
-  'ja': 'Japanese',
-};
 
 /// The story creator. Reached two ways:
 ///  * from the bookshelf / home → a fresh story, which can be standalone, start
@@ -350,10 +343,10 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
                 value: '',
                 child: Text(
                   'Same as the child'
-                  ' (${_secondLanguageChoices[child?.language ?? 'en'] ?? 'English'})',
+                  ' (${languageChoices[child?.language ?? 'en'] ?? 'English'})',
                 ),
               ),
-              for (final entry in _secondLanguageChoices.entries)
+              for (final entry in languageChoices.entries)
                 DropdownMenuItem(value: entry.key, child: Text(entry.value)),
             ],
             onChanged: _creating
@@ -398,7 +391,7 @@ class _NewSeriesScreenState extends ConsumerState<NewSeriesScreen> {
                 border: OutlineInputBorder(),
               ),
               items: [
-                for (final entry in _secondLanguageChoices.entries)
+                for (final entry in languageChoices.entries)
                   if (entry.key != _mainLanguage)
                     DropdownMenuItem(
                       value: entry.key,

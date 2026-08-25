@@ -71,4 +71,101 @@ void main() {
       expect(deck.byId('nope'), isNull);
     });
   });
+  group('setLanguages', () {
+    Future<Series> saved(InMemoryStorageRepo repo, Series s) async {
+      await repo.saveSeries(s);
+      return s;
+    }
+
+    test('a story can change the language it is told in', () async {
+      final repo = InMemoryStorageRepo();
+      final service = SeriesService(repo);
+      final story = await saved(
+        repo,
+        const Series(
+          id: 's1',
+          childId: 'c1',
+          title: 'Leo and Bolt',
+          theme: StoryTheme.cozy,
+        ),
+      );
+
+      final updated = await service.setLanguages(
+        story,
+        baseLanguage: 'fr',
+        bilingualEnabled: true,
+        secondaryLanguage: 'en',
+        bilingualBlend: BilingualBlend.alternating,
+      );
+
+      expect(updated.baseLanguage, 'fr');
+      expect(languageFor(updated, 'en'), 'fr');
+      expect((await repo.loadSeriesById('s1'))!.secondaryLanguage, 'en');
+    });
+
+    test('turning bilingual off clears the second language', () async {
+      // The reason this is not a copyWith: a copyWith that reads null as
+      // "leave it alone" cannot clear a field, and a story left holding a
+      // second language it no longer uses would still be prompted for it.
+      final repo = InMemoryStorageRepo();
+      final service = SeriesService(repo);
+      final story = await saved(
+        repo,
+        const Series(
+          id: 's2',
+          childId: 'c1',
+          title: 'Leo and Bolt',
+          theme: StoryTheme.cozy,
+          baseLanguage: 'fr',
+          bilingualEnabled: true,
+          secondaryLanguage: 'en',
+          bilingualBlend: BilingualBlend.alternating,
+        ),
+      );
+
+      final updated = await service.setLanguages(
+        story,
+        baseLanguage: 'fr',
+        bilingualEnabled: false,
+        secondaryLanguage: 'en',
+        bilingualBlend: BilingualBlend.alternating,
+      );
+
+      expect(updated.bilingualEnabled, isFalse);
+      expect(updated.secondaryLanguage, isNull);
+      expect(updated.bilingualBlend, isNull);
+    });
+
+    test('everything else about the story is left alone', () async {
+      final repo = InMemoryStorageRepo();
+      final story = await saved(
+        repo,
+        const Series(
+          id: 's3',
+          childId: 'c1',
+          title: 'Leo and Bolt',
+          theme: StoryTheme.adventure,
+          extraThemes: [StoryTheme.technical],
+          heroMode: HeroMode.namedHero,
+          heroName: 'Shadow',
+          storyBible: 'They found a stone.',
+          lastReadSeq: 3,
+        ),
+      );
+
+      final updated = await SeriesService(repo).setLanguages(
+        story,
+        baseLanguage: 'es',
+        bilingualEnabled: false,
+        secondaryLanguage: null,
+        bilingualBlend: null,
+      );
+
+      expect(updated.title, 'Leo and Bolt');
+      expect(updated.extraThemes, [StoryTheme.technical]);
+      expect(updated.heroName, 'Shadow');
+      expect(updated.storyBible, 'They found a stone.');
+      expect(updated.lastReadSeq, 3);
+    });
+  });
 }

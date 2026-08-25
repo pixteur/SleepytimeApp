@@ -84,6 +84,49 @@ class SeriesService {
     return updated;
   }
 
+  /// Change the languages a story is told in.
+  ///
+  /// Written out in full rather than through `copyWith`, because turning
+  /// bilingual mode off has to *clear* the second language and the blend —
+  /// and a copyWith that treats null as "leave it alone" cannot express that.
+  ///
+  /// Only future chapters are affected: the ones already written keep the
+  /// words they were written in. Narration is keyed by language too, so a
+  /// story whose base language changes will re-record on next play — the old
+  /// recordings stay on disk under the old language.
+  Future<Series> setLanguages(
+    Series series, {
+    required String? baseLanguage,
+    required bool bilingualEnabled,
+    required String? secondaryLanguage,
+    required BilingualBlend? bilingualBlend,
+  }) async {
+    final updated = Series(
+      id: series.id,
+      childId: series.childId,
+      title: series.title,
+      theme: series.theme,
+      extraThemes: series.extraThemes,
+      autoTitle: series.autoTitle,
+      worldId: series.worldId,
+      customTheme: series.customTheme,
+      heroMode: series.heroMode,
+      heroName: series.heroName,
+      baseLanguage: baseLanguage,
+      bilingualEnabled: bilingualEnabled,
+      secondaryLanguage: bilingualEnabled ? secondaryLanguage : null,
+      bilingualBlend: bilingualEnabled ? bilingualBlend : null,
+      seedSummary: series.seedSummary,
+      storyBible: series.storyBible,
+      branchedFromBeatId: series.branchedFromBeatId,
+      status: series.status,
+      lastReadSeq: series.lastReadSeq,
+      lastReadAt: series.lastReadAt,
+    );
+    await _repo.saveSeries(updated);
+    return updated;
+  }
+
   /// Permanently delete a series and its chapters (FK cascade).
   Future<void> delete(String id) => _repo.deleteSeries(id);
 

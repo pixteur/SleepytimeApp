@@ -9,6 +9,8 @@ import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../../domain/models/series.dart';
 import '../common/hold_to_delete.dart';
+import '../common/language_choices.dart';
+import '../series/story_language_sheet.dart';
 import '../common/error_banner.dart';
 import 'story_view_screen.dart';
 
@@ -437,6 +439,39 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
   }
 
   /// Rename the story (parent mode only).
+  /// Change the languages an existing story is told in.
+  ///
+  /// The creator asks once and there was no way back to it, so a story begun
+  /// in the wrong language stayed that way. Chapters already written keep
+  /// their words; this steers the ones still to come.
+  Future<void> _editLanguages(Series series) async {
+    final child = ref.read(activeChildProvider);
+    final chosen = await showStoryLanguageSheet(
+      context,
+      series: series,
+      childLanguage: child?.language ?? 'en',
+    );
+    if (chosen == null || !mounted) return;
+    final updated = await ref
+        .read(seriesServiceProvider)
+        .setLanguages(
+          series,
+          baseLanguage: chosen.baseLanguage,
+          bilingualEnabled: chosen.bilingualEnabled,
+          secondaryLanguage: chosen.secondaryLanguage,
+          bilingualBlend: chosen.bilingualBlend,
+        );
+    if (!mounted) return;
+    ref.read(activeSeriesProvider.notifier).select(updated);
+    ref.invalidate(seriesForChildProvider(series.childId));
+    final second = updated.secondaryLanguage;
+    showErrorBanner(
+      context,
+      'Told in ${languageLabel(languageFor(updated, child?.language))}'
+      '${second == null ? "" : ", with ${languageLabel(second)} woven in"}.',
+    );
+  }
+
   Future<void> _rename(Series series) async {
     final controller = TextEditingController(text: series.title);
     final name = await showDialog<String>(
@@ -539,10 +574,17 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
         title: Text(series.title),
         actions: [
           if (parentMode)
-            IconButton(
+            PopupMenuButton<String>(
               icon: const Icon(Icons.edit_outlined),
-              tooltip: 'Rename story',
-              onPressed: () => _rename(series),
+              tooltip: 'Story settings',
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'rename', child: Text('Rename story')),
+                PopupMenuItem(value: 'language', child: Text('Languages…')),
+              ],
+              onSelected: (v) {
+                if (v == 'rename') _rename(series);
+                if (v == 'language') _editLanguages(series);
+              },
             ),
           // Every export sends a story out of the app — as a file to pass on,
           // or onto another device — so the whole menu is grown-ups only.
