@@ -680,7 +680,7 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                   _downloading
                       ? 'Saving chapter ${_downloaded + 1} of ${beats.length}'
                             '${_chapterParts.$2 > 1 ? " — part ${_chapterParts.$1 + 1} of ${_chapterParts.$2}" : ""}…'
-                      : 'Save the whole story for offline',
+                      : "Create the storyteller's audio",
                 ),
               ),
             ),

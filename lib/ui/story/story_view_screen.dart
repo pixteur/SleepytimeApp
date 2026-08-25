@@ -21,9 +21,15 @@ class StoryViewScreen extends ConsumerStatefulWidget {
     super.key,
     required this.beat,
     this.canContinue = true,
+    this.continueListening = false,
   });
 
   final Beat beat;
+
+  /// True when this chapter was reached while a story was being read aloud, so
+  /// the voice should pick straight up. False when a chapter was simply
+  /// opened, where waiting on a synthesis would block the reading.
+  final bool continueListening;
 
   /// False when viewing from the archive (no generating new chapters).
   final bool canContinue;
@@ -67,8 +73,31 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _markRead();
-      _speak();
+      _speakIfReady();
     });
+  }
+
+  /// Start reading aloud only when it can start *now*.
+  ///
+  /// Opening a chapter used to fire a synthesis and hold a popup over the text
+  /// until it came back — the better part of a minute for a long chapter, with
+  /// a child sitting in front of a story they could have been reading. So the
+  /// voice starts by itself only when the narration is already saved, or when
+  /// this chapter was reached mid-listen and the reading is meant to carry on.
+  /// Otherwise the text is simply there, and LISTEN is a tap away.
+  Future<void> _speakIfReady() async {
+    if (widget.continueListening) {
+      await _speak();
+      return;
+    }
+    final saved = await ref
+        .read(savedNarrationProvider)
+        .isSavedAnywhere(
+          widget.beat,
+          language: _lang,
+          preferred: _tts.voiceSignature,
+        );
+    if (saved && mounted) await _speak();
   }
 
   /// Remember this chapter as where the story got to, so the bookshelf can
@@ -207,7 +236,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     final beats = await ref.read(storageRepoProvider).loadBeats(id);
     final hasNext = beats.any((b) => b.seq == widget.beat.seq + 1);
     final canGenerate = widget.canContinue && !widget.beat.isFinal && !hasNext;
-    if (hasNext || canGenerate) await _next();
+    if (hasNext || canGenerate) await _next(keepListening: true);
   }
 
   /// User-initiated stop — cancels auto-advance so it stays put.
@@ -223,15 +252,18 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     return null;
   }
 
-  Future<void> _open(Beat beat) async {
+  Future<void> _open(Beat beat, {bool keepListening = false}) async {
     _autoAdvance = false; // manual navigation must not chain another advance
     await _tts.stop();
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            StoryViewScreen(beat: beat, canContinue: widget.canContinue),
+        builder: (_) => StoryViewScreen(
+          beat: beat,
+          canContinue: widget.canContinue,
+          continueListening: keepListening,
+        ),
       ),
     );
   }
@@ -265,14 +297,14 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     if (mounted) Navigator.of(context).maybePop();
   }
 
-  Future<void> _next() async {
+  Future<void> _next({bool keepListening = false}) async {
     _autoAdvance = false;
     final id = _seriesId;
     if (id == null) return;
     final beats = await ref.read(storageRepoProvider).loadBeats(id);
     final existing = _find(beats, widget.beat.seq + 1);
     if (existing != null) {
-      await _open(existing);
+      await _open(existing, keepListening: keepListening);
       return;
     }
     if (!widget.canContinue || widget.beat.isFinal) return;
@@ -299,7 +331,7 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
     if (!mounted) return;
     setState(() => _busy = false);
     _warnIfFallback(engine.lastFallbackReason);
-    await _open(beat);
+    await _open(beat, keepListening: keepListening);
   }
 
   /// Tapping the chapter title opens a picker to jump to any chapter.
@@ -599,7 +631,6 @@ class _StoryViewScreenState extends ConsumerState<StoryViewScreen> {
                         ),
                       ),
                     ),
-                  if (_loading) const _BufferingPopup(),
                 ],
               ),
             ),
@@ -986,7 +1017,9 @@ class _ListenBar extends StatelessWidget {
                           : Icons.volume_up_rounded,
                     ),
               label: Text(
-                speaking
+                buffering
+                    ? 'GETTING THE VOICE…'
+                    : speaking
                     ? 'PAUSE'
                     : paused
                     ? 'RESUME'
@@ -1002,48 +1035,6 @@ class _ListenBar extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// A gentle, non-scary popup shown while the voice buffers, so a waiting child
-/// knows the story is coming.
-class _BufferingPopup extends StatelessWidget {
-  const _BufferingPopup();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Positioned.fill(
-      child: ColoredBox(
-        color: const Color(0x66000000),
-        child: Center(
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('🌙✨', style: TextStyle(fontSize: 40)),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Warming up the storyteller…',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  const Text('Your story is coming!'),
-                  const SizedBox(height: 16),
-                  const SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
