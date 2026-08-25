@@ -8,7 +8,6 @@ import '../../adapters/prefs/app_prefs.dart';
 import '../../app_providers.dart';
 import '../../domain/models/series.dart';
 import '../../domain/models/world.dart';
-import '../common/confirm_destructive.dart';
 import '../story/story_chapters_screen.dart';
 import 'new_series_screen.dart';
 import '../common/hold_to_delete.dart';
@@ -146,6 +145,19 @@ class _BookshelfScreenState extends ConsumerState<BookshelfScreen> {
                 ),
                 const SizedBox(height: 8),
                 for (final s in standalone) _StoryCard(series: s),
+              ],
+              // Said once, where the cards are. A gesture nobody knows about
+              // is the same as no gesture, and holding is now the only way to
+              // delete anything.
+              if (ref.watch(parentModeProvider)) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Hold a card — or right-click it — to delete a world or a '
+                  'story.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ],
           );
@@ -329,15 +341,15 @@ class _StoryCard extends ConsumerWidget {
           trailing: parentMode
               ? PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert),
+                  // Deleting is the hold gesture now, the same as everywhere
+                  // else; the menu keeps only what nothing else offers.
                   itemBuilder: (_) => const [
                     PopupMenuItem(
                       value: 'world',
                       child: Text('Make this a world'),
                     ),
-                    PopupMenuItem(value: 'delete', child: Text('Delete story')),
                   ],
                   onSelected: (v) {
-                    if (v == 'delete') _confirmDelete(context, ref);
                     if (v == 'world') _convertToWorld(context, ref);
                   },
                 )
@@ -430,18 +442,5 @@ class _StoryCard extends ConsumerWidget {
         ref.invalidate(seriesForChildProvider(series.childId));
       },
     );
-  }
-
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
-    final ok = await confirmDestructive(
-      context,
-      title: 'Delete story?',
-      message: 'This deletes "${series.title}" and all its chapters.',
-      confirmLabel: 'Delete story',
-      doubleCheck: '"${series.title}" will be gone forever. Delete it?',
-    );
-    if (!ok || !context.mounted) return;
-    await ref.read(seriesServiceProvider).delete(series.id);
-    ref.invalidate(seriesForChildProvider(series.childId));
   }
 }

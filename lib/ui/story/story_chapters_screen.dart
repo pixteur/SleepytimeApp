@@ -8,7 +8,7 @@ import '../../adapters/lunii/lunii_transfer.dart';
 import '../../app_providers.dart';
 import '../../domain/models/beat.dart';
 import '../../domain/models/series.dart';
-import '../common/confirm_destructive.dart';
+import '../common/hold_to_delete.dart';
 import '../common/error_banner.dart';
 import 'story_view_screen.dart';
 
@@ -471,28 +471,35 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
 
   /// Delete a chapter (parent-gated) and renumber the rest so numbering stays
   /// clean (1, 2, 3…). Handy for trimming early placeholder chapters.
-  Future<void> _deleteChapter(Beat beat) async {
+  /// Hold a chapter to delete it — the same sheet, gate and double check as a
+  /// story, a world or a child.
+  Future<void> _holdToDeleteChapter(Beat beat) async {
     final series = ref.read(activeSeriesProvider);
     if (series == null) return;
-    final ok = await confirmDestructive(
+    final title = beat.title.trim().isEmpty
+        ? 'Chapter ${beat.seq + 1}'
+        : 'Chapter ${beat.seq + 1} · ${beat.title.trim()}';
+    await holdToDelete(
       context,
-      title: 'Delete Chapter ${beat.seq + 1}?',
-      message: 'This removes the chapter and its saved text.',
-      confirmLabel: 'Delete chapter',
-      doubleCheck: 'Chapter ${beat.seq + 1} can\'t be brought back. Delete it?',
+      enabled: ref.read(parentModeProvider),
+      what: title,
+      icon: '📄',
+      warning:
+          'This removes the chapter and its text. The rest of the story is '
+          'left alone, and the chapters after it move up a number.',
+      onDelete: () async {
+        final repo = ref.read(storageRepoProvider);
+        await repo.deleteBeat(beat.id);
+        // Compact seq to 0..n-1 so the list still reads 1, 2, 3…
+        final remaining = await repo.loadBeats(series.id);
+        for (var i = 0; i < remaining.length; i++) {
+          if (remaining[i].seq != i) {
+            await repo.saveBeat(_withSeq(remaining[i], i));
+          }
+        }
+        ref.invalidate(beatsForSeriesProvider(series.id));
+      },
     );
-    if (!ok || !mounted) return;
-    final repo = ref.read(storageRepoProvider);
-    await repo.deleteBeat(beat.id);
-    // Compact seq to 0..n-1 so the list reads 1, 2, 3…
-    final remaining = await repo.loadBeats(series.id);
-    for (var i = 0; i < remaining.length; i++) {
-      if (remaining[i].seq != i) {
-        await repo.saveBeat(_withSeq(remaining[i], i));
-      }
-    }
-    if (!mounted) return;
-    ref.invalidate(beatsForSeriesProvider(series.id));
   }
 
   Beat _withSeq(Beat b, int seq) => Beat(
@@ -644,73 +651,67 @@ class _StoryChaptersScreenState extends ConsumerState<StoryChaptersScreen> {
                     itemCount: beats.length,
                     itemBuilder: (_, i) {
                       final b = beats[i];
-                      return Card(
-                        child: ListTile(
-                          leading: CircleAvatar(child: Text('${b.seq + 1}')),
-                          // The number alone for chapters written before
-                          // titles existed, and for fallback chapters.
-                          title: Text(
-                            b.title.trim().isEmpty
-                                ? 'Chapter ${b.seq + 1}'
-                                : 'Chapter ${b.seq + 1} · ${b.title.trim()}',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                      // ListTile has no right-click of its own, so the card
+                      // carries it. Same gesture as every other card.
+                      return GestureDetector(
+                        onSecondaryTap: () => _holdToDeleteChapter(b),
+                        child: Card(
+                          child: ListTile(
+                            onLongPress: () => _holdToDeleteChapter(b),
+                            leading: CircleAvatar(child: Text('${b.seq + 1}')),
+                            // The number alone for chapters written before
+                            // titles existed, and for fallback chapters.
+                            title: Text(
+                              b.title.trim().isEmpty
+                                  ? 'Chapter ${b.seq + 1}'
+                                  : 'Chapter ${b.seq + 1} · ${b.title.trim()}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              b.summary,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Per-chapter control is a grown-up's tool; a
+                                // child gets the one button above instead.
+                                if (parentMode)
+                                  _DownloadIcon(
+                                    signature: '$voiceSig|$lang|${b.id}',
+                                    // Asks across every voice this device has
+                                    // recorded with, not only the current one:
+                                    // a chapter downloaded last week in another
+                                    // voice is still downloaded.
+                                    isCached: () => ref
+                                        .read(savedNarrationProvider)
+                                        .isSavedAnywhere(
+                                          b,
+                                          language: lang,
+                                          preferred: ref
+                                              .read(ttsProvider)
+                                              .voiceSignature,
+                                          alternatives:
+                                              ref
+                                                  .read(knownVoicesProvider)
+                                                  .asData
+                                                  ?.value ??
+                                              const [],
+                                        ),
+                                    onDownload: () => ref
+                                        .read(ttsProvider)
+                                        .preload(
+                                          b.text,
+                                          language: lang,
+                                          notes: b.narration,
+                                        ),
+                                  ),
+                              ],
+                            ),
+                            onTap: () => _open(b),
                           ),
-                          subtitle: Text(
-                            b.summary,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Per-chapter control is a grown-up's tool; a
-                              // child gets the one button above instead.
-                              if (parentMode)
-                                _DownloadIcon(
-                                  signature: '$voiceSig|$lang|${b.id}',
-                                  // Asks across every voice this device has
-                                  // recorded with, not only the current one:
-                                  // a chapter downloaded last week in another
-                                  // voice is still downloaded.
-                                  isCached: () => ref
-                                      .read(savedNarrationProvider)
-                                      .isSavedAnywhere(
-                                        b,
-                                        language: lang,
-                                        preferred: ref
-                                            .read(ttsProvider)
-                                            .voiceSignature,
-                                        alternatives:
-                                            ref
-                                                .read(knownVoicesProvider)
-                                                .asData
-                                                ?.value ??
-                                            const [],
-                                      ),
-                                  onDownload: () => ref
-                                      .read(ttsProvider)
-                                      .preload(
-                                        b.text,
-                                        language: lang,
-                                        notes: b.narration,
-                                      ),
-                                ),
-                              if (parentMode)
-                                PopupMenuButton<String>(
-                                  itemBuilder: (_) => const [
-                                    PopupMenuItem(
-                                      value: 'delete',
-                                      child: Text('Delete chapter'),
-                                    ),
-                                  ],
-                                  onSelected: (v) {
-                                    if (v == 'delete') _deleteChapter(b);
-                                  },
-                                ),
-                            ],
-                          ),
-                          onTap: () => _open(b),
                         ),
                       );
                     },
